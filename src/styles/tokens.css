@@ -1,0 +1,24 @@
+/* Design tokens. RGB triplets so Tailwind can apply alpha. */
+:root,
+:root[data-theme='light'] {
+  --c-bg: 247 248 250;
+  --c-surface: 255 255 255;
+  --c-line: 226 229 235;
+  --c-ink: 24 31 42;
+  --c-muted: 100 110 126;
+  --c-brand: 13 148 136;
+  --c-brand-ink: 255 255 255;
+  --radius: 10px;
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  --c-bg: 15 18 24;
+  --c-surface: 23 27 35;
+  --c-line: 43 49 61;
+  --c-ink: 232 236 242;
+  --c-muted: 148 158 174;
+  --c-brand: 45 212 191;
+  --c-brand-ink: 6 30 28;
+  color-scheme: dark;
+}
