@@ -1,9 +1,15 @@
 import { useEffect } from 'react'
 import { useSettings } from '@/stores/settings'
+import * as A from '@/editor/actions'
+import { Canvas } from '@/editor/canvas/Canvas'
+import { installKeyboard } from '@/editor/keyboard'
+import { useScene } from '@/editor/scene'
+import { useEditor } from '@/editor/store'
+import { CommandPalette, SearchBar, ShortcutSheet } from '@/editor/ui/Overlays'
 
 function Wordmark() {
   return (
-    <div className="flex items-center gap-2" aria-label="Wishtaamaps">
+    <div className="flex shrink-0 items-center gap-2" aria-label="Wishtaamaps">
       <svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true">
         <circle cx="13" cy="13" r="4" className="fill-brand" />
         <g className="stroke-brand" strokeWidth="2" strokeLinecap="round" fill="none">
@@ -20,65 +26,98 @@ function Wordmark() {
   )
 }
 
-const RAIL = ['Topic', 'Sub topic', 'Relationship', 'Boundary', 'Summary', 'Insert']
+function Btn(props: React.ButtonHTMLAttributes<HTMLButtonElement> & { active?: boolean }) {
+  const { active, className = '', ...rest } = props
+  return (
+    <button
+      type="button"
+      aria-pressed={active}
+      {...rest}
+      className={`rounded-ui border px-2.5 py-1 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+        active ? 'border-brand bg-brand/15' : 'border-line hover:bg-bg'
+      } ${className}`}
+    />
+  )
+}
 
 export function App() {
   const theme = useSettings((s) => s.theme)
   const toggleTheme = useSettings((s) => s.toggleTheme)
+  const scene = useScene()
+  const { canUndo, canRedo, tool, levels, focusId, saveState, selected, rootId } = useEditor()
+  const zoom = useEditor((s) => s.viewport.k)
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme
   }, [theme])
+  useEffect(() => installKeyboard(), [])
+
+  const onlyRoot = selected.length === 1 && selected[0] === rootId
 
   return (
     <div className="flex h-full flex-col">
-      <header className="flex h-12 shrink-0 items-center justify-between border-b border-line bg-surface px-4">
+      <header className="flex h-12 shrink-0 items-center gap-3 overflow-x-auto whitespace-nowrap border-b border-line bg-surface px-3">
         <Wordmark />
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={toggleTheme}
-            className="rounded-ui border border-line px-3 py-1 text-sm hover:bg-bg"
-            aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
-          >
+        <div className="mx-1 h-5 w-px bg-line" />
+        <div className="flex shrink-0 items-center gap-1.5" role="toolbar" aria-label="Editing tools">
+          <Btn onClick={A.cmdUndo} disabled={!canUndo} aria-label="Undo" title="Undo (Ctrl+Z)">↶</Btn>
+          <Btn onClick={A.cmdRedo} disabled={!canRedo} aria-label="Redo" title="Redo (Ctrl+Y)">↷</Btn>
+          <Btn onClick={A.cmdAddChild} title="Add child (Tab)">+ Topic</Btn>
+          <Btn onClick={A.cmdAddSibling} disabled={onlyRoot} title="Add sibling (Enter)">+ Sibling</Btn>
+          <Btn onClick={() => A.cmdAddFloating()} title="Add a floating topic">+ Floating</Btn>
+          <Btn onClick={A.cmdDelete} disabled={!selected.length || onlyRoot} title="Delete (Delete)">Delete</Btn>
+        </div>
+        <div className="ml-auto flex shrink-0 items-center gap-1.5">
+          <Btn active={tool === 'pan'} onClick={() => A.setTool('pan')} title="Hand tool (H)">Hand</Btn>
+          <Btn active={tool === 'select'} onClick={() => A.setTool('select')} title="Select tool (V)">Select</Btn>
+          <Btn onClick={A.openSearch} title="Search (Ctrl+F)">Search</Btn>
+          <Btn active={!!focusId} onClick={A.toggleFocus} title="Focus on the selected branch (Ctrl+Shift+F)">Focus</Btn>
+          <Btn onClick={() => A.setPalette(true)} title="Command palette (Ctrl+K)">Ctrl+K</Btn>
+          <Btn onClick={() => A.setHelp(true)} aria-label="Keyboard shortcuts" title="Shortcuts (?)">?</Btn>
+          <Btn onClick={toggleTheme} aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}>
             {theme === 'light' ? 'Dark' : 'Light'}
-          </button>
+          </Btn>
         </div>
       </header>
 
-      <div className="flex min-h-0 flex-1">
-        <nav aria-label="Tools" className="flex w-20 shrink-0 flex-col gap-1 border-r border-line bg-surface p-2">
-          {RAIL.map((label) => (
+      <main className="relative min-h-0 flex-1" aria-label="Canvas">
+        <Canvas />
+        <SearchBar />
+        <CommandPalette />
+        <ShortcutSheet />
+      </main>
+
+      <footer className="flex h-8 shrink-0 items-center justify-between gap-3 overflow-x-auto whitespace-nowrap border-t border-line bg-surface px-3 text-xs text-muted">
+        <span>
+          Topics {scene.boxes.size}
+          {scene.boxes.size !== scene.total ? ` of ${scene.total}` : ''} · No limit
+        </span>
+        <div className="flex items-center gap-1" role="group" aria-label="Show levels">
+          <span className="mr-1">Levels</span>
+          {([1, 2, 3, null] as const).map((n) => (
             <button
-              key={label}
+              key={String(n)}
               type="button"
-              disabled
-              className="rounded-ui px-1 py-2 text-xs text-muted disabled:cursor-not-allowed"
-              title="Arrives in Phase 1"
+              aria-pressed={levels === n}
+              onClick={() => A.setLevels(n)}
+              className={`rounded px-1.5 py-0.5 ${levels === n ? 'bg-brand/20 text-ink' : 'hover:bg-bg'}`}
             >
-              {label}
+              {n ?? 'All'}
             </button>
           ))}
-        </nav>
-
-        <main className="relative min-w-0 flex-1" aria-label="Canvas">
-          <div className="absolute inset-0 grid place-items-center text-center">
-            <div>
-              <p className="text-lg font-medium">Canvas coming in Phase 1</p>
-              <p className="mt-1 text-sm text-muted">Phase 0 shell: tokens, theming, layout regions.</p>
-            </div>
-          </div>
-        </main>
-
-        <aside aria-label="Properties" className="hidden w-64 shrink-0 border-l border-line bg-surface p-4 md:block">
-          <h2 className="text-sm font-semibold">Properties</h2>
-          <p className="mt-1 text-sm text-muted">Style, notes and marks will appear here.</p>
-        </aside>
-      </div>
-
-      <footer className="flex h-7 shrink-0 items-center justify-between border-t border-line bg-surface px-3 text-xs text-muted">
-        <span>Topics 0 · No limit</span>
-        <span>Saved</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <button type="button" onClick={() => A.zoomBy(0.8)} aria-label="Zoom out" className="px-1 hover:text-ink">−</button>
+          <button type="button" onClick={A.zoomTo100} title="Reset to 100%" className="w-10 text-center hover:text-ink">
+            {Math.round(zoom * 100)}%
+          </button>
+          <button type="button" onClick={() => A.zoomBy(1.25)} aria-label="Zoom in" className="px-1 hover:text-ink">+</button>
+          <button type="button" onClick={A.fitToScreen} className="rounded px-1.5 hover:bg-bg hover:text-ink">Fit</button>
+          <button type="button" onClick={A.toggleFullscreen} className="rounded px-1.5 hover:bg-bg hover:text-ink">Fullscreen</button>
+          <span aria-live="polite" className="w-16 text-right">
+            {saveState === 'saved' ? 'Saved' : saveState === 'saving' ? 'Saving…' : 'Save failed'}
+          </span>
+        </div>
       </footer>
     </div>
   )
