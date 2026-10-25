@@ -1,4 +1,4 @@
-# Wishtaamaps
+# Wishtaa Maps
 
 Web mind-mapping tool: no topic cap, no export watermark. Original product; EdrawMind is a feature reference only.
 

@@ -9,7 +9,7 @@ import { CommandPalette, SearchBar, ShortcutSheet } from '@/editor/ui/Overlays'
 
 function Wordmark() {
   return (
-    <div className="flex shrink-0 items-center gap-2" aria-label="Wishtaamaps">
+    <div className="flex shrink-0 items-center gap-2" aria-label="Wishtaa Maps">
       <svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true">
         <circle cx="13" cy="13" r="4" className="fill-brand" />
         <g className="stroke-brand" strokeWidth="2" strokeLinecap="round" fill="none">
@@ -21,7 +21,7 @@ function Wordmark() {
           <circle cx="4" cy="19" r="2" />
         </g>
       </svg>
-      <span className="text-[15px] font-semibold tracking-tight">Wishtaamaps</span>
+      <span className="text-[15px] font-semibold tracking-tight">Wishtaa Maps</span>
     </div>
   )
 }

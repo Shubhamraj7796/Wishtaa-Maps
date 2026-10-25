@@ -1,4 +1,4 @@
--- Wishtaamaps core schema. RLS lives in 0002_rls.sql.
+-- Wishtaa Maps core schema. RLS lives in 0002_rls.sql.
 create extension if not exists pgcrypto;
 
 create type public.collab_role as enum ('owner', 'editor', 'commenter', 'viewer');
