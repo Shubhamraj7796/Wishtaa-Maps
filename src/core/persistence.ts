@@ -20,10 +20,10 @@ export function encodeDoc(doc: MapDoc): string {
   return toBase64(Y.encodeStateAsUpdate(doc.ydoc))
 }
 
-/** Applies a saved state. Returns false (and leaves the doc untouched) if it is corrupt. */
+/** Applies a saved state (origin "load", which is not treated as a change). Returns false if it is corrupt. */
 export function loadInto(doc: MapDoc, b64: string): boolean {
   try {
-    Y.applyUpdate(doc.ydoc, fromBase64(b64), 'init')
+    Y.applyUpdate(doc.ydoc, fromBase64(b64), 'load')
     return true
   } catch {
     return false

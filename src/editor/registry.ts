@@ -1,4 +1,14 @@
 import * as A from './actions'
+import {
+  clearImageSelection,
+  cmdAddImage,
+  currentTopicId,
+  nudgeImage,
+  removeImage,
+  resetImageSize,
+  selectImage,
+  selectedImageTopic,
+} from './images'
 import { useEditor } from './store'
 
 export interface Cmd {
@@ -21,7 +31,13 @@ export const COMMANDS: Cmd[] = [
   { id: 'sibling', label: 'Add sibling topic', group: 'Edit', keys: ['Enter'], run: A.cmdAddSibling },
   { id: 'floating', label: 'Add floating topic', group: 'Edit', run: () => A.cmdAddFloating() },
   { id: 'rename', label: 'Rename topic', group: 'Edit', keys: ['F2'], run: () => A.beginEdit() },
-  { id: 'delete', label: 'Delete topic', group: 'Edit', keys: ['Delete', 'Backspace'], run: A.cmdDelete },
+  {
+    id: 'delete',
+    label: 'Delete topic (or the selected image)',
+    group: 'Edit',
+    keys: ['Delete', 'Backspace'],
+    run: () => (selectedImageTopic() ? removeImage() : A.cmdDelete()),
+  },
   { id: 'collapse', label: 'Collapse / expand branch', group: 'Edit', keys: ['/'], run: A.cmdToggleCollapse },
   { id: 'up', label: 'Move topic up', group: 'Edit', keys: ['Alt+ArrowUp'], run: () => A.cmdReorder(-1) },
   { id: 'down', label: 'Move topic down', group: 'Edit', keys: ['Alt+ArrowDown'], run: () => A.cmdReorder(1) },
@@ -31,6 +47,36 @@ export const COMMANDS: Cmd[] = [
   { id: 'copy', label: 'Copy', group: 'Edit', keys: ['Ctrl+C'], run: () => void A.cmdCopy() },
   { id: 'cut', label: 'Cut', group: 'Edit', keys: ['Ctrl+X'], run: A.cmdCut },
   { id: 'paste', label: 'Paste', group: 'Edit', hint: 'Ctrl+V', run: () => {}, palette: false },
+  { id: 'pasteImage', label: 'Paste an image into the selected topic', group: 'Edit', hint: 'Ctrl+V', run: () => {}, palette: false },
+  { id: 'addImage', label: 'Add image to topic…', group: 'Edit', run: () => void cmdAddImage() },
+  { id: 'removeImage', label: 'Remove image from topic', group: 'Edit', run: () => removeImage() },
+  {
+    id: 'selectImage',
+    label: 'Select topic image (to resize)',
+    group: 'Edit',
+    keys: ['I'],
+    run: () => {
+      const id = currentTopicId()
+      if (id) selectImage(id)
+    },
+  },
+  { id: 'resetImage', label: 'Reset image to original size', group: 'Edit', run: () => void resetImageSize() },
+  {
+    id: 'imgBigger',
+    label: 'Enlarge the selected image',
+    group: 'Edit',
+    keys: ['Shift+ArrowRight', 'Shift+ArrowUp'],
+    run: () => nudgeImage(10),
+    palette: false,
+  },
+  {
+    id: 'imgSmaller',
+    label: 'Shrink the selected image',
+    group: 'Edit',
+    keys: ['Shift+ArrowLeft', 'Shift+ArrowDown'],
+    run: () => nudgeImage(-10),
+    palette: false,
+  },
   { id: 'duplicate', label: 'Duplicate', group: 'Edit', keys: ['Ctrl+D'], run: A.cmdDuplicate },
   { id: 'selectAll', label: 'Select all', group: 'Edit', keys: ['Ctrl+A'], run: A.selectAll },
 
@@ -60,6 +106,8 @@ export const COMMANDS: Cmd[] = [
 
 function escape() {
   const s = st()
+  if (s.menu) return A.closeMenu()
+  if (selectedImageTopic()) return clearImageSelection()
   if (s.helpOpen) return A.setHelp(false)
   if (s.paletteOpen) return A.setPalette(false)
   if (s.search.open) return A.closeSearch()

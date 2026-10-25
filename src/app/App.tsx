@@ -5,7 +5,8 @@ import { Canvas } from '@/editor/canvas/Canvas'
 import { installKeyboard } from '@/editor/keyboard'
 import { useScene } from '@/editor/scene'
 import { useEditor } from '@/editor/store'
-import { CommandPalette, SearchBar, ShortcutSheet } from '@/editor/ui/Overlays'
+import { CommandPalette, ContextMenu, NoticeToast, SearchBar, ShortcutSheet } from '@/editor/ui/Overlays'
+import { SaveStatus } from '@/editor/ui/SaveStatus'
 
 function Wordmark() {
   return (
@@ -44,7 +45,7 @@ export function App() {
   const theme = useSettings((s) => s.theme)
   const toggleTheme = useSettings((s) => s.toggleTheme)
   const scene = useScene()
-  const { canUndo, canRedo, tool, levels, focusId, saveState, selected, rootId } = useEditor()
+  const { canUndo, canRedo, tool, levels, focusId, selected, rootId, title } = useEditor()
   const zoom = useEditor((s) => s.viewport.k)
 
   useEffect(() => {
@@ -58,6 +59,16 @@ export function App() {
     <div className="flex h-full flex-col">
       <header className="flex h-12 shrink-0 items-center gap-3 overflow-x-auto whitespace-nowrap border-b border-line bg-surface px-3">
         <Wordmark />
+        <div className="mx-1 h-5 w-px bg-line" />
+        <input
+          aria-label="Map name"
+          value={title}
+          onChange={(e) => A.setTitle(e.target.value)}
+          onBlur={() => !title.trim() && A.setTitle('Untitled map')}
+          onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+          className="w-28 shrink-0 rounded-ui border border-transparent bg-transparent px-2 py-1 text-sm font-medium hover:border-line focus:border-brand sm:w-44"
+        />
+        <SaveStatus />
         <div className="mx-1 h-5 w-px bg-line" />
         <div className="flex shrink-0 items-center gap-1.5" role="toolbar" aria-label="Editing tools">
           <Btn onClick={A.cmdUndo} disabled={!canUndo} aria-label="Undo" title="Undo (Ctrl+Z)">↶</Btn>
@@ -85,6 +96,8 @@ export function App() {
         <SearchBar />
         <CommandPalette />
         <ShortcutSheet />
+        <ContextMenu />
+        <NoticeToast />
       </main>
 
       <footer className="flex h-8 shrink-0 items-center justify-between gap-3 overflow-x-auto whitespace-nowrap border-t border-line bg-surface px-3 text-xs text-muted">
@@ -114,9 +127,6 @@ export function App() {
           <button type="button" onClick={() => A.zoomBy(1.25)} aria-label="Zoom in" className="px-1 hover:text-ink">+</button>
           <button type="button" onClick={A.fitToScreen} className="rounded px-1.5 hover:bg-bg hover:text-ink">Fit</button>
           <button type="button" onClick={A.toggleFullscreen} className="rounded px-1.5 hover:bg-bg hover:text-ink">Fullscreen</button>
-          <span aria-live="polite" className="w-16 text-right">
-            {saveState === 'saved' ? 'Saved' : saveState === 'saving' ? 'Saving…' : 'Save failed'}
-          </span>
         </div>
       </footer>
     </div>

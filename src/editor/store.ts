@@ -1,4 +1,6 @@
 import { create } from 'zustand'
+import type { SaveSnapshot } from '@/core/autosave'
+import type { Corner } from '@/core/images/resize'
 import type { TopicMap } from '@/core/model/tree'
 
 export interface Viewport {
@@ -14,6 +16,18 @@ export interface SearchState {
   index: number
 }
 
+export interface Notice {
+  id: number
+  text: string
+}
+
+export interface ImageLive {
+  topicId: string
+  width: number
+  height: number
+  corner: Corner
+}
+
 export interface EditorState {
   topics: TopicMap
   rootId: string
@@ -26,7 +40,14 @@ export interface EditorState {
   focusId: string | null
   search: SearchState
   reveal: string[]
-  saveState: 'saved' | 'saving' | 'error'
+  save: SaveSnapshot
+  title: string
+  /** Topic whose image is selected (shows resize handles). Only effective while that topic is the sole selection. */
+  imageSelected: string | null
+  /** Size of an image while it is being dragged to a new size. */
+  imageLive: ImageLive | null
+  notice: Notice | null
+  menu: { x: number; y: number; topicId: string } | null
   canUndo: boolean
   canRedo: boolean
   paletteOpen: boolean
@@ -48,7 +69,12 @@ export const useEditor = create<EditorState>(() => ({
   focusId: null,
   search: { open: false, query: '', matches: [], index: 0 },
   reveal: [],
-  saveState: 'saved',
+  save: { status: 'saved', savedAt: null, error: null },
+  title: 'Untitled map',
+  imageSelected: null,
+  imageLive: null,
+  notice: null,
+  menu: null,
   canUndo: false,
   canRedo: false,
   paletteOpen: false,

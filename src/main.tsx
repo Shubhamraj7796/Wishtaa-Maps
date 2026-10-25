@@ -5,10 +5,10 @@ import './styles/tailwind.css'
 import { App } from './app/App'
 import { initSession } from './editor/session'
 
-initSession()
-
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <App />
-  </StrictMode>
-)
+void initSession().then(() => {
+  createRoot(document.getElementById('root')!).render(
+    <StrictMode>
+      <App />
+    </StrictMode>
+  )
+})

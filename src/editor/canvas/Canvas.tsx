@@ -4,6 +4,8 @@ import { buildIndex, descendantIds, topLevelOnly } from '@/core/model/tree'
 import {
   beginEdit,
   clearSelection,
+  closeMenu,
+  openMenu,
   dropTopics,
   expandBadge,
   fitToScreen,
@@ -15,7 +17,9 @@ import {
   zoomAround,
   type DropMode,
 } from '../actions'
+import { addImageToTopic, firstImageFile, hasFiles, resetImageSize, selectImage } from '../images'
 import { spaceDown } from '../keyboard'
+import { showNotice } from '../notice'
 import { useScene } from '../scene'
 import { useEditor } from '../store'
 import { Minimap } from './Minimap'
@@ -125,6 +129,8 @@ export function Canvas() {
     const el = host.current
     const target = e.target as HTMLElement
     if (!el || target.closest('input')) return
+    if (target.closest('[data-handle],[data-imgbtn]')) return // image resize handles and the remove button
+    if (useEditor.getState().menu) closeMenu()
     el.focus()
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
 
@@ -149,15 +155,21 @@ export function Canvas() {
     const id = target.closest<HTMLElement>('[data-topic]')?.dataset.topic
 
     if (id && e.button === 0 && !spaceDown) {
+      const onImage = !!target.closest('[data-image]')
       const now = performance.now()
       if (lastDown.current.id === id && now - lastDown.current.t < 350) {
         lastDown.current = { id: null, t: 0 }
-        beginEdit(id)
+        if (onImage) {
+          selectImage(id)
+          void resetImageSize(id) // double-click an image: back to its original size
+        } else beginEdit(id)
         return
       }
       lastDown.current = { id, t: now }
       if (additive) toggleSelect(id)
       else if (!st.selected.includes(id)) selectOnly(id)
+      // Clicking the picture selects it (resize handles); clicking the text selects just the topic.
+      useEditor.setState({ imageSelected: onImage && !additive && st.topics[id]?.image ? id : null })
       const ids = topLevelOnly(st.topics, useEditor.getState().selected.filter((x) => x !== st.rootId))
       const idx = buildIndex(st.topics)
       const exclude = new Set(ids)
@@ -257,6 +269,39 @@ export function Canvas() {
   const selectedSet = useMemo(() => new Set(selected), [selected])
   const matchSet = useMemo(() => new Set(search.matches), [search.matches])
   const currentMatch = search.matches[search.index]
+  const imageSelected = useEditor((s) => s.imageSelected)
+  const imageLive = useEditor((s) => s.imageLive)
+  const soleImageTopic = selected.length === 1 && selected[0] === imageSelected ? imageSelected : null
+
+  const onContextMenu = (e: React.MouseEvent) => {
+    const id = (e.target as HTMLElement).closest<HTMLElement>('[data-topic]')?.dataset.topic
+    if (!id) return
+    e.preventDefault()
+    if (!useEditor.getState().selected.includes(id)) selectOnly(id)
+    const p = local(e)
+    openMenu(p.x, p.y, id)
+  }
+  const onDragOver = (e: React.DragEvent) => {
+    if (!hasFiles(e.dataTransfer)) return
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'copy'
+  }
+  const onDrop = (e: React.DragEvent) => {
+    if (!hasFiles(e.dataTransfer)) return
+    e.preventDefault()
+    const file = firstImageFile(e.dataTransfer)
+    if (!file) {
+      showNotice('Only image files can be dropped onto a topic.')
+      return
+    }
+    const id = (e.target as HTMLElement).closest<HTMLElement>('[data-topic]')?.dataset.topic
+    if (!id) {
+      showNotice('Drop the image onto a topic.')
+      return
+    }
+    selectOnly(id)
+    void addImageToTopic(file, id)
+  }
 
   const visible: LaidOut[] = []
   scene.boxes.forEach((b) => {
@@ -296,6 +341,9 @@ export function Canvas() {
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
+      onContextMenu={onContextMenu}
+      onDragOver={onDragOver}
+      onDrop={onDrop}
     >
       <div
         className="absolute left-0 top-0 origin-top-left"
@@ -314,6 +362,9 @@ export function Canvas() {
               key={b.id}
               box={b}
               text={t.text}
+              image={t.image}
+              imageSelected={soleImageTopic === b.id}
+              live={imageLive?.topicId === b.id ? imageLive : null}
               isRoot={b.id === scene.rootId}
               selected={selectedSet.has(b.id)}
               editing={editingId === b.id}

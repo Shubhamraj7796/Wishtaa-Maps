@@ -8,6 +8,10 @@
   --c-muted: 100 110 126;
   --c-brand: 13 148 136;
   --c-brand-ink: 255 255 255;
+  /* Status colours (always paired with an icon and a text label). */
+  --c-ok: 21 128 61;
+  --c-warn: 180 83 9;
+  --c-bad: 185 28 28;
   --radius: 10px;
   color-scheme: light;
 }
@@ -20,5 +24,8 @@
   --c-muted: 148 158 174;
   --c-brand: 45 212 191;
   --c-brand-ink: 6 30 28;
+  --c-ok: 74 222 128;
+  --c-warn: 251 191 36;
+  --c-bad: 248 113 113;
   color-scheme: dark;
 }

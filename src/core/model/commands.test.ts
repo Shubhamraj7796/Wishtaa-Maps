@@ -11,6 +11,8 @@ import {
   reorder,
   serializeBranches,
   setCollapsed,
+  setImage,
+  setImageSize,
   setText,
 } from './commands'
 import { MAX_UNDO, createMapDoc, ensureRoot, snapshotTopics } from './doc'
@@ -212,5 +214,67 @@ describe('undo / redo', () => {
     expect(doc.undo.undoStack.length).toBe(MAX_UNDO)
     for (let i = 0; i < MAX_UNDO; i++) doc.undo.undo()
     expect(texts(doc, root)).toHaveLength(20)
+  })
+})
+
+describe('images', () => {
+  const ref = { imageId: 'img-1', width: 200, height: 100 }
+
+  it('sets, resizes, replaces and removes an image, each as one undo step', () => {
+    const { doc, root } = setup()
+    const a = addChild(doc, root, 'A')
+    setImage(doc, a, ref)
+    expect(doc.topics.get(a)?.image).toEqual(ref)
+    setImageSize(doc, a, 300, 150)
+    expect(doc.topics.get(a)?.image).toEqual({ imageId: 'img-1', width: 300, height: 150 })
+    setImage(doc, a, { imageId: 'img-2', width: 50, height: 50 })
+    setImage(doc, a, null)
+    expect(doc.topics.get(a)?.image).toBeNull()
+
+    doc.undo.undo() // remove
+    expect(doc.topics.get(a)?.image?.imageId).toBe('img-2')
+    doc.undo.undo() // replace
+    expect(doc.topics.get(a)?.image).toEqual({ imageId: 'img-1', width: 300, height: 150 })
+    doc.undo.undo() // resize
+    expect(doc.topics.get(a)?.image).toEqual(ref)
+    doc.undo.undo() // paste
+    expect(doc.topics.get(a)?.image).toBeNull()
+    doc.undo.redo()
+    expect(doc.topics.get(a)?.image).toEqual(ref)
+  })
+
+  it('does not create an undo step when the size is unchanged', () => {
+    const { doc, root } = setup()
+    const a = addChild(doc, root, 'A')
+    setImage(doc, a, ref)
+    const before = doc.undo.undoStack.length
+    setImageSize(doc, a, 200, 100)
+    expect(doc.undo.undoStack.length).toBe(before)
+  })
+
+  it('ignores resizing a topic that has no image', () => {
+    const { doc, root } = setup()
+    const a = addChild(doc, root, 'A')
+    setImageSize(doc, a, 10, 10)
+    expect(doc.topics.get(a)?.image).toBeNull()
+  })
+
+  it('keeps the image when a branch is copied, pasted or duplicated', () => {
+    const { doc, root } = setup()
+    const a = addChild(doc, root, 'A')
+    setImage(doc, a, ref)
+    const [copy] = duplicate(doc, [a])
+    expect(doc.topics.get(copy!)?.image).toEqual(ref)
+    const b = addChild(doc, root, 'B')
+    const [pasted] = pasteBranches(doc, serializeBranches(snapshotTopics(doc), [a]), b)
+    expect(doc.topics.get(pasted!)?.image).toEqual(ref)
+  })
+
+  it('loads topics saved before images existed', () => {
+    const { doc, root } = setup()
+    const old = { ...doc.topics.get(root)! }
+    delete (old as { image?: unknown }).image
+    doc.topics.set(root, old)
+    expect(doc.topics.get(root)?.image ?? null).toBeNull()
   })
 })

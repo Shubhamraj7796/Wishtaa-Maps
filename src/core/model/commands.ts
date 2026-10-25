@@ -1,6 +1,6 @@
 import { newId } from './ids'
 import { LOCAL, getRootId, snapshotTopics, type MapDoc } from './doc'
-import { makeTopic, type TopicData } from './topic'
+import { makeTopic, type TopicData, type TopicImage } from './topic'
 import { buildIndex, childrenOf, descendantIds, isAncestorOf, topLevelOnly, type TopicMap } from './tree'
 
 export interface Point {
@@ -8,7 +8,7 @@ export interface Point {
   y: number
 }
 
-type BranchData = Pick<TopicData, 'text' | 'collapsed' | 'style' | 'marks' | 'note' | 'tags' | 'task' | 'link'>
+type BranchData = Pick<TopicData, 'text' | 'collapsed' | 'style' | 'marks' | 'note' | 'tags' | 'task' | 'link' | 'image'>
 export interface Branch {
   data: BranchData
   children: Branch[]
@@ -66,6 +66,21 @@ export function setText(doc: MapDoc, id: string, text: string) {
   const t = doc.topics.get(id)
   if (!t || t.text === text) return
   tx(doc, () => doc.topics.set(id, { ...t, text }))
+}
+
+/** Sets, replaces (or with null removes) a topic's image. One undo step. */
+export function setImage(doc: MapDoc, id: string, image: TopicImage | null) {
+  const t = doc.topics.get(id)
+  if (!t) return
+  tx(doc, () => doc.topics.set(id, { ...t, image }))
+}
+
+/** Changes the displayed size of a topic's image. One undo step. */
+export function setImageSize(doc: MapDoc, id: string, width: number, height: number) {
+  const t = doc.topics.get(id)
+  const img = t?.image
+  if (!t || !img || (img.width === width && img.height === height)) return
+  tx(doc, () => doc.topics.set(id, { ...t, image: { ...img, width, height } }))
 }
 
 export function setCollapsed(doc: MapDoc, ids: string[], collapsed: boolean) {
@@ -171,6 +186,7 @@ function toBranch(topics: TopicMap, idx: ReturnType<typeof buildIndex>, id: stri
       tags: t.tags,
       task: t.task,
       link: t.link,
+      image: t.image ?? null,
     }),
     children: childrenOf(idx, id).map((c) => toBranch(topics, idx, c.id)),
   }

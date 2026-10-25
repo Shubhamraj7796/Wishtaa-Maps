@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { addChild, setCollapsed } from '../model/commands'
+import { addChild, setCollapsed, setImage } from '../model/commands'
 import { createMapDoc, ensureRoot, snapshotTopics } from '../model/doc'
 import { buildScene, type Scene } from './mindmap'
 
@@ -84,6 +84,30 @@ describe('mind map layout', () => {
     const focus = scene(doc, root, { focusId: a })
     expect(focus.rootId).toBe(a)
     expect(focus.boxes.size).toBe(3)
+  })
+
+  it('grows a topic to fit its image and keeps siblings apart', () => {
+    const doc = createMapDoc()
+    const root = ensureRoot(doc)
+    const a = addChild(doc, root, 'with picture')
+    const b = addChild(doc, root, 'plain')
+    const plain = scene(doc, root).boxes.get(a)!
+    setImage(doc, a, { imageId: 'i', width: 400, height: 300 })
+    const s = scene(doc, root)
+    const boxA = s.boxes.get(a)!
+    expect(boxA.h).toBeGreaterThanOrEqual(300 + 20)
+    expect(boxA.w).toBeGreaterThanOrEqual(400 + 28)
+    expect(boxA.h).toBeGreaterThan(plain.h)
+    expect(s.boxes.has(b)).toBe(true)
+    expect(overlaps(s)).toBe(false)
+  })
+
+  it('sizes an image-only topic without a text row', () => {
+    const doc = createMapDoc()
+    const root = ensureRoot(doc)
+    const a = addChild(doc, root, '')
+    setImage(doc, a, { imageId: 'i', width: 100, height: 80 })
+    expect(scene(doc, root).boxes.get(a)?.h).toBe(80 + 20)
   })
 
   it('lays out 2,000 topics quickly', () => {

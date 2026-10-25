@@ -18,8 +18,9 @@ import { LOCAL, snapshotTopics } from '@/core/model/doc'
 import { ancestorIds, buildIndex, childrenOf, topLevelOnly } from '@/core/model/tree'
 import { outlineToBranches, parseOutline, toOutline } from '@/core/io/outline'
 import { revealAncestors, searchTopics } from '@/core/search'
+import { addImageReferenceSource } from './images'
 import { getScene } from './scene'
-import { mapDoc } from './session'
+import { mapDoc } from './mapdoc'
 import { MAX_ZOOM, MIN_ZOOM, useEditor, type Viewport } from './store'
 
 const get = useEditor.getState
@@ -228,6 +229,12 @@ export function moveFloating(ids: string[], dx: number, dy: number) {
 // ---------- clipboard ----------
 let clip: { branches: Branch[]; text: string } | null = null
 
+// A copied branch may carry images: keep their blobs while the clipboard holds them.
+function branchImageIds(bs: Branch[]): string[] {
+  return bs.flatMap((b) => [...(b.data.image ? [b.data.image.imageId] : []), ...branchImageIds(b.children)])
+}
+addImageReferenceSource(() => (clip ? branchImageIds(clip.branches) : []))
+
 export function cmdCopy(): string | null {
   const { selected, topics, rootId } = get()
   const ids = selected.length ? selected : [rootId]
@@ -344,5 +351,12 @@ export function toggleFullscreen() {
   else void document.documentElement.requestFullscreen?.()
 }
 export const setTool = (tool: 'pan' | 'select') => set({ tool })
+export const openMenu = (x: number, y: number, topicId: string) => set({ menu: { x, y, topicId } })
+export const closeMenu = () => set({ menu: null })
+
+/** Renames the map. Not an undo step. */
+export function setTitle(title: string) {
+  mapDoc.ydoc.transact(() => mapDoc.meta.set('title', title), 'title')
+}
 export const setPalette = (paletteOpen: boolean) => set({ paletteOpen })
 export const setHelp = (helpOpen: boolean) => set({ helpOpen })

@@ -1,5 +1,5 @@
 import { buildIndex, childrenOf, type TopicMap } from '../model/tree'
-import type { TopicData } from '../model/topic'
+import type { TopicData, TopicImage } from '../model/topic'
 
 /** Branch colours: all reach 4.5:1 contrast against white text. */
 export const PALETTE = ['#0f766e', '#1d4ed8', '#b45309', '#be185d', '#6d28d9', '#15803d', '#b91c1c', '#0e7490']
@@ -48,12 +48,22 @@ const H_GAP = 56
 const V_GAP = 14
 const FLOAT_GAP = 120
 
-export function measure(text: string, depth: number): { w: number; h: number } {
+/** Extra space around an image inside a topic: border, padding and the text row below it. */
+const IMAGE_PAD_X = 28
+const IMAGE_PAD_Y = 20
+const IMAGE_TEXT_ROW = 28
+
+export function measure(text: string, depth: number, image?: TopicImage | null): { w: number; h: number } {
   const big = depth === 0
   const charW = big ? 9.4 : 7.8
   const pad = big ? 56 : 36
-  const w = Math.min(big ? 340 : 300, Math.max(big ? 120 : 72, Math.ceil(text.length * charW + pad)))
-  return { w, h: big ? 52 : 38 }
+  const textW = Math.min(big ? 340 : 300, Math.max(big ? 120 : 72, Math.ceil(text.length * charW + pad)))
+  if (!image) return { w: textW, h: big ? 52 : 38 }
+  const hasText = text.trim().length > 0
+  return {
+    w: Math.max(hasText ? textW : 72, image.width + IMAGE_PAD_X),
+    h: image.height + IMAGE_PAD_Y + (hasText ? IMAGE_TEXT_ROW : 0),
+  }
 }
 
 export function emptyScene(rootId = ''): Scene {
@@ -95,7 +105,7 @@ export function buildScene(topics: TopicMap, opts: SceneOptions): Scene {
   const heights = new Map<string, number>()
 
   const heightOf = (t: TopicData, depth: number): number => {
-    const m = measure(t.text, depth)
+    const m = measure(t.text, depth, t.image)
     sizes.set(t.id, m)
     const all = childrenOf(idx, t.id)
     let kids = all

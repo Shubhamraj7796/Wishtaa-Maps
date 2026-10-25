@@ -26,6 +26,19 @@ describe('shortcuts', () => {
     expect(commandFor(ev('q'))).toBeUndefined()
   })
 
+  it('maps the image shortcuts and lists image paste in the shortcut sheet', () => {
+    expect(commandFor(ev('i'))?.id).toBe('selectImage')
+    expect(commandFor(ev('ArrowRight', { shiftKey: true }))?.id).toBe('imgBigger')
+    expect(commandFor(ev('ArrowUp', { shiftKey: true }))?.id).toBe('imgBigger')
+    expect(commandFor(ev('ArrowLeft', { shiftKey: true }))?.id).toBe('imgSmaller')
+    expect(commandFor(ev('ArrowDown', { shiftKey: true }))?.id).toBe('imgSmaller')
+    // Plain arrows still navigate.
+    expect(commandFor(ev('ArrowRight'))?.id).toBe('nav-right')
+    const sheet = COMMANDS.filter((c) => c.hint === 'Ctrl+V').map((c) => c.label)
+    expect(sheet.some((l) => /image/i.test(l))).toBe(true)
+    expect(COMMANDS.find((c) => c.id === 'addImage')?.palette).not.toBe(false)
+  })
+
   it('has no chord bound to two commands', () => {
     const seen = new Set<string>()
     for (const c of COMMANDS)

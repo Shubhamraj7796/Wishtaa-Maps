@@ -1,5 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { closeSearch, setHelp, setPalette, setQuery, stepMatch } from '../actions'
+import {
+  beginEdit,
+  closeMenu,
+  closeSearch,
+  cmdAddChild,
+  cmdAddSibling,
+  cmdDelete,
+  selectOnly,
+  setHelp,
+  setPalette,
+  setQuery,
+  stepMatch,
+} from '../actions'
+import { cmdAddImage, removeImage, resetImageSize } from '../images'
 import { COMMANDS, displayKeys, type Cmd } from '../registry'
 import { useEditor } from '../store'
 
@@ -177,6 +190,92 @@ export function ShortcutSheet() {
           to rename · drag a topic onto another to re-parent, or onto its top/bottom edge to reorder.
         </p>
       </div>
+    </div>
+  )
+}
+
+/** Right-click menu for a topic. */
+export function ContextMenu() {
+  const menu = useEditor((s) => s.menu)
+  const topic = useEditor((s) => (s.menu ? s.topics[s.menu.topicId] : undefined))
+  const rootId = useEditor((s) => s.rootId)
+  const size = useEditor((s) => s.canvasSize)
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (menu) ref.current?.querySelector<HTMLButtonElement>('button')?.focus()
+  }, [menu])
+  if (!menu || !topic) return null
+
+  const act = (fn: () => void, keepSelection = false) => () => {
+    closeMenu()
+    if (!keepSelection) selectOnly(menu.topicId)
+    requestAnimationFrame(fn)
+  }
+  const items: { label: string; run: () => void }[] = [
+    { label: 'Add image…', run: act(() => void cmdAddImage(menu.topicId)) },
+    ...(topic.image
+      ? [
+          { label: 'Remove image', run: act(() => removeImage(menu.topicId)) },
+          { label: 'Reset image size', run: act(() => void resetImageSize(menu.topicId)) },
+        ]
+      : []),
+    { label: 'Add child topic', run: act(cmdAddChild) },
+    ...(menu.topicId === rootId ? [] : [{ label: 'Add sibling topic', run: act(cmdAddSibling) }]),
+    { label: 'Rename', run: act(() => beginEdit(menu.topicId)) },
+    ...(menu.topicId === rootId ? [] : [{ label: 'Delete', run: act(cmdDelete, true) }]),
+  ]
+  const move = (e: React.KeyboardEvent, dir: 1 | -1) => {
+    e.preventDefault()
+    const btns = [...(ref.current?.querySelectorAll<HTMLButtonElement>('button') ?? [])]
+    const i = btns.indexOf(document.activeElement as HTMLButtonElement)
+    btns[(i + dir + btns.length) % btns.length]?.focus()
+  }
+  return (
+    <>
+      <div
+        className="absolute inset-0 z-20"
+        onPointerDown={closeMenu}
+        onContextMenu={(e) => {
+          e.preventDefault()
+          closeMenu()
+        }}
+      />
+      <div
+        ref={ref}
+        role="menu"
+        aria-label="Topic actions"
+        className="absolute z-30 min-w-48 overflow-hidden rounded-ui border border-line bg-surface py-1 shadow-xl"
+        style={{ left: Math.max(4, Math.min(menu.x, size.w - 200)), top: Math.max(4, Math.min(menu.y, size.h - items.length * 36 - 12)) }}
+        onKeyDown={(e) => {
+          if (e.key === 'ArrowDown') move(e, 1)
+          else if (e.key === 'ArrowUp') move(e, -1)
+          else if (e.key === 'Escape') closeMenu()
+        }}
+      >
+        {items.map((it) => (
+          <button
+            key={it.label}
+            type="button"
+            role="menuitem"
+            onClick={it.run}
+            className="block w-full px-4 py-2 text-left text-sm hover:bg-brand/15 focus:bg-brand/15"
+          >
+            {it.label}
+          </button>
+        ))}
+      </div>
+    </>
+  )
+}
+
+/** Short messages (e.g. "That image is larger than 10 MB"). */
+export function NoticeToast() {
+  const notice = useEditor((s) => s.notice)
+  return (
+    <div aria-live="polite" role="status" className="pointer-events-none absolute bottom-4 left-1/2 z-40 -translate-x-1/2 px-4">
+      {notice && (
+        <div className="pointer-events-auto rounded-ui border border-line bg-surface px-4 py-2 text-sm shadow-lg">{notice.text}</div>
+      )}
     </div>
   )
 }
