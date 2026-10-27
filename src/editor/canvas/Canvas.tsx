@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import type { LaidOut } from '@/core/layout/mindmap'
+import type { LaidOut } from '@/core/layout/types'
+import { accentFor, DASH, resolveLine } from '@/core/theme/resolve'
 import { buildIndex, descendantIds, topLevelOnly } from '@/core/model/tree'
 import {
+  applyPainter,
   beginEdit,
   clearSelection,
   closeMenu,
@@ -9,6 +11,7 @@ import {
   dropTopics,
   expandBadge,
   fitToScreen,
+  moveBranches,
   moveFloating,
   selectIds,
   selectOnly,
@@ -20,10 +23,13 @@ import {
 import { addImageToTopic, firstImageFile, hasFiles, resetImageSize, selectImage } from '../images'
 import { spaceDown } from '../keyboard'
 import { showNotice } from '../notice'
-import { useScene } from '../scene'
+import { useScene, useTheme } from '../scene'
 import { useEditor } from '../store'
+import { finishLinkPick, finishRelationship } from '../content'
 import { Minimap } from './Minimap'
-import { TopicView, branchColor } from './TopicView'
+import { ObjectsLayer } from './ObjectsLayer'
+import { bracePath, edgePath, patternStyle, wedgePath } from './paths'
+import { TopicView } from './TopicView'
 
 type Gesture =
   | { kind: 'none' }
@@ -41,18 +47,12 @@ interface DragView {
 
 const DRAG_THRESHOLD = 4
 
-function edgePath(a: LaidOut, b: LaidOut): string {
-  const right = b.side !== 'left'
-  const x1 = right ? a.x + a.w : a.x
-  const y1 = a.y + a.h / 2
-  const x2 = right ? b.x : b.x + b.w
-  const y2 = b.y + b.h / 2
-  const mx = (x1 + x2) / 2
-  return `M${x1} ${y1}C${mx} ${y1} ${mx} ${y2} ${x2} ${y2}`
-}
-
 export function Canvas() {
   const scene = useScene()
+  const theme = useTheme()
+  const painter = useEditor((s) => s.painter)
+  const settings = useEditor((s) => s.settings)
+  const tagFilter = useEditor((s) => s.tagFilter)
   const viewport = useEditor((s) => s.viewport)
   const canvasSize = useEditor((s) => s.canvasSize)
   const selected = useEditor((s) => s.selected)
@@ -129,7 +129,7 @@ export function Canvas() {
     const el = host.current
     const target = e.target as HTMLElement
     if (!el || target.closest('input')) return
-    if (target.closest('[data-handle],[data-imgbtn]')) return // image resize handles and the remove button
+    if (target.closest('[data-handle],[data-imgbtn],[data-action],[data-obj]')) return // buttons inside topics, resize handles, diagram objects
     if (useEditor.getState().menu) closeMenu()
     el.focus()
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
@@ -155,6 +155,18 @@ export function Canvas() {
     const id = target.closest<HTMLElement>('[data-topic]')?.dataset.topic
 
     if (id && e.button === 0 && !spaceDown) {
+      if (st.linkFrom) {
+        finishLinkPick(id) // target of a topic link
+        return
+      }
+      if (st.relationFrom) {
+        finishRelationship(st.relationFrom, id) // second end of a relationship line
+        return
+      }
+      if (st.painter) {
+        applyPainter(id, e.shiftKey) // format painter: paint this topic
+        return
+      }
       const onImage = !!target.closest('[data-image]')
       const now = performance.now()
       if (lastDown.current.id === id && now - lastDown.current.t < 350) {
@@ -253,7 +265,10 @@ export function Canvas() {
         else {
           const topics = useEditor.getState().topics
           const floating = drag.ids.filter((id) => topics[id]?.parentId === null)
+          const attached = drag.ids.filter((id) => topics[id]?.parentId)
           if (floating.length) moveFloating(floating, drag.dx, drag.dy)
+          // Branch free positioning: dropping on empty canvas leaves the branch where it was dropped.
+          if (attached.length && useEditor.getState().settings.freePositioning) moveBranches(attached, drag.dx, drag.dy)
         }
       }
       setDrag(null)
@@ -307,7 +322,7 @@ export function Canvas() {
   scene.boxes.forEach((b) => {
     if (b.x + b.w >= vx0 && b.x <= vx1 && b.y + b.h >= vy0 && b.y <= vy1) visible.push(b)
   })
-  const paths: { key: string; d: string; color: string; width: number }[] = []
+  const paths: { key: string; d: string; color: string; width: number; dash: string | undefined }[] = []
   for (const e of scene.edges) {
     const a = scene.boxes.get(e.from)
     const b = scene.boxes.get(e.to)
@@ -317,11 +332,13 @@ export function Canvas() {
     const minY = Math.min(a.y, b.y)
     const maxY = Math.max(a.y + a.h, b.y + b.h)
     if (maxX < vx0 || minX > vx1 || maxY < vy0 || minY > vy1) continue
-    paths.push({ key: e.to, d: edgePath(a, b), color: branchColor(b.branch), width: Math.max(1.5, 3.5 - b.depth * 0.6) })
+    const line = resolveLine(theme, { depth: b.depth, branch: b.branch, style: topics[e.to]?.style })
+    paths.push({ key: e.to, d: edgePath(a, b, e), color: line.color, width: line.width, dash: DASH[line.style] })
   }
 
   const dragTargetBox = drag?.target ? scene.boxes.get(drag.target.id) : undefined
-  const cursor = tool === 'pan' ? (g.current.kind === 'pan' ? 'grabbing' : 'grab') : 'crosshair'
+  const relationFrom = useEditor((s) => s.relationFrom)
+  const cursor = relationFrom ? 'crosshair' : painter ? 'copy' : tool === 'pan' ? (g.current.kind === 'pan' ? 'grabbing' : 'grab') : 'crosshair'
 
   return (
     <div
@@ -333,8 +350,8 @@ export function Canvas() {
       className="relative h-full w-full touch-none overflow-hidden outline-none"
       style={{
         cursor,
-        backgroundImage: 'radial-gradient(rgb(var(--c-line)) 1px, transparent 1px)',
-        backgroundSize: `${24 * k}px ${24 * k}px`,
+        backgroundColor: theme.bg,
+        ...patternStyle(theme.pattern, theme.bg, theme.text, k),
         backgroundPosition: `${viewport.x}px ${viewport.y}px`,
       }}
       onPointerDown={onPointerDown}
@@ -350,10 +367,40 @@ export function Canvas() {
         style={{ transform: `translate(${viewport.x}px, ${viewport.y}px) scale(${k})` }}
       >
         <svg className="pointer-events-none absolute left-0 top-0 overflow-visible" width="1" height="1" aria-hidden="true">
-          {paths.map((p) => (
-            <path key={p.key} d={p.d} fill="none" stroke={p.color} strokeWidth={p.width} strokeLinecap="round" />
-          ))}
+          {theme.handDrawn && (
+            <defs>
+              <filter id="wm-rough" filterUnits="userSpaceOnUse" x="-100000" y="-100000" width="200000" height="200000">
+                <feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="2" seed="4" result="noise" />
+                <feDisplacementMap in="SourceGraphic" in2="noise" scale="4" />
+              </filter>
+            </defs>
+          )}
+          <g filter={theme.handDrawn ? 'url(#wm-rough)' : undefined}>
+            {scene.decor.map((d, i) =>
+              d.kind === 'wedge' ? (
+                <path key={`d${i}`} d={wedgePath(d)} fill={accentFor(theme, d.branch)} fillOpacity={0.1} stroke={accentFor(theme, d.branch)} strokeOpacity={0.3} />
+              ) : d.kind === 'brace' ? (
+                <path key={`d${i}`} d={bracePath(d)} fill="none" stroke={accentFor(theme, d.branch)} strokeWidth={2.5} strokeLinecap="round" />
+              ) : (
+                <line
+                  key={`d${i}`}
+                  x1={d.x1}
+                  y1={d.y1}
+                  x2={d.x2}
+                  y2={d.y2}
+                  stroke={d.branch < 0 ? theme.text : accentFor(theme, d.branch)}
+                  strokeOpacity={d.branch < 0 ? 0.55 : 1}
+                  strokeWidth={d.width ?? 2.5}
+                  strokeLinecap="round"
+                />
+              )
+            )}
+            {paths.map((p) => (
+              <path key={p.key} d={p.d} fill="none" stroke={p.color} strokeWidth={p.width} strokeDasharray={p.dash} strokeLinecap="round" strokeLinejoin="round" />
+            ))}
+          </g>
         </svg>
+        <ObjectsLayer scene={scene} theme={theme} layer="back" />
         {visible.map((b) => {
           const t = topics[b.id]
           if (!t) return null
@@ -361,8 +408,12 @@ export function Canvas() {
             <TopicView
               key={b.id}
               box={b}
-              text={t.text}
-              image={t.image}
+              topic={t}
+              number={scene.numbers.get(b.id) ?? ''}
+              theme={theme}
+              tagColors={settings.tagColors}
+              layoutShape={scene.layoutShape}
+              dim={tagFilter.length > 0 && !t.tags?.some((tag) => tagFilter.includes(tag))}
               imageSelected={soleImageTopic === b.id}
               live={imageLive?.topicId === b.id ? imageLive : null}
               isRoot={b.id === scene.rootId}
@@ -374,6 +425,7 @@ export function Canvas() {
             />
           )
         })}
+        <ObjectsLayer scene={scene} theme={theme} layer="front" />
         {drag &&
           drag.ids.map((id) => {
             const b = scene.boxes.get(id)

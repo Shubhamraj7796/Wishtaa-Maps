@@ -8,20 +8,30 @@ import {
   moveTopic,
   pasteBranches,
   reorder,
+  replaceTopicStyle,
   serializeBranches,
+  setBranchDir,
+  setBranchOffset,
   setCollapsed,
   setFloatingPosition,
   setText,
+  setTopicStyle,
   type Branch,
 } from '@/core/model/commands'
 import { LOCAL, snapshotTopics } from '@/core/model/doc'
+import type { BranchDir } from '@/core/model/topic'
+import type { TopicStyle } from '@/core/model/types'
+import { isLayoutId } from '@/core/layout/catalog'
+import { MAX_CUSTOM_THEMES, setSetting, type MapSettings } from '@/core/settings'
+import { DEFAULT_THEME_ID, type Theme } from '@/core/theme/themes'
 import { ancestorIds, buildIndex, childrenOf, topLevelOnly } from '@/core/model/tree'
 import { outlineToBranches, parseOutline, toOutline } from '@/core/io/outline'
 import { revealAncestors, searchTopics } from '@/core/search'
 import { addImageReferenceSource } from './images'
 import { getScene } from './scene'
 import { mapDoc } from './mapdoc'
-import { MAX_ZOOM, MIN_ZOOM, useEditor, type Viewport } from './store'
+import { showNotice } from './notice'
+import { MAX_ZOOM, MIN_ZOOM, useEditor, type PanelTab, type Viewport } from './store'
 
 const get = useEditor.getState
 const set = useEditor.setState
@@ -30,20 +40,20 @@ export const primary = (): string | null => get().selected[get().selected.length
 
 // ---------- selection ----------
 export function selectIds(ids: string[]) {
-  set({ selected: ids })
+  set({ selected: ids, selectedObject: null })
 }
 export function selectOnly(id: string) {
-  set({ selected: [id] })
+  set({ selected: [id], selectedObject: null })
 }
 export function toggleSelect(id: string) {
   const s = get().selected
-  set({ selected: s.includes(id) ? s.filter((x) => x !== id) : [...s, id] })
+  set({ selected: s.includes(id) ? s.filter((x) => x !== id) : [...s, id], selectedObject: null })
 }
 export function selectAll() {
-  set({ selected: getScene().order })
+  set({ selected: getScene().order, selectedObject: null })
 }
 export function clearSelection() {
-  set({ selected: [] })
+  set({ selected: [], selectedObject: null })
 }
 
 // ---------- viewport ----------
@@ -360,3 +370,120 @@ export function setTitle(title: string) {
 }
 export const setPalette = (paletteOpen: boolean) => set({ paletteOpen })
 export const setHelp = (helpOpen: boolean) => set({ helpOpen })
+
+// ---------- layout, theme and style ----------
+export function setLayout(id: string) {
+  if (!isLayoutId(id)) return
+  setSetting(mapDoc, 'layout', id)
+  requestAnimationFrame(fitToScreen)
+}
+
+export function changeSetting<K extends keyof MapSettings>(key: K, value: MapSettings[K]) {
+  setSetting(mapDoc, key, value)
+}
+
+export const selectTheme = (id: string) => setSetting(mapDoc, 'themeId', id)
+
+/** Saves a theme the user designed (updating it in place if it is already custom) and switches to it. One undo step. */
+export function saveCustomTheme(theme: Theme, asNew = false) {
+  const cur = get().settings.customThemes
+  const exists = cur.some((t) => t.id === theme.id)
+  const update = exists && !asNew
+  const id = update ? theme.id : `custom-${Date.now().toString(36)}`
+  const saved: Theme = { ...theme, id }
+  const next = update ? cur.map((t) => (t.id === id ? saved : t)) : [...cur.slice(-(MAX_CUSTOM_THEMES - 1)), saved]
+  mapDoc.ydoc.transact(() => {
+    mapDoc.settings.set('customThemes', next)
+    mapDoc.settings.set('themeId', id)
+  }, LOCAL)
+}
+
+export function deleteCustomTheme(id: string) {
+  const { customThemes, themeId } = get().settings
+  mapDoc.ydoc.transact(() => {
+    mapDoc.settings.set('customThemes', customThemes.filter((t) => t.id !== id))
+    if (themeId === id) mapDoc.settings.set('themeId', DEFAULT_THEME_ID)
+  }, LOCAL)
+}
+
+/** Applies style changes to the selected topics (and their branches when that option is on). */
+export function styleSelected(patch: Partial<TopicStyle>) {
+  const { selected, styleBranch } = get()
+  setTopicStyle(mapDoc, selected, patch, styleBranch)
+}
+
+export function resetStyleSelected() {
+  const { selected, styleBranch } = get()
+  replaceTopicStyle(mapDoc, selected, {}, styleBranch)
+}
+
+export function setSelectedBranchDir(dir: BranchDir | null) {
+  const id = primary()
+  if (id) setBranchDir(mapDoc, id, dir)
+}
+
+export function copyFormat() {
+  const id = primary()
+  const t = id ? get().topics[id] : undefined
+  if (!t) return
+  set({ copiedFormat: structuredClone(t.style) })
+  showNotice('Format copied. Paste it with Ctrl+Alt+V, or use the format painter.')
+}
+
+export function pasteFormat() {
+  const f = get().copiedFormat
+  if (!f) {
+    showNotice('Copy a topic’s format first (Ctrl+Alt+C).')
+    return
+  }
+  replaceTopicStyle(mapDoc, get().selected, f, get().styleBranch)
+}
+
+/** Format painter: copy the selected topic's format, then click topics to paint them. */
+export function togglePainter() {
+  if (get().painter) {
+    set({ painter: null })
+    return
+  }
+  const id = primary()
+  const t = id ? get().topics[id] : undefined
+  if (!t) {
+    showNotice('Select a topic first, then turn on the format painter.')
+    return
+  }
+  const style = structuredClone(t.style)
+  set({ painter: style, copiedFormat: style })
+  showNotice('Format painter on: click topics to paint them. Hold Shift to keep painting; Esc to stop.')
+}
+
+export function applyPainter(id: string, keep = false) {
+  const style = get().painter
+  if (!style) return
+  replaceTopicStyle(mapDoc, [id], style)
+  if (!keep) set({ painter: null })
+}
+
+/** Branch free positioning: shift whole branches by a drag distance. One undo step. */
+export function moveBranches(ids: string[], dx: number, dy: number) {
+  const topics = get().topics
+  mapDoc.ydoc.transact(() => {
+    for (const id of topLevelOnly(topics, ids)) {
+      const cur = topics[id]?.offset
+      setBranchOffset(mapDoc, id, { x: (cur?.x ?? 0) + dx, y: (cur?.y ?? 0) + dy })
+    }
+  }, LOCAL)
+}
+
+/** Puts every manually moved branch back to its automatic position. One undo step. */
+export function resetBranchPositions() {
+  const topics = get().topics
+  mapDoc.ydoc.transact(() => {
+    for (const t of Object.values(topics)) if (t.offset) setBranchOffset(mapDoc, t.id, null)
+  }, LOCAL)
+}
+
+export function togglePanel(tab?: PanelTab) {
+  const { panelOpen, panelTab } = get()
+  if (tab) set({ panelOpen: !panelOpen || panelTab !== tab, panelTab: tab })
+  else set({ panelOpen: !panelOpen })
+}

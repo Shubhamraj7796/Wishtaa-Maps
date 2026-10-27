@@ -225,3 +225,29 @@ export function firstImageFile(dt: DataTransfer | null): File | null {
 export function hasFiles(dt: DataTransfer | null): boolean {
   return !!dt && Array.from(dt.types ?? []).includes('Files')
 }
+
+/** Saves a topic's picture to the computer. */
+export async function downloadImage(imageId: string, name: string) {
+  const stored = await imageStore.get(imageId).catch(() => undefined)
+  if (!stored) {
+    showNotice('That picture is no longer stored in this browser.')
+    return
+  }
+  const ext = stored.type === 'image/webp' ? 'webp' : stored.type === 'image/jpeg' ? 'jpg' : 'png'
+  const url = URL.createObjectURL(stored.blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `${name.replace(/[\\/:*?"<>|]/g, '_').trim().slice(0, 60) || 'picture'}.${ext}`
+  a.click()
+  setTimeout(() => URL.revokeObjectURL(url), 5000)
+}
+
+/** Replaces a topic's picture with a new file (the old one is cleaned up later). */
+export async function replaceImage(topicId: string) {
+  const file = await pickImageFile()
+  if (file) await addImageToTopic(file, topicId)
+}
+
+export async function loadImageBlob(imageId: string): Promise<Blob | null> {
+  return (await imageStore.get(imageId).catch(() => undefined))?.blob ?? null
+}

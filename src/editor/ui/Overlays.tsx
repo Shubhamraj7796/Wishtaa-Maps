@@ -12,6 +12,8 @@ import {
   setQuery,
   stepMatch,
 } from '../actions'
+import { Icon, type IconName } from '@/ui/icons'
+import { addBoundaryToSelected, addCalloutToSelected, openTab, startRelationship } from '../content'
 import { cmdAddImage, removeImage, resetImageSize } from '../images'
 import { COMMANDS, displayKeys, type Cmd } from '../registry'
 import { useEditor } from '../store'
@@ -149,7 +151,7 @@ export function ShortcutSheet() {
     if (open) ref.current?.focus()
   }, [open])
   if (!open) return null
-  const groups = ['Edit', 'Navigate', 'View', 'Tools'] as const
+  const groups = ['Edit', 'Insert', 'Navigate', 'View', 'Format', 'Tools'] as const
   return (
     <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/30 p-4" onPointerDown={() => setHelp(false)}>
       <div
@@ -211,18 +213,24 @@ export function ContextMenu() {
     if (!keepSelection) selectOnly(menu.topicId)
     requestAnimationFrame(fn)
   }
-  const items: { label: string; run: () => void }[] = [
-    { label: 'Add image…', run: act(() => void cmdAddImage(menu.topicId)) },
+  const items: { label: string; icon: IconName; run: () => void }[] = [
+    { label: 'Add picture…', icon: 'imageAdd', run: act(() => void cmdAddImage(menu.topicId)) },
     ...(topic.image
       ? [
-          { label: 'Remove image', run: act(() => removeImage(menu.topicId)) },
-          { label: 'Reset image size', run: act(() => void resetImageSize(menu.topicId)) },
+          { label: 'Remove picture', icon: 'trash' as IconName, run: act(() => removeImage(menu.topicId)) },
+          { label: 'Reset picture size', icon: 'reset' as IconName, run: act(() => void resetImageSize(menu.topicId)) },
         ]
       : []),
-    { label: 'Add child topic', run: act(cmdAddChild) },
-    ...(menu.topicId === rootId ? [] : [{ label: 'Add sibling topic', run: act(cmdAddSibling) }]),
-    { label: 'Rename', run: act(() => beginEdit(menu.topicId)) },
-    ...(menu.topicId === rootId ? [] : [{ label: 'Delete', run: act(cmdDelete, true) }]),
+    { label: 'Add sub topic', icon: 'subTopic', run: act(cmdAddChild) },
+    ...(menu.topicId === rootId ? [] : [{ label: 'Add topic', icon: 'topic' as IconName, run: act(cmdAddSibling) }]),
+    { label: 'Rename', icon: 'edit', run: act(() => beginEdit(menu.topicId)) },
+    { label: 'Marks…', icon: 'mark', run: act(() => openTab('mark')) },
+    { label: 'Details…', icon: 'details', run: act(() => openTab('details')) },
+    { label: 'Notes…', icon: 'notes', run: act(() => openTab('notes')) },
+    { label: 'Relationship line…', icon: 'relationship', run: act(startRelationship) },
+    { label: 'Callout', icon: 'callout', run: act(addCalloutToSelected) },
+    { label: 'Boundary', icon: 'boundary', run: act(() => addBoundaryToSelected()) },
+    ...(menu.topicId === rootId ? [] : [{ label: 'Delete', icon: 'trash' as IconName, run: act(cmdDelete, true) }]),
   ]
   const move = (e: React.KeyboardEvent, dir: 1 | -1) => {
     e.preventDefault()
@@ -258,8 +266,9 @@ export function ContextMenu() {
             type="button"
             role="menuitem"
             onClick={it.run}
-            className="block w-full px-4 py-2 text-left text-sm hover:bg-brand/15 focus:bg-brand/15"
+            className="flex w-full items-center gap-3 px-4 py-2 text-left text-sm hover:bg-brand/15 focus:bg-brand/15"
           >
+            <Icon name={it.icon} size={16} />
             {it.label}
           </button>
         ))}

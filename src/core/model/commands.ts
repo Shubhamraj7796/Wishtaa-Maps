@@ -1,14 +1,19 @@
 import { newId } from './ids'
 import { LOCAL, getRootId, snapshotTopics, type MapDoc } from './doc'
-import { makeTopic, type TopicData, type TopicImage } from './topic'
+import { makeTopic, type BranchDir, type TopicData, type TopicImage } from './topic'
+import type { TopicStyle } from './types'
 import { buildIndex, childrenOf, descendantIds, isAncestorOf, topLevelOnly, type TopicMap } from './tree'
+import { pruneObjects } from './objectCommands'
 
 export interface Point {
   x: number
   y: number
 }
 
-type BranchData = Pick<TopicData, 'text' | 'collapsed' | 'style' | 'marks' | 'note' | 'tags' | 'task' | 'link' | 'image'>
+type BranchData = Pick<
+  TopicData,
+  'text' | 'collapsed' | 'style' | 'marks' | 'note' | 'tags' | 'task' | 'link' | 'image' | 'inlineNote' | 'latex' | 'table' | 'attachments'
+>
 export interface Branch {
   data: BranchData
   children: Branch[]
@@ -75,6 +80,58 @@ export function setImage(doc: MapDoc, id: string, image: TopicImage | null) {
   tx(doc, () => doc.topics.set(id, { ...t, image }))
 }
 
+/** Topics to restyle: the given ones, plus all their descendants when `withBranch` is set. */
+function styleTargets(doc: MapDoc, ids: string[], withBranch: boolean): string[] {
+  const topics = snapshotTopics(doc)
+  const out = new Set(ids.filter((id) => topics[id]))
+  if (withBranch) {
+    const idx = buildIndex(topics)
+    for (const id of [...out]) descendantIds(idx, id).forEach((d) => out.add(d))
+  }
+  return [...out]
+}
+
+/** Merges style changes into topics. A value of `undefined` clears that property. One undo step. */
+export function setTopicStyle(doc: MapDoc, ids: string[], patch: Partial<TopicStyle>, withBranch = false) {
+  const targets = styleTargets(doc, ids, withBranch)
+  if (!targets.length) return
+  tx(doc, () => {
+    for (const id of targets) {
+      const t = doc.topics.get(id)
+      if (!t) continue
+      const style: Record<string, unknown> = { ...t.style, ...patch }
+      for (const k of Object.keys(style)) if (style[k] === undefined) delete style[k]
+      doc.topics.set(id, { ...t, style: style as TopicStyle })
+    }
+  })
+}
+
+/** Replaces the whole style of topics (format painter, "reset style"). One undo step. */
+export function replaceTopicStyle(doc: MapDoc, ids: string[], style: TopicStyle, withBranch = false) {
+  const targets = styleTargets(doc, ids, withBranch)
+  if (!targets.length) return
+  tx(doc, () => {
+    for (const id of targets) {
+      const t = doc.topics.get(id)
+      if (t) doc.topics.set(id, { ...t, style: structuredClone(style) })
+    }
+  })
+}
+
+/** Sets (or with null clears) the layout direction used inside one branch. One undo step. */
+export function setBranchDir(doc: MapDoc, id: string, dir: BranchDir | null) {
+  const t = doc.topics.get(id)
+  if (!t || (t.branchDir ?? null) === dir) return
+  tx(doc, () => doc.topics.set(id, { ...t, branchDir: dir }))
+}
+
+/** Moves a whole branch away from its automatic position (null puts it back). One undo step. */
+export function setBranchOffset(doc: MapDoc, id: string, offset: Point | null) {
+  const t = doc.topics.get(id)
+  if (!t || id === getRootId(doc)) return
+  tx(doc, () => doc.topics.set(id, { ...t, offset }))
+}
+
 /** Changes the displayed size of a topic's image. One undo step. */
 export function setImageSize(doc: MapDoc, id: string, width: number, height: number) {
   const t = doc.topics.get(id)
@@ -126,6 +183,7 @@ export function deleteTopics(doc: MapDoc, ids: string[]): string[] {
   const parents = new Set(targets.map((id) => topics[id]?.parentId ?? null))
   tx(doc, () => {
     removed.forEach((id) => doc.topics.delete(id))
+    pruneObjects(doc, removed)
     for (const p of parents) {
       if (p === null) continue
       applyList(doc, p, childrenOf(idx, p).filter((s) => !removed.has(s.id)))
@@ -187,6 +245,10 @@ function toBranch(topics: TopicMap, idx: ReturnType<typeof buildIndex>, id: stri
       task: t.task,
       link: t.link,
       image: t.image ?? null,
+      inlineNote: t.inlineNote ?? '',
+      latex: t.latex ?? null,
+      table: t.table ?? null,
+      attachments: t.attachments ?? [],
     }),
     children: childrenOf(idx, id).map((c) => toBranch(topics, idx, c.id)),
   }

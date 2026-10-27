@@ -16,14 +16,24 @@ export interface MapMeta {
   shareToken: string
 }
 
+export type Shape = 'rounded' | 'rect' | 'pill' | 'ellipse' | 'diamond' | 'underline'
+export const SHAPES: Shape[] = ['rounded', 'rect', 'pill', 'ellipse', 'diamond', 'underline']
+
+export type LineStyle = 'solid' | 'dashed' | 'dotted'
+
+/** Per-topic overrides. Anything left undefined follows the theme. */
 export interface TopicStyle {
-  shape?: string
+  shape?: Shape
   fill?: string
   border?: string
+  borderWidth?: number
   textColor?: string
+  fontFamily?: string
   fontSize?: number
   fontWeight?: number
-  lineStyle?: 'solid' | 'dashed' | 'dotted'
+  italic?: boolean
+  /** Style and thickness of the connector line leading to this topic. */
+  lineStyle?: LineStyle
   lineWidth?: number
 }
 

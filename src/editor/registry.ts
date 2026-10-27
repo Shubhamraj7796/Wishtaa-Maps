@@ -1,4 +1,7 @@
+import { LAYOUTS } from '@/core/layout/catalog'
+import { THEMES } from '@/core/theme/themes'
 import * as A from './actions'
+import * as C from './content'
 import {
   clearImageSelection,
   cmdAddImage,
@@ -14,7 +17,7 @@ import { useEditor } from './store'
 export interface Cmd {
   id: string
   label: string
-  group: 'Edit' | 'Navigate' | 'View' | 'Tools'
+  group: 'Edit' | 'Insert' | 'Navigate' | 'View' | 'Tools' | 'Format'
   /** Chords that trigger it, e.g. "Ctrl+Shift+Z". The first is shown in the UI. */
   keys?: string[]
   /** Shown instead of `keys` when the shortcut is handled elsewhere (paste event). */
@@ -36,7 +39,11 @@ export const COMMANDS: Cmd[] = [
     label: 'Delete topic (or the selected image)',
     group: 'Edit',
     keys: ['Delete', 'Backspace'],
-    run: () => (selectedImageTopic() ? removeImage() : A.cmdDelete()),
+    run: () => {
+      if (C.deleteSelectedObject()) return
+      if (selectedImageTopic()) removeImage()
+      else A.cmdDelete()
+    },
   },
   { id: 'collapse', label: 'Collapse / expand branch', group: 'Edit', keys: ['/'], run: A.cmdToggleCollapse },
   { id: 'up', label: 'Move topic up', group: 'Edit', keys: ['Alt+ArrowUp'], run: () => A.cmdReorder(-1) },
@@ -48,7 +55,7 @@ export const COMMANDS: Cmd[] = [
   { id: 'cut', label: 'Cut', group: 'Edit', keys: ['Ctrl+X'], run: A.cmdCut },
   { id: 'paste', label: 'Paste', group: 'Edit', hint: 'Ctrl+V', run: () => {}, palette: false },
   { id: 'pasteImage', label: 'Paste an image into the selected topic', group: 'Edit', hint: 'Ctrl+V', run: () => {}, palette: false },
-  { id: 'addImage', label: 'Add image to topic…', group: 'Edit', run: () => void cmdAddImage() },
+  { id: 'addImage', label: 'Add picture to topic…', group: 'Insert', keys: ['Ctrl+Alt+I'], run: () => void cmdAddImage() },
   { id: 'removeImage', label: 'Remove image from topic', group: 'Edit', run: () => removeImage() },
   {
     id: 'selectImage',
@@ -100,13 +107,62 @@ export const COMMANDS: Cmd[] = [
   { id: 'lvlAll', label: 'Show all levels', group: 'View', keys: ['Alt+0'], run: () => A.setLevels(null) },
   { id: 'fullscreen', label: 'Toggle fullscreen', group: 'View', run: A.toggleFullscreen },
 
+  { id: 'relationship', label: 'Relationship line', group: 'Insert', keys: ['Ctrl+Alt+R'], run: C.startRelationship },
+  { id: 'callout', label: 'Callout', group: 'Insert', keys: ['Ctrl+Alt+O'], run: C.addCalloutToSelected },
+  { id: 'boundary', label: 'Boundary', group: 'Insert', keys: ['Ctrl+Alt+B'], run: () => C.addBoundaryToSelected() },
+  { id: 'summary', label: 'Summary', group: 'Insert', keys: ['Ctrl+Alt+S'], run: C.addSummaryToSelected },
+  { id: 'mark', label: 'Marks (priority, progress, emoji, flags…)', group: 'Insert', keys: ['F9'], run: () => C.openTab('mark') },
+  { id: 'clipart', label: 'Clipart', group: 'Insert', keys: ['Ctrl+Alt+U'], run: () => C.openTab('clipart') },
+  { id: 'notes', label: 'Notes (rich text)', group: 'Insert', keys: ['Ctrl+Alt+E'], run: () => C.openTab('notes') },
+  { id: 'inlineNote', label: 'Short note', group: 'Insert', keys: ['Ctrl+Alt+N'], run: () => C.openTab('details', 'inline') },
+  { id: 'tag', label: 'Tags', group: 'Insert', keys: ['Ctrl+G'], run: () => C.openTab('details', 'tags') },
+  { id: 'task', label: 'Task', group: 'Insert', keys: ['Ctrl+Alt+T'], run: () => C.openTab('details', 'task') },
+  { id: 'link', label: 'Hyperlink', group: 'Insert', keys: ['Ctrl+Alt+K'], run: () => C.openTab('details', 'link') },
+  { id: 'attachment', label: 'Attachment', group: 'Insert', keys: ['Ctrl+Alt+H'], run: () => C.openTab('details', 'attachments') },
+  { id: 'latex', label: 'Formula (LaTeX)', group: 'Insert', keys: ['Ctrl+Alt+L'], run: () => C.openTab('details', 'latex') },
+  { id: 'table', label: 'Table', group: 'Insert', keys: ['Ctrl+Alt+J'], run: () => C.openTab('details', 'table') },
+  { id: 'numbering', label: 'Branch numbers on / off', group: 'Insert', run: C.toggleNumbering },
+  { id: 'ocr', label: 'Read text from the topic’s picture (OCR)', group: 'Edit', run: () => { const id = currentTopicId(); if (id) C.startOcr(id) } },
+  { id: 'viewMap', label: 'Map view', group: 'View', run: () => C.setView('map') },
+  { id: 'viewOutline', label: 'Outline view', group: 'View', keys: ['Ctrl+Alt+M'], run: () => C.setView(useEditor.getState().view === 'outline' ? 'map' : 'outline') },
+  { id: 'clearTagFilter', label: 'Show all topics (clear tag filter)', group: 'View', run: C.clearTagFilter },
+  { id: 'panel', label: 'Show / hide the format panel', group: 'Format', keys: ['F4'], run: () => A.togglePanel() },
+  { id: 'panelLayout', label: 'Layout settings…', group: 'Format', run: () => A.togglePanel('layout') },
+  { id: 'panelTheme', label: 'Themes and background…', group: 'Format', run: () => A.togglePanel('theme') },
+  { id: 'panelStyle', label: 'Topic style…', group: 'Format', run: () => A.togglePanel('style') },
+  { id: 'copyFormat', label: 'Copy topic format', group: 'Format', keys: ['Ctrl+Alt+C'], run: A.copyFormat },
+  { id: 'pasteFormat', label: 'Paste topic format', group: 'Format', keys: ['Ctrl+Alt+V'], run: A.pasteFormat },
+  { id: 'painter', label: 'Format painter (click topics to paint)', group: 'Format', run: A.togglePainter },
+  { id: 'resetStyle', label: 'Reset style of selected topics', group: 'Format', run: A.resetStyleSelected },
+  { id: 'resetPositions', label: 'Reset manually moved branches', group: 'Format', run: A.resetBranchPositions },
+  ...LAYOUTS.map((l) => ({
+    id: `layout:${l.id}`,
+    label: `Layout: ${l.group} · ${l.label}`,
+    group: 'Format' as const,
+    run: () => A.setLayout(l.id),
+  })),
+  ...THEMES.map((t) => ({
+    id: `theme:${t.id}`,
+    label: `Theme: ${t.name}`,
+    group: 'Format' as const,
+    run: () => A.selectTheme(t.id),
+  })),
+
   { id: 'toolPan', label: 'Hand tool (drag to pan)', group: 'Tools', keys: ['H'], run: () => A.setTool('pan') },
   { id: 'toolSelect', label: 'Select tool (drag to box-select)', group: 'Tools', keys: ['V'], run: () => A.setTool('select') },
 ]
 
 function escape() {
   const s = st()
+  if (s.editingObject) return C.editObject(null)
+  if (s.lightbox) return C.showPreview(null)
+  if (s.ocrTopic) return C.startOcr(null)
+  if (s.insertOpen) return C.toggleInsert(false)
+  if (s.relationFrom) return C.cancelRelationship()
+  if (s.linkFrom) return C.cancelLinkPick()
+  if (s.selectedObject) return C.selectObject(null)
   if (s.menu) return A.closeMenu()
+  if (s.painter) return useEditor.setState({ painter: null })
   if (selectedImageTopic()) return clearImageSelection()
   if (s.helpOpen) return A.setHelp(false)
   if (s.paletteOpen) return A.setPalette(false)
@@ -138,3 +194,5 @@ export function commandFor(e: KeyboardEvent): Cmd | undefined {
 export function displayKeys(c: Cmd): string {
   return c.hint ?? c.keys?.[0] ?? ''
 }
+
+export const commandById = (id: string): Cmd | undefined => COMMANDS.find((c) => c.id === id)

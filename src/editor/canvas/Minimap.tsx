@@ -2,7 +2,8 @@ import { useEffect, useRef } from 'react'
 import type { Scene } from '@/core/layout/mindmap'
 import { setViewport } from '../actions'
 import { useEditor } from '../store'
-import { branchColor } from './TopicView'
+import { accentFor } from '@/core/theme/resolve'
+import { useTheme } from '../scene'
 
 const W = 190
 const H = 120
@@ -12,6 +13,7 @@ export function Minimap({ scene }: { scene: Scene }) {
   const viewport = useEditor((s) => s.viewport)
   const size = useEditor((s) => s.canvasSize)
   const selected = useEditor((s) => s.selected)
+  const theme = useTheme()
 
   const b = scene.bounds
   const pad = 200
@@ -34,7 +36,7 @@ export function Minimap({ scene }: { scene: Scene }) {
     ctx.clearRect(0, 0, W, H)
     const sel = new Set(selected)
     scene.boxes.forEach((bx) => {
-      ctx.fillStyle = sel.has(bx.id) ? '#f59e0b' : branchColor(bx.branch)
+      ctx.fillStyle = sel.has(bx.id) ? '#f59e0b' : bx.branch < 0 ? theme.root.fill : accentFor(theme, bx.branch)
       ctx.globalAlpha = bx.depth > 2 ? 0.45 : 0.85
       ctx.fillRect(offX + (bx.x - x0) * scale, offY + (bx.y - y0) * scale, Math.max(2, bx.w * scale), Math.max(1.5, bx.h * scale))
     })
@@ -45,7 +47,7 @@ export function Minimap({ scene }: { scene: Scene }) {
     ctx.strokeStyle = '#0d9488'
     ctx.lineWidth = 1.5
     ctx.strokeRect(vx, vy, (size.w / viewport.k) * scale, (size.h / viewport.k) * scale)
-  }, [scene, viewport, size, selected, scale, offX, offY, x0, y0])
+  }, [scene, viewport, size, selected, theme, scale, offX, offY, x0, y0])
 
   const moveTo = (e: React.PointerEvent) => {
     const r = e.currentTarget.getBoundingClientRect()

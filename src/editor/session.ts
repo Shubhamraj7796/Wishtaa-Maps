@@ -1,6 +1,9 @@
 import { Autosaver, LocalMapStorage } from '@/core/autosave'
-import { ensureRoot, snapshotTopics } from '@/core/model/doc'
+import { ensureRoot, snapshotObjects, snapshotTopics } from '@/core/model/doc'
+import { OBJECT_COLLECTION } from '@/core/model/objects'
+import { snapshotSettings } from '@/core/settings'
 import { encodeDoc, loadInto } from '@/core/persistence'
+import { noteAttachmentStep, scanAttachments, sweepAttachments } from './attachments'
 import { imagesIdle, noteUndoStep, scheduleImageGc, sweepUnusedImages } from './images'
 import { mapDoc } from './mapdoc'
 import { useEditor } from './store'
@@ -34,6 +37,8 @@ export async function initSession() {
     rootId,
     selected: [rootId],
     title: mapDoc.meta.get('title') ?? 'Untitled map',
+    settings: snapshotSettings(mapDoc),
+    objects: snapshotObjects(mapDoc),
   })
 
   mapDoc.topics.observe((e) => {
@@ -55,11 +60,21 @@ export async function initSession() {
     })
   })
   mapDoc.meta.observe(() => useEditor.setState({ title: mapDoc.meta.get('title') ?? 'Untitled map' }))
+  mapDoc.settings.observe(() => useEditor.setState({ settings: snapshotSettings(mapDoc) }))
+  const syncObjects = () => {
+    const objects = snapshotObjects(mapDoc)
+    const st = useEditor.getState()
+    const sel = st.selectedObject
+    const gone = sel && !objects[OBJECT_COLLECTION[sel.kind]][sel.id]
+    useEditor.setState({ objects, ...(gone ? { selectedObject: null, editingObject: null } : {}) })
+  }
+  for (const m of [mapDoc.relationships, mapDoc.callouts, mapDoc.boundaries, mapDoc.summaries]) m.observe(syncObjects)
 
   const syncUndo = () =>
     useEditor.setState({ canUndo: mapDoc.undo.undoStack.length > 0, canRedo: mapDoc.undo.redoStack.length > 0 })
   mapDoc.undo.on('stack-item-added', () => {
     noteUndoStep()
+    noteAttachmentStep()
     syncUndo()
   })
   mapDoc.undo.on('stack-item-popped', syncUndo)
@@ -72,7 +87,10 @@ export async function initSession() {
     beforeSave: imagesIdle,
     onChange: (save) => {
       useEditor.setState({ save })
-      if (save.status === 'saved') scheduleImageGc()
+      if (save.status === 'saved') {
+        scheduleImageGc()
+        void scanAttachments()
+      }
     },
   })
   autosaver = saver
@@ -96,5 +114,8 @@ export async function initSession() {
     }
   })
 
-  if (loaded) void sweepUnusedImages()
+  if (loaded) {
+    void sweepUnusedImages()
+    void sweepAttachments()
+  }
 }
