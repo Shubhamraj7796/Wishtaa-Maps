@@ -5,6 +5,7 @@ import { MAX_ATTACHMENTS, MAX_ATTACHMENT_BYTES, addAttachment, removeAttachment 
 import { MAX_UNDO } from '@/core/model/doc'
 import { newId } from '@/core/model/ids'
 import type { Attachment } from '@/core/model/topic'
+import { repository } from '../app/repo'
 import { mapDoc } from './mapdoc'
 import { showNotice } from './notice'
 import { useEditor } from './store'
@@ -21,8 +22,8 @@ function createStore(): ImageStore {
 /** Files attached to topics. Same interface as pictures, so it can move to Supabase Storage later. */
 export const attachmentStore: ImageStore = createStore()
 
-const referenced = () => {
-  const ids = new Set<string>()
+const referenced = async () => {
+  const ids = await repository.referencedAttachmentIds()
   for (const t of Object.values(useEditor.getState().topics)) for (const a of t.attachments ?? []) ids.add(a.id)
   return ids
 }

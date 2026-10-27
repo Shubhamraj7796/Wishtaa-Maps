@@ -6,6 +6,7 @@ import { IndexedDbImageStore, MemoryImageStore, type ImageStore } from '@/core/i
 import { setImage, setImageSize } from '@/core/model/commands'
 import { MAX_UNDO } from '@/core/model/doc'
 import { newId } from '@/core/model/ids'
+import { repository } from '../app/repo'
 import { mapDoc } from './mapdoc'
 import { showNotice } from './notice'
 import { useEditor, type ImageLive } from './store'
@@ -91,8 +92,8 @@ export function addImageReferenceSource(fn: () => Iterable<string>) {
   referenceSources.push(fn)
 }
 
-function referencedIds(): Set<string> {
-  const ids = new Set<string>()
+async function referencedIds(): Promise<Set<string>> {
+  const ids = await repository.referencedImageIds()
   for (const t of Object.values(get().topics)) if (t.image) ids.add(t.image.imageId)
   for (const src of referenceSources) for (const id of src()) ids.add(id)
   return ids

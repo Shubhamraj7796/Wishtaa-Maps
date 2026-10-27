@@ -36,6 +36,9 @@ export type ViewMode = 'map' | 'outline'
 export type DetailsSection = 'picture' | 'tags' | 'task' | 'link' | 'attachments' | 'inline' | 'latex' | 'table'
 
 export interface EditorState {
+  /** The file open in the editor. */
+  fileId: string | null
+  fileType: 'map' | 'kb' | null
   topics: TopicMap
   rootId: string
   selected: string[]
@@ -57,6 +60,7 @@ export interface EditorState {
   menu: { x: number; y: number; topicId: string } | null
   settings: MapSettings
   panelOpen: boolean
+  minimap: boolean
   panelTab: PanelTab
   /** Apply style changes to the whole branch, not just the selected topics. */
   styleBranch: boolean
@@ -94,6 +98,8 @@ export const MIN_ZOOM = 0.1
 export const MAX_ZOOM = 3
 
 export const useEditor = create<EditorState>(() => ({
+  fileId: null,
+  fileType: null,
   topics: {},
   rootId: '',
   selected: [],
@@ -113,6 +119,7 @@ export const useEditor = create<EditorState>(() => ({
   menu: null,
   settings: DEFAULT_SETTINGS,
   panelOpen: false,
+  minimap: true,
   panelTab: 'layout',
   styleBranch: false,
   painter: null,

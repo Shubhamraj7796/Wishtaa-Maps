@@ -1,4 +1,6 @@
-import { normalizeLink, linkedTopicId, isWebLink, topicLink } from '@/core/links'
+import { normalizeLink, linkedFile, linkedTopicId, isWebLink, topicLink } from '@/core/links'
+import { navigateTo, routeForFile } from '../app/navigation'
+import { repository } from '../app/repo'
 import { clearMarks, patchTask, setAllImageWidths, setImagePosition, toggleMarkOn, addTag, removeTag, setInlineNote, setLatex, setLink, setTable } from '@/core/model/content'
 import { addBoundary, addCallout, addRelationship, addSummary, deleteObject, updateObject } from '@/core/model/objectCommands'
 import type { BoundaryShape, ObjectKind, ObjectRef } from '@/core/model/objects'
@@ -158,6 +160,14 @@ export function setTopicLink(topicId: string, input: string): boolean {
 /** Opens a topic's link: web links in a new tab, topic links by jumping to that topic. */
 export function followLink(topicId: string) {
   const link = get().topics[topicId]?.link
+  const file = linkedFile(link)
+  if (file) {
+    void repository.get(file.fileId).then((f) => {
+      if (!f || f.trashed) showNotice('The file this link points to is no longer here.')
+      else navigateTo(routeForFile(f, file.topicId))
+    })
+    return
+  }
   const target = linkedTopicId(link)
   if (target) {
     if (!get().topics[target]) return showNotice('The topic this link points to no longer exists.')

@@ -12,7 +12,7 @@ export class ImageGc {
 
   constructor(
     private store: ImageStore,
-    private referenced: () => Set<string>,
+    private referenced: () => Set<string> | Promise<Set<string>>,
     private maxUndo: number
   ) {}
 
@@ -23,7 +23,7 @@ export class ImageGc {
 
   /** Finds unused blobs and deletes the ones that can no longer be restored. Returns deleted ids. */
   async scan(): Promise<string[]> {
-    const used = this.referenced()
+    const used = await this.referenced()
     const deleted: string[] = []
     for (const id of await this.store.keys()) {
       if (used.has(id)) {
@@ -47,7 +47,7 @@ export class ImageGc {
    * history is empty. Returns deleted ids.
    */
   async sweepAll(): Promise<string[]> {
-    const used = this.referenced()
+    const used = await this.referenced()
     const deleted: string[] = []
     for (const id of await this.store.keys()) {
       if (!used.has(id)) {

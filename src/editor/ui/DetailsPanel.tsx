@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { linkedTopicId } from '@/core/links'
+import { linkedFile, linkedTopicId } from '@/core/links'
 import { MAX_ATTACHMENTS, MAX_INLINE_NOTE, MAX_LATEX_LENGTH, MAX_TABLE_COLS, MAX_TABLE_ROWS, patchTask, setTask } from '@/core/model/content'
 import { IMAGE_POSITIONS, type ImagePosition } from '@/core/model/topic'
 import { isHex } from '@/core/theme/color'
@@ -12,6 +12,8 @@ import { mapDoc } from '../mapdoc'
 import { getTheme } from '../scene'
 import { useEditor, type DetailsSection } from '../store'
 import { Formula } from './Formula'
+import { Backlinks, FileLinkPicker, useLinkedFile } from './FileLinks'
+import { useFiles } from '../../app/FilesContext'
 
 const field = 'rounded-ui border border-line bg-surface px-2 py-1 text-sm'
 const iconBtn = 'grid h-8 w-8 shrink-0 place-items-center rounded-ui border border-line hover:bg-bg disabled:opacity-40'
@@ -190,7 +192,11 @@ function LinkSection({ id }: { id: string }) {
   const topics = useEditor((s) => s.topics)
   const linkFrom = useEditor((s) => s.linkFrom)
   const [text, setText] = useState(link)
-  useEffect(() => setText(link.startsWith('#topic:') ? '' : link), [link, id])
+  const [picker, setPicker] = useState(false)
+  const files = useFiles()
+  const linkedTo = useLinkedFile(link)
+  const isFileLink = !!linkedFile(link)
+  useEffect(() => setText(link.startsWith('#topic:') || link.startsWith('#map:') ? '' : link), [link, id])
   const target = linkedTopicId(link)
   return (
     <Sec id="link" title="Hyperlink" icon="link">
@@ -204,7 +210,19 @@ function LinkSection({ id }: { id: string }) {
       <button type="button" onClick={() => (linkFrom ? cancelLinkPick() : startLinkPick(id))} aria-pressed={!!linkFrom} className={`${field} flex w-full items-center gap-2 hover:bg-bg ${linkFrom ? 'border-brand bg-brand/15' : ''}`}>
         <Icon name="map" size={16} /> {linkFrom ? 'Click a topic in the map… (Esc to cancel)' : 'Link to another topic in this map'}
       </button>
+      <button type="button" onClick={() => setPicker(true)} className={`${field} flex w-full items-center gap-2 hover:bg-bg`}>
+        <Icon name="notebook" size={16} /> Link to map or knowledge base
+      </button>
       {target && <p className="text-xs text-muted">Linked to: {topics[target]?.text || '(untitled topic)'}</p>}
+      {isFileLink && (
+        <p className="flex items-center gap-2 text-xs text-muted">
+          <span className="min-w-0 flex-1 truncate">Linked to file: {linkedTo ? linkedTo.name : 'a file that is no longer here'}</span>
+          {linkedTo && (
+            <button type="button" onClick={() => files.open(linkedTo)} className="shrink-0 rounded-ui border border-line px-2 py-0.5 hover:bg-bg">Open</button>
+          )}
+        </p>
+      )}
+      {picker && <FileLinkPicker topicId={id} onClose={() => setPicker(false)} />}
     </Sec>
   )
 }
@@ -322,6 +340,7 @@ export default function DetailsPanel() {
       <TagsSection id={id} />
       <TaskSection id={id} />
       <LinkSection id={id} />
+      <Backlinks topicId={id} />
       <AttachmentsSection id={id} />
       <InlineNoteSection id={id} />
       <LatexSection id={id} />

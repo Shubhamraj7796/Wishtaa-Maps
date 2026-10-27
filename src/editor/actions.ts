@@ -364,9 +364,9 @@ export const setTool = (tool: 'pan' | 'select') => set({ tool })
 export const openMenu = (x: number, y: number, topicId: string) => set({ menu: { x, y, topicId } })
 export const closeMenu = () => set({ menu: null })
 
-/** Renames the map. Not an undo step. */
+/** Updates the name shown in the header while typing. The file is renamed by `renameOpenFile` on blur. */
 export function setTitle(title: string) {
-  mapDoc.ydoc.transact(() => mapDoc.meta.set('title', title), 'title')
+  set({ title })
 }
 export const setPalette = (paletteOpen: boolean) => set({ paletteOpen })
 export const setHelp = (helpOpen: boolean) => set({ helpOpen })
@@ -480,6 +480,10 @@ export function resetBranchPositions() {
   mapDoc.ydoc.transact(() => {
     for (const t of Object.values(topics)) if (t.offset) setBranchOffset(mapDoc, t.id, null)
   }, LOCAL)
+}
+
+export function toggleMinimap() {
+  set({ minimap: !get().minimap })
 }
 
 export function togglePanel(tab?: PanelTab) {

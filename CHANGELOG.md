@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+### App shell, files and knowledge bases (Phase A)
+- **Shell**: sidebar (New file, Home, All files, Knowledge base, Gallery, Storage > Google Drive, Trash, storage info),
+  top bar with search across all files, a drawer menu on phones, light and dark themes, and a dismissible
+  "Files are saved in this browser only." banner. Routes: /home, /files, /files/:folderId, /kb, /kb/:id, /map/:id,
+  /gallery, /drive, /search; `vercel.json` rewrite so refresh and deep links work.
+- **Home**: Create new, Continue where you left off, Recent files, Starred, friendly empty state.
+- **All files**: tabs My files / Notes / Resources / Recycle bin, filter chips, sort (editing time, name, created, with
+  direction), grid and list views, folders nested to any depth with breadcrumbs, rename, move (drag and drop or "Move to"),
+  duplicate, star, trash, restore, delete forever, multi-select with bulk actions. Every map has a thumbnail refreshed on
+  each save.
+- **Knowledge base**: files of type "kb" that open as a mind map, with starter structure (Concepts, Resources, Projects,
+  Notes), a Notes button, an example knowledge base, search over topics, notes and tags, links to other maps or
+  knowledge bases with a picker, and backlinks.
+- **Data layer**: `FileRepository` interface; `LocalRepository` on IndexedDB (a Supabase or Drive repository can replace it
+  without UI changes). The old single map in the browser is imported as "My first map". See docs/files-model.md.
+- Fixed while building: opening and closing a file are queued so React's double mount can't leave a file without autosave.
+
 ### Phase 3: rich content, diagram objects, outline, icons
 - **Diagram objects**: relationship lines (label, curve, arrow ends, style, colour), callouts, boundaries, summaries. Each has
   an inspector bar; all are undoable and follow their topics.

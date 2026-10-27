@@ -51,6 +51,7 @@ export function Canvas() {
   const scene = useScene()
   const theme = useTheme()
   const painter = useEditor((s) => s.painter)
+  const minimapOn = useEditor((s) => s.minimap)
   const settings = useEditor((s) => s.settings)
   const tagFilter = useEditor((s) => s.tagFilter)
   const viewport = useEditor((s) => s.viewport)
@@ -463,7 +464,7 @@ export function Canvas() {
           style={{ left: Math.min(box.x0, box.x1), top: Math.min(box.y0, box.y1), width: Math.abs(box.x1 - box.x0), height: Math.abs(box.y1 - box.y0) }}
         />
       )}
-      <Minimap scene={scene} />
+      {minimapOn && <Minimap scene={scene} />}
     </div>
   )
 }
