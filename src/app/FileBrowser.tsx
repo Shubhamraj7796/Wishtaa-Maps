@@ -2,7 +2,8 @@ import { useEffect, useRef, useState, type DragEvent } from 'react'
 import type { FileRecord } from '@/core/files/types'
 import { useFiles } from './FilesContext'
 import { timeAgo } from './format'
-import { BookOpen, Copy, Folder, FolderInput, MoreVertical, Network, Pencil, RotateCcw, Star, Trash2 } from './icons'
+import { BookOpen, Cloud, Copy, Folder, FolderInput, HardDrive, MoreVertical, Network, Pencil, RotateCcw, Star, Trash2 } from './icons'
+import { useDriveActions } from './useDrive'
 
 export const DRAG_TYPE = 'application/x-wishtaa-files'
 
@@ -31,8 +32,19 @@ function Thumb({ file }: { file: FileRecord }) {
   )
 }
 
+function DriveBadge({ file }: { file: FileRecord }) {
+  if (file.storage !== 'drive') return null
+  return (
+    <span title="Stored in Google Drive" className="inline-flex shrink-0 items-center gap-1 rounded-full bg-brand/15 px-1.5 py-0.5 text-[10px] font-semibold text-ink">
+      <Cloud size={11} aria-hidden="true" />
+      <span>Drive</span>
+    </span>
+  )
+}
+
 function Menu({ file, onClose }: { file: FileRecord; onClose: () => void }) {
   const f = useFiles()
+  const drive = useDriveActions()
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => {
     ref.current?.querySelector<HTMLElement>('button')?.focus()
@@ -69,6 +81,8 @@ function Menu({ file, onClose }: { file: FileRecord; onClose: () => void }) {
             {item('Rename', <Pencil size={15} aria-hidden="true" />, () => f.setDialog({ kind: 'rename', file }))}
             {item('Move to…', <FolderInput size={15} aria-hidden="true" />, () => f.setDialog({ kind: 'move', ids: [file.id] }))}
             {file.type !== 'folder' && item('Duplicate', <Copy size={15} aria-hidden="true" />, () => void f.duplicate(file))}
+            {file.type !== 'folder' && file.storage === 'local' && drive.configured && item('Move to Google Drive', <Cloud size={15} aria-hidden="true" />, () => void drive.moveToDrive(file))}
+            {file.type !== 'folder' && file.storage === 'drive' && item('Keep only in this browser', <HardDrive size={15} aria-hidden="true" />, () => void drive.keepLocal(file))}
             {item(file.starred ? 'Remove star' : 'Star', <Star size={15} aria-hidden="true" />, () => void f.toggleStar(file))}
             {item('Move to bin', <Trash2 size={15} aria-hidden="true" />, () => void f.trash([file.id]), true)}
           </>
@@ -160,7 +174,7 @@ function Item({ file, view, selected, anySelected, onSelect, dragIds }: ItemProp
         <button type="button" onClick={open} className="flex min-w-0 flex-1 items-center gap-3 text-left">
           <span className="h-9 w-14 shrink-0 overflow-hidden rounded border border-line"><Thumb file={file} /></span>
           <span className="min-w-0">
-            <span className="flex items-center gap-1.5 text-sm font-medium"><FileKindIcon type={file.type} size={15} className="shrink-0 text-muted" /><span className="truncate">{file.name}</span>{star}</span>
+            <span className="flex items-center gap-1.5 text-sm font-medium"><FileKindIcon type={file.type} size={15} className="shrink-0 text-muted" /><span className="truncate">{file.name}</span>{star}<DriveBadge file={file} /></span>
             <span className="block truncate text-xs text-muted">{kindLabel(file.type)} · {timeAgo(file.modifiedAt)}</span>
           </span>
         </button>
@@ -182,7 +196,7 @@ function Item({ file, view, selected, anySelected, onSelect, dragIds }: ItemProp
       <button type="button" onClick={open} className="block w-full text-left" aria-label={`Open ${file.name}`}>
         <span className="block aspect-[8/5] overflow-hidden border-b border-line"><Thumb file={file} /></span>
         <span className="block px-3 py-2 pr-11">
-          <span className="flex items-center gap-1.5 text-sm font-medium"><FileKindIcon type={file.type} size={15} className="shrink-0 text-muted" /><span className="truncate">{file.name}</span>{star}</span>
+          <span className="flex items-center gap-1.5 text-sm font-medium"><FileKindIcon type={file.type} size={15} className="shrink-0 text-muted" /><span className="truncate">{file.name}</span>{star}<DriveBadge file={file} /></span>
           <span className="block text-xs text-muted">{kindLabel(file.type)} · {timeAgo(file.modifiedAt)}</span>
         </span>
       </button>

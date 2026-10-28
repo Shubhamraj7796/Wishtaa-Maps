@@ -147,7 +147,7 @@ export class RepositoryCore implements FileRepository {
     const copyOf = async (f: FileRecord, parentId: string | null, name: string): Promise<FileRecord> => {
       const t = this.now()
       const nid = newId()
-      const rec: FileRecord = { ...f, id: nid, name, parentId, createdAt: t, modifiedAt: t, starred: false, trashed: false, trashedAt: undefined, trashedRoot: null, contentRef: f.type === 'folder' ? null : nid }
+      const rec: FileRecord = { ...f, id: nid, name, parentId, createdAt: t, modifiedAt: t, starred: false, trashed: false, trashedAt: undefined, trashedRoot: null, contentRef: f.type === 'folder' ? null : nid, storage: 'local', driveMeta: null }
       if (f.type !== 'folder') {
         const content = await this.backend.getContent(f.id)
         if (content) await this.backend.putContent(nid, content)

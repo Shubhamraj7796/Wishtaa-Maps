@@ -3,9 +3,9 @@ import { buildFileIndex, referencedIds } from '@/core/files/indexer'
 import type { FileRepository } from '@/core/files/types'
 import { createMapDoc, snapshotTopics } from '@/core/model/doc'
 import { fromBase64 } from '@/core/persistence'
-import { sweepAttachments } from '@/editor/attachments'
-import { sweepUnusedImages } from '@/editor/images'
-import { repository } from './repo'
+import { attachmentStore, sweepAttachments } from '@/editor/attachments'
+import { imageStore, sweepUnusedImages } from '@/editor/images'
+import { repository, setBlobStores } from './repo'
 
 const LEGACY_KEY = 'wishtaamaps:guest:v1'
 const LEGACY_DONE = 'wishtaamaps:legacy-imported'
@@ -45,6 +45,7 @@ export async function migrateLegacyMap(repo: FileRepository = repository): Promi
 
 /** Runs once when the app starts. */
 export async function boot(): Promise<void> {
+  setBlobStores({ images: imageStore, attachments: attachmentStore })
   await migrateLegacyMap()
   // Remove pictures and attachments that no file uses any more.
   await sweepUnusedImages()

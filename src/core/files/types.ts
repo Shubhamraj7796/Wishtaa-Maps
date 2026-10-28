@@ -1,6 +1,13 @@
 export type FileType = 'folder' | 'map' | 'kb'
 export type StorageKind = 'local' | 'drive' | 'cloud'
 
+/** What we last knew about a file's copy in Google Drive, to spot changes made elsewhere. */
+export interface DriveMeta {
+  /** Drive's version counter for the file (changes on every edit, including from other devices). */
+  version: string
+  modifiedTime: string
+}
+
 /** One folder, mind map or knowledge base. */
 export interface FileRecord {
   id: string
@@ -23,6 +30,8 @@ export interface FileRecord {
   imageIds?: string[]
   attachmentIds?: string[]
   topicCount?: number
+  /** For files stored in Google Drive (`storage: 'drive'`, `contentRef` = the Drive file id). */
+  driveMeta?: DriveMeta | null
 }
 
 export interface FileLinkRef {
@@ -99,7 +108,7 @@ export interface CreateInput {
 }
 
 export type FilePatch = Partial<
-  Pick<FileRecord, 'name' | 'starred' | 'thumbnail' | 'imageIds' | 'attachmentIds' | 'topicCount'>
+  Pick<FileRecord, 'name' | 'starred' | 'thumbnail' | 'imageIds' | 'attachmentIds' | 'topicCount' | 'storage' | 'contentRef' | 'driveMeta'>
 >
 
 export interface SaveMeta {

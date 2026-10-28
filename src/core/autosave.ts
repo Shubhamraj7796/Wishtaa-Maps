@@ -119,7 +119,7 @@ export class Autosaver {
           this.failures = 0
         } catch (e) {
           this.dirty = true // keep the changes in memory and try again
-          this.set({ status: 'error', error: message(e) })
+          this.set({ status: isOffline(e) ? 'offline' : 'error', error: message(e) })
           this.scheduleRetry()
           return
         }
@@ -143,6 +143,11 @@ export class Autosaver {
     this.snap = next
     this.opts.onChange?.(next)
   }
+}
+
+/** Errors from storage can mark themselves as "no connection" (`offline: true`) so the status says so. */
+function isOffline(e: unknown): boolean {
+  return typeof e === 'object' && e !== null && (e as { offline?: unknown }).offline === true
 }
 
 function message(e: unknown): string {

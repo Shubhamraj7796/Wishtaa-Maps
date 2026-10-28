@@ -2,10 +2,11 @@ import { lazy, Suspense } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { FilesProvider } from './FilesContext'
 import { Shell } from './Shell'
+import Drive from './pages/Drive'
 import Files from './pages/Files'
 import Home from './pages/Home'
 import Kb from './pages/Kb'
-import { Drive, Gallery, NotFound, SearchPage } from './pages/Misc'
+import { Gallery, NotFound, SearchPage } from './pages/Misc'
 
 // The editor is the heaviest part of the app; load it only when a file is opened.
 const EditorScreen = lazy(() => import('./EditorScreen'))

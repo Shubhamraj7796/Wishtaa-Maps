@@ -87,6 +87,10 @@ function installPageListeners() {
     if (document.visibilityState === 'hidden') void open?.autosaver.flush()
   })
   window.addEventListener('blur', () => void open?.autosaver.flush())
+  // Back online: send whatever could not be saved while offline.
+  window.addEventListener('online', () => {
+    if (open?.autosaver.hasUnsaved) void open.autosaver.retry()
+  })
   window.addEventListener('pagehide', () => void open?.autosaver.prepareForUnload())
   window.addEventListener('beforeunload', (e) => {
     if (open && !open.autosaver.prepareForUnload()) {
@@ -106,12 +110,12 @@ function enqueue<T>(work: () => Promise<T>): Promise<T> {
   return run
 }
 
-async function closeCurrent(): Promise<void> {
+async function closeCurrent(flush = true): Promise<void> {
   const o = open
   if (!o) return
   open = null
   try {
-    await o.autosaver.flush()
+    if (flush) await o.autosaver.flush()
   } finally {
     o.dispose()
     useEditor.setState({ fileId: null, fileType: null })
@@ -137,6 +141,23 @@ export function closeFile(): Promise<void> {
 export function openFile(fileId: string, repo: FileRepository = repository): Promise<FileRecord | null> {
   wanted = fileId
   return enqueue(() => doOpen(fileId, repo))
+}
+
+/**
+ * Re-reads the open file from the repository, throwing away what the editor holds (used after the file's content was
+ * replaced from outside, such as keeping Google Drive's version in a conflict).
+ */
+export function reopenFile(fileId: string, repo: FileRepository = repository): Promise<FileRecord | null> {
+  wanted = fileId
+  return enqueue(async () => {
+    await closeCurrent(false)
+    try {
+      localStorage.removeItem(pendingKey(fileId))
+    } catch {
+      /* ignore */
+    }
+    return doOpen(fileId, repo)
+  })
 }
 
 async function doOpen(fileId: string, repo: FileRepository): Promise<FileRecord | null> {

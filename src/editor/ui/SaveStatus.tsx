@@ -41,12 +41,13 @@ function CloudOff() {
 export function SaveStatus() {
   const status = useEditor((s) => s.save.status)
   const savedAt = useEditor((s) => s.save.savedAt)
+  const reason = useEditor((s) => s.save.error)
 
   const time = savedAt ? new Date(savedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : null
   const label =
     status === 'saving' ? 'Saving...' : status === 'saved' ? 'Saved' : status === 'error' ? 'Not saved - retry' : 'Offline - will sync'
   const tip =
-    status === 'saved' ? (time ? `Saved at ${time}` : 'All changes are saved') : status === 'error' ? 'Saving failed. Your changes are kept and will be retried.' : label
+    status === 'saved' ? (time ? `Saved at ${time}` : 'All changes are saved') : status === 'error' ? `${reason ?? 'Saving failed.'} Your changes are kept and will be retried.` : status === 'offline' ? `${reason ?? 'No connection.'} Changes are kept here and will sync when you are back online.` : label
   const icon = status === 'saving' ? <Spinner /> : status === 'saved' ? <Tick /> : status === 'error' ? <Alert /> : <CloudOff />
 
   // Icon only when space is tight; the full label stays available to screen readers and on hover.

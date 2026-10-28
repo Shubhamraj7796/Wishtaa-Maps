@@ -5,7 +5,7 @@ import { routeForFile } from '../navigation'
 import { FileKindIcon } from '../FileBrowser'
 import { useFiles } from '../FilesContext'
 import { timeAgo } from '../format'
-import { Cloud, LayoutTemplate, Search, Sparkles } from '../icons'
+import { LayoutTemplate, Search, Sparkles } from '../icons'
 import { Chips, EmptyState, Page, PageHeader } from '../ui'
 import { useIndexes } from '../useIndexes'
 import { buttonSecondary } from '../Modal'
@@ -18,20 +18,6 @@ export function Gallery() {
         Ready-made maps for planning, studying and brainstorming will live here. For now, start with a blank mind map or a knowledge base.
         <div className="mt-4 flex justify-center">
           <Link to="/home" className={buttonSecondary}><LayoutTemplate size={16} aria-hidden="true" /> Back to Home</Link>
-        </div>
-      </EmptyState>
-    </Page>
-  )
-}
-
-export function Drive() {
-  return (
-    <Page>
-      <PageHeader title="Google Drive" subtitle="Keep your maps in your own Google Drive." />
-      <EmptyState icon={<Cloud size={26} aria-hidden="true" />} title="Google Drive is coming next">
-        You will be able to connect Drive and save maps there. Wishtaa Maps will only see the files it creates or that you open with it, never the rest of your Drive.
-        <div className="mt-4 flex justify-center">
-          <button type="button" disabled className={buttonSecondary}><Cloud size={16} aria-hidden="true" /> Connect Google Drive</button>
         </div>
       </EmptyState>
     </Page>

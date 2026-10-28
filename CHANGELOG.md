@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+### Google Drive storage (Phase B)
+- **Connect Google Drive** from the Google Drive page, the New file dialog, or Storage settings. Uses Google Identity
+  Services with the single `drive.file` scope (only files this app creates or the user opens with it). Tokens live in
+  memory only and are renewed silently; no Google token is stored anywhere. First connect creates a "Wishtaa Maps" folder.
+- **Maps and knowledge bases as `.wishtaa` files** (versioned JSON, with pictures and attachments inside).
+- **Move to Google Drive** and **Keep only in this browser** in each file's menu; **Open from Drive** with Google Picker;
+  a Drive browser limited to the Wishtaa Maps folder; a Drive badge in file lists.
+- **Autosave to Drive** with the same debounce, queue and save indicator. Saves go to this browser first, then Drive.
+  Offline shows "Offline - will sync" and catches up when the connection returns.
+- **Conflict detection** (Drive version check before every upload) with *Keep mine*, *Keep Drive's*, *Save a copy*.
+- Handles expired sign-in (reconnect bar), revoked access, Drive full and rate limits with plain messages.
+- `DriveRepository` wraps the local repository behind the same `FileRepository` interface. See docs/google-drive-setup.md.
+- Fixed while building: the sync subscription lost its `this` when handed to React.
+
 ### App shell, files and knowledge bases (Phase A)
 - **Shell**: sidebar (New file, Home, All files, Knowledge base, Gallery, Storage > Google Drive, Trash, storage info),
   top bar with search across all files, a drawer menu on phones, light and dark themes, and a dismissible

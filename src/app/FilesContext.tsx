@@ -13,6 +13,7 @@ export type Dialog =
   | { kind: 'move'; ids: string[] }
   | { kind: 'delete'; ids: string[] }
   | { kind: 'emptyBin' }
+  | { kind: 'storage' }
   | { kind: 'importInfo' }
   | { kind: 'templateInfo' }
 

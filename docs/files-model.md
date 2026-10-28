@@ -70,6 +70,14 @@ a file open without its observers.
 Pictures and attachments stay in shared IndexedDB stores. Clean-up asks the repository which ids any file (including the
 bin) still uses, so a picture used by one file is never removed because another file dropped it.
 
+## Google Drive
+
+`DriveRepository` wraps the local repository (`src/core/drive/repository.ts`). A file with `storage: 'drive'` keeps its
+local copy; `contentRef` is the Drive file id and `driveMeta` is the Drive version last seen. Saves write locally and then
+upload; before each upload the Drive version is compared, and a mismatch becomes a conflict the user resolves.
+Opening a Drive file fetches a newer remote version first when nothing is waiting to upload, and falls back to the local
+copy when Drive can't be reached. Setup and behaviour: `docs/google-drive-setup.md`.
+
 ## Links between files
 
 A topic link of the form `#map:<fileId>` or `#map:<fileId>/<topicId>` points to another map or knowledge base.
@@ -103,6 +111,5 @@ It is kept outside `supabase/migrations` on purpose so nothing applies it until 
 
 ## Not built yet
 
-Own cloud storage, sharing, "Shared with me" and "My shares" (placeholders only), accounts, templates, import, Google
-Drive (Phase B). When accounts arrive, signed-out visitors will see "Log in to view your files" instead of the local
+Own cloud storage, sharing, "Shared with me" and "My shares" (placeholders only), accounts, templates, import. When accounts arrive, signed-out visitors will see "Log in to view your files" instead of the local
 files banner.

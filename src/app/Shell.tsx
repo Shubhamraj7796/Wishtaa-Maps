@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, type FormEvent, type Re
 import { NavLink, Outlet, useLocation, useMatch, useNavigate, useSearchParams } from 'react-router-dom'
 import { useSettings } from '@/stores/settings'
 import { Dialogs } from './Dialogs'
+import { ConflictPrompt, DriveBanner } from './DriveUi'
 import { useFiles } from './FilesContext'
 import { Cloud, HardDrive, Home, Info, Library, Menu, Moon, Plus, Search, Sparkles, Sun, Trash2, X, FileText } from './icons'
 
@@ -66,6 +67,9 @@ function StorageInfo() {
         {used ? ` · ${used}` : ''}
       </p>
       <p className="mt-0.5">Guest. Files stay on this device.</p>
+      <button type="button" onClick={() => f.setDialog({ kind: 'storage' })} className="mt-2 rounded-ui border border-line px-2 py-1 font-medium text-ink hover:bg-bg">
+        Storage settings
+      </button>
     </div>
   )
 }
@@ -212,6 +216,8 @@ export function Shell(): ReactNode {
         <div className="flex min-w-0 flex-1 flex-col">
           {!immersive && <TopBar />}
           {!immersive && <LocalBanner />}
+          <DriveBanner />
+          <ConflictPrompt />
           <div className={`min-h-0 flex-1 ${immersive ? "overflow-hidden" : "overflow-y-auto"}`}>
             <Outlet />
           </div>

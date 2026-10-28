@@ -2,8 +2,10 @@ import { useState, type FormEvent } from 'react'
 import { folderOptions } from '@/core/files/tree'
 import { countAffected, useFiles } from './FilesContext'
 import { Modal, buttonDanger, buttonPrimary, buttonSecondary } from './Modal'
-import { BookOpen, FilePlus2, FolderPlus, LayoutTemplate, Network, Upload } from './icons'
+import { BookOpen, Cloud, FilePlus2, FolderPlus, LayoutTemplate, Network, Upload } from './icons'
+import { StorageSettings } from './DriveUi'
 import { plural } from './format'
+import { useDriveActions, useDriveAuth } from './useDrive'
 
 function NameForm({ title, label, initial, action, onSubmit, onClose }: { title: string; label: string; initial: string; action: string; onSubmit: (name: string) => void; onClose: () => void }) {
   const [name, setName] = useState(initial)
@@ -57,12 +59,23 @@ function NewDialog({ parentId, onClose }: { parentId: string | null; onClose: ()
     onClose()
     await work()
   }
+  const drive = useDriveActions()
+  const auth = useDriveAuth()
+  const connected = auth.status === 'connected' || auth.status === 'reconnect'
   return (
     <Modal title="New file" onClose={onClose}>
       <div className="space-y-2">
         <Choice icon={<Network size={20} aria-hidden="true" />} title="Blank mind map" hint="Start from one central topic." onClick={() => void go(() => f.createMap(parentId))} />
         <Choice icon={<BookOpen size={20} aria-hidden="true" />} title="Knowledge base" hint="A mind map for connected notes: Concepts, Resources, Projects, Notes." onClick={() => void go(() => f.createKb(parentId))} />
         <Choice icon={<FolderPlus size={20} aria-hidden="true" />} title="Folder" hint="Group files together. Folders can hold folders." onClick={() => f.setDialog({ kind: 'folder', parentId })} />
+        {drive.configured && (
+          <Choice
+            icon={<Cloud size={20} aria-hidden="true" />}
+            title={connected ? 'Open from Google Drive' : 'Connect Google Drive'}
+            hint={connected ? 'Choose a Wishtaa Maps file from your Drive.' : 'Keep files in your own Drive. Only files this app creates or opens are visible to it.'}
+            onClick={() => void go(() => (connected ? drive.pickFromDrive() : drive.connect()))}
+          />
+        )}
         <Choice icon={<LayoutTemplate size={20} aria-hidden="true" />} title="From template" hint="Coming soon." disabled />
         <Choice icon={<Upload size={20} aria-hidden="true" />} title="Import" hint="Coming soon." disabled />
       </div>
@@ -200,6 +213,8 @@ export function Dialogs() {
           </div>
         </Modal>
       )
+    case 'storage':
+      return <StorageSettings onClose={close} />
     case 'importInfo':
     case 'templateInfo':
       return (
