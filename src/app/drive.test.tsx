@@ -122,11 +122,10 @@ describe('Drive in the file screens', () => {
     mount('/home')
     fireEvent.click(await screen.findByRole('button', { name: /new file/i }))
     const dialog = await screen.findByRole('dialog', { name: 'New file' })
-    expect(within(dialog).getByText('Connect Google Drive')).toBeTruthy()
-    fireEvent.click(within(dialog).getByText('Connect Google Drive'))
+    expect(within(dialog).queryByText('Open from Google Drive')).toBeNull()
+    fireEvent.click(within(dialog).getByRole('button', { name: /Connect Google Drive/ }))
     await waitFor(() => expect(driveAuth.state.status).toBe('connected'))
-    fireEvent.click(await screen.findByRole('button', { name: /new file/i }))
-    expect(await screen.findByText('Open from Google Drive')).toBeTruthy()
+    expect(await within(dialog).findByText('Open from Google Drive')).toBeTruthy()
   })
 
   it('moves a file to Drive from its menu and marks it with a Drive badge', async () => {
@@ -139,7 +138,8 @@ describe('Drive in the file screens', () => {
     const card = (await screen.findByRole('button', { name: 'Open Budget' })).closest('li') as HTMLElement
     await waitFor(() => expect(within(card).getByTitle('Stored in Google Drive')).toBeTruthy())
     fireEvent.click(within(card).getByRole('button', { name: 'More actions for Budget' }))
-    expect(await screen.findByRole('menuitem', { name: 'Keep only in this browser' })).toBeTruthy()
+    expect(await screen.findByRole('menuitem', { name: 'Move to this browser' })).toBeTruthy()
+    expect(screen.getByRole('menuitem', { name: 'Stop syncing with Drive' })).toBeTruthy()
   })
 
   it('connects first when a file is moved to Drive while disconnected', async () => {

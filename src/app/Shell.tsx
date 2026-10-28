@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, type FormEvent, type Re
 import { NavLink, Outlet, useLocation, useMatch, useNavigate, useSearchParams } from 'react-router-dom'
 import { useSettings } from '@/stores/settings'
 import { Dialogs } from './Dialogs'
+import { CreateBridge } from './createFlow'
 import { ConflictPrompt, DriveBanner } from './DriveUi'
 import { useFiles } from './FilesContext'
 import { Cloud, HardDrive, Home, Info, Library, Menu, Moon, Plus, Search, Sparkles, Sun, Trash2, X, FileText } from './icons'
@@ -224,6 +225,7 @@ export function Shell(): ReactNode {
         </div>
       </div>
       <Dialogs />
+      <CreateBridge />
       <Toast />
     </ShellCtx.Provider>
   )

@@ -76,6 +76,18 @@ is nothing else to set.
 4. Edit it: the save indicator shows Saving, then Saved, and Drive's copy updates.
 5. Turn the network off and edit: the indicator says "Offline - will sync"; turn it on and it catches up.
 
+## Creating files
+
+New mind maps, knowledge bases and folders ask where to save them (**This browser** or **Google Drive**), except where
+the place is obvious: on the Google Drive page they are created in the folder you are viewing, and inside a local folder
+in All files they are created in that folder. Tick "Don't ask again" to always use one choice; Storage settings has
+"Ask me each time" to undo that.
+
+In Drive, a file is created as a `.wishtaa` file at once (so the first autosave updates it instead of making a second
+copy) and a folder becomes a real Drive folder. **Choose another folder** uses Google Picker in folder mode; choosing a
+folder with Picker is what lets this app (which only has `drive.file` access) create files inside it. If Drive can't be
+reached, the new file is kept in this browser and you can retry or keep it there.
+
 ## How it behaves
 
 - **Local first.** Every save goes to this browser first, then to Drive, so editing is instant and nothing is lost

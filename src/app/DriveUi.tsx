@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import { driveAuth } from './drive'
+import { choiceLabel } from '@/core/drive/placement'
+import { setPrefs, useCreatePrefs } from './createPrefs'
 import { useFiles } from './FilesContext'
 import { timeAgo } from './format'
 import { Modal, buttonPrimary, buttonSecondary } from './Modal'
@@ -92,6 +94,7 @@ export function StorageSettings({ onClose }: { onClose: () => void }) {
   const auth = useDriveAuth()
   const actions = useDriveActions()
   const connected = auth.status === 'connected' || auth.status === 'reconnect'
+  const prefs = useCreatePrefs()
   return (
     <Modal title="Storage" onClose={onClose}>
       <div className="space-y-3 text-sm">
@@ -119,6 +122,19 @@ export function StorageSettings({ onClose }: { onClose: () => void }) {
                 </button>
               </div>
             </>
+          )}
+        </div>
+        <div className="rounded-ui border border-line p-3">
+          <p className="font-semibold">New files</p>
+          {prefs.always ? (
+            <>
+              <p className="mt-1 text-xs text-muted">New files are always saved to <strong className="text-ink">{choiceLabel(prefs.always)}</strong>, without asking.</p>
+              <div className="mt-2">
+                <button type="button" className={buttonSecondary} onClick={() => setPrefs({ always: null })}>Ask me each time</button>
+              </div>
+            </>
+          ) : (
+            <p className="mt-1 text-xs text-muted">You are asked where to save each new file. Tick "Don't ask again" in that dialog to stop being asked.</p>
           )}
         </div>
         <p className="flex items-start gap-2 text-xs text-muted"><Info size={14} aria-hidden="true" className="mt-0.5 shrink-0" /> Our own cloud storage is coming later.</p>

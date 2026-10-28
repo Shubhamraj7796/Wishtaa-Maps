@@ -26,6 +26,8 @@ export interface DriveApi {
   meta(id: string): Promise<DriveFileMeta>
   download(id: string): Promise<string>
   create(input: { name: string; parentId: string; body: string }): Promise<DriveFileMeta>
+  /** A real Drive folder inside `parentId`. */
+  createFolder(name: string, parentId: string): Promise<DriveFileMeta>
   update(id: string, input: { name?: string; body: string }): Promise<DriveFileMeta>
   list(parentId: string): Promise<DriveFileMeta[]>
   trash(id: string): Promise<void>
@@ -147,6 +149,14 @@ export class DriveClient implements DriveApi {
   create({ name, parentId, body }: { name: string; parentId: string; body: string }): Promise<DriveFileMeta> {
     const m = this.multipart({ name, parents: [parentId], mimeType: WISHTAA_MIME }, body)
     return this.json<DriveFileMeta>(`${UPLOAD}/files?uploadType=multipart&fields=${FILE_FIELDS}`, { method: 'POST', ...m })
+  }
+
+  createFolder(name: string, parentId: string): Promise<DriveFileMeta> {
+    return this.json<DriveFileMeta>(`${API}/files?fields=${FILE_FIELDS}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, mimeType: FOLDER_MIME, parents: [parentId] }),
+    })
   }
 
   update(id: string, { name, body }: { name?: string; body: string }): Promise<DriveFileMeta> {

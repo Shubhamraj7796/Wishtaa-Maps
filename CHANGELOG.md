@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+### Choose where new files are stored
+- **"Save to" when creating** a mind map, knowledge base or folder: This browser or Google Drive (with the connected
+  account). Drive is the default when connected, otherwise This browser; the last choice and the last Drive folder are
+  remembered. When Drive isn't connected, **Connect Google Drive** connects and carries on creating.
+- **Drive location**: defaults to the Wishtaa Maps folder; **Choose another folder** opens Google Picker in folder mode.
+- **"Don't ask again, always use ..."**, resettable in Storage settings ("Ask me each time").
+- **Context rules**: from the Google Drive page (or a Drive folder) it creates directly there; inside a local folder it
+  creates directly in that folder; from Home, the sidebar, the top of All files and the command palette (New mind map,
+  New knowledge base, New folder) it asks.
+- **Created in Drive immediately** as a `.wishtaa` file, so the first autosave updates it; Drive folders are real Drive
+  folders. If Drive fails (offline, expired sign-in, full), the new file stays safe in this browser and you can
+  **Retry** or **Create in this browser instead**.
+- **Move to this browser** (with a confirmation) next to Move to Google Drive. "Keep only in this browser" is now
+  "Stop syncing with Drive" (it leaves the Drive copy as it is).
+
 ### Google Drive storage (Phase B)
 - **Connect Google Drive** from the Google Drive page, the New file dialog, or Storage settings. Uses Google Identity
   Services with the single `drive.file` scope (only files this app creates or the user opens with it). Tokens live in

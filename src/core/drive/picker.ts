@@ -22,7 +22,7 @@ interface PickerResponse {
 interface PickerApi {
   PickerBuilder: new () => PickerBuilder
   DocsView: new (viewId?: unknown) => { setMimeTypes(m: string): unknown; setIncludeFolders(b: boolean): unknown; setSelectFolderEnabled(b: boolean): unknown }
-  ViewId: { DOCS: unknown }
+  ViewId: { DOCS: unknown; FOLDERS: unknown }
   Action: { PICKED: string; CANCEL: string }
 }
 
@@ -55,6 +55,35 @@ function loadPicker(): Promise<PickerApi> {
 
 /** The Google Cloud project number is the first part of the OAuth client id. */
 export const projectNumber = (clientId: string) => clientId.split('-')[0] ?? ''
+
+/**
+ * Lets the user choose a Drive folder to save new files in. Choosing a folder gives this app access to that folder
+ * (the `drive.file` scope), so files can be created inside it.
+ */
+export async function pickDriveFolder(opts: { token: string; apiKey: string | undefined; clientId: string | undefined }): Promise<PickedFile | null> {
+  if (!opts.apiKey || !opts.clientId) {
+    throw new DriveError('config', 'Choosing a folder needs a Google API key. Add VITE_GOOGLE_API_KEY (see the setup notes).')
+  }
+  const picker = await loadPicker()
+  return new Promise((resolve) => {
+    const view = new picker.DocsView(picker.ViewId.FOLDERS)
+    view.setIncludeFolders(true)
+    view.setSelectFolderEnabled(true)
+    view.setMimeTypes('application/vnd.google-apps.folder')
+    new picker.PickerBuilder()
+      .addView(view)
+      .setOAuthToken(opts.token)
+      .setDeveloperKey(opts.apiKey as string)
+      .setAppId(projectNumber(opts.clientId as string))
+      .setTitle('Choose a folder in Google Drive')
+      .setCallback((data) => {
+        if (data.action === picker.Action.PICKED) resolve(data.docs?.[0] ? { id: data.docs[0].id, name: data.docs[0].name } : null)
+        else if (data.action === picker.Action.CANCEL) resolve(null)
+      })
+      .build()
+      .setVisible(true)
+  })
+}
 
 /**
  * Lets the user choose a `.wishtaa` file from their Drive. Picking a file gives this app access to that one file

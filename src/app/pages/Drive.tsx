@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { FOLDER_MIME, type DriveFileMeta } from '@/core/drive/client'
 import { nameFromDrive } from '@/core/drive/format'
+import { useCreate } from '../createFlow'
 import { driveAuth } from '../drive'
 import { FileKindIcon } from '../FileBrowser'
 import { useFiles } from '../FilesContext'
 import { timeAgo } from '../format'
-import { Cloud, Folder, Info, RotateCcw } from '../icons'
+import { BookOpen, Cloud, Folder, FolderPlus, Info, Network, RotateCcw } from '../icons'
 import { buttonPrimary, buttonSecondary } from '../Modal'
 import { driveRepository } from '../repo'
 import { EmptyState, Page, PageHeader } from '../ui'
@@ -17,9 +19,10 @@ interface Crumb {
 }
 
 /** The part of Google Drive this app can see: the "Wishtaa Maps" folder and whatever the user opened with it. */
-function DriveBrowser() {
+function DriveBrowser({ initialFolder }: { initialFolder: { id: string; name: string } | null }) {
   const actions = useDriveActions()
-  const [trail, setTrail] = useState<Crumb[]>([{ id: undefined, name: 'Wishtaa Maps' }])
+  const create = useCreate()
+  const [trail, setTrail] = useState<Crumb[]>([{ id: undefined, name: 'Wishtaa Maps' }, ...(initialFolder ? [initialFolder] : [])])
   const [items, setItems] = useState<DriveFileMeta[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const auth = useDriveAuth()
@@ -55,8 +58,18 @@ function DriveBrowser() {
     )
   }
 
+  // Creating here puts the new file or folder in the Drive folder being viewed, without asking.
+  const make = (item: 'map' | 'kb' | 'folder') =>
+    create.start(item, { source: 'drive', driveFolder: here.id ? { id: here.id, name: here.name } : null, onFolderCreated: () => void load() })
+
   return (
     <section aria-label="Google Drive files">
+      <div role="group" aria-label={`Create in ${here.name}`} className="mb-4 flex flex-wrap items-center gap-2">
+        <span className="text-xs text-muted">Create in {here.name}:</span>
+        <button type="button" className={buttonSecondary} onClick={() => make('map')}><Network size={15} aria-hidden="true" /> New mind map</button>
+        <button type="button" className={buttonSecondary} onClick={() => make('kb')}><BookOpen size={15} aria-hidden="true" /> New knowledge base</button>
+        <button type="button" className={buttonSecondary} onClick={() => make('folder')}><FolderPlus size={15} aria-hidden="true" /> New folder</button>
+      </div>
       <nav aria-label="Drive folders" className="mb-3 flex flex-wrap items-center gap-1 text-sm text-muted">
         {trail.map((c, i) => (
           <span key={`${c.id ?? 'root'}`} className="flex items-center gap-1">
@@ -117,6 +130,8 @@ export default function Drive() {
   const auth = useDriveAuth()
   const actions = useDriveActions()
   const { files } = useFiles()
+  const [params] = useSearchParams()
+  const folderParam = params.get('folder')
   const connected = auth.status === 'connected' || auth.status === 'reconnect'
   const stored = files.filter((f) => f.storage === 'drive' && !f.trashed).length
 
@@ -164,7 +179,7 @@ export default function Drive() {
           <p className="mb-4 text-sm text-muted">
             Connected{auth.account ? ` as ${auth.account}` : ''}. {stored === 0 ? 'No files are stored in Drive yet.' : `${stored} ${stored === 1 ? 'file is' : 'files are'} stored in Drive.`}
           </p>
-          <DriveBrowser />
+          <DriveBrowser key={folderParam ?? 'root'} initialFolder={folderParam ? { id: folderParam, name: params.get('name') ?? 'Folder' } : null} />
         </>
       )}
     </Page>

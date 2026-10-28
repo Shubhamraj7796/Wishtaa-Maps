@@ -67,6 +67,11 @@ export class FakeDrive implements DriveApi {
     return this.store(name, 'application/json', [parentId], body)
   }
 
+  async createFolder(name: string, parentId: string) {
+    this.gate('createFolder')
+    return this.store(name, 'application/vnd.google-apps.folder', [parentId], '')
+  }
+
   async update(id: string, { name, body }: { name?: string; body: string }) {
     this.gate(`update ${id}`)
     const f = this.files.get(id)

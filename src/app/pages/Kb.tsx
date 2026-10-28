@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { sortFiles, trashRoots } from '@/core/files/tree'
 import { FileBrowser } from '../FileBrowser'
+import { useCreate } from '../createFlow'
 import { useFiles } from '../FilesContext'
 import { BookOpen, LayoutTemplate, Library, Plus, Trash2, X } from '../icons'
 import { ActionCard, Chips, EmptyState, Page, PageHeader, SortControl, Tabs, ViewToggle, usePref } from '../ui'
@@ -24,6 +25,7 @@ const KB_ONLY: ('kb')[] = ['kb']
 
 export default function Kb() {
   const f = useFiles()
+  const create = useCreate()
   const [params, setParams] = useSearchParams()
   const tab = (TABS.find((t) => t.id === params.get('tab'))?.id ?? 'kb') as Tab
   const [chip, setChip] = useState<Chip>('all')
@@ -58,7 +60,7 @@ export default function Kb() {
       {tab === 'kb' && (
         <>
           <section aria-label="Create" className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:max-w-2xl">
-            <ActionCard icon={<Plus size={20} aria-hidden="true" />} title="Create knowledge base" hint="Concepts, Resources, Projects, Notes" onClick={() => void f.createKb()} />
+            <ActionCard icon={<Plus size={20} aria-hidden="true" />} title="Create knowledge base" hint="Concepts, Resources, Projects, Notes" onClick={() => create.start('kb', { source: 'home' })} />
             <ActionCard icon={<LayoutTemplate size={20} aria-hidden="true" />} title="Create from template" hint="Coming soon" badge="Soon" onClick={() => f.setDialog({ kind: 'templateInfo' })} />
           </section>
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">

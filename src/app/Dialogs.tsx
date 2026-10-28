@@ -1,8 +1,12 @@
 import { useState, type FormEvent } from 'react'
 import { folderOptions } from '@/core/files/tree'
+import type { NewItem } from '@/core/drive/create'
+import { choiceLabel, effectiveAlways } from '@/core/drive/placement'
+import { initialPickerState, MoveLocalDialog, placementFor, rememberChoice, SaveToDialog, SaveToPicker, useCreate, type PickerState } from './createFlow'
+import { useCreatePrefs } from './createPrefs'
 import { countAffected, useFiles } from './FilesContext'
 import { Modal, buttonDanger, buttonPrimary, buttonSecondary } from './Modal'
-import { BookOpen, Cloud, FilePlus2, FolderPlus, LayoutTemplate, Network, Upload } from './icons'
+import { BookOpen, Cloud, FilePlus2, FolderPlus, Info, LayoutTemplate, Network, Upload } from './icons'
 import { StorageSettings } from './DriveUi'
 import { plural } from './format'
 import { useDriveActions, useDriveAuth } from './useDrive'
@@ -54,26 +58,47 @@ function Choice({ icon, title, hint, onClick, disabled }: { icon: React.ReactNod
 }
 
 function NewDialog({ parentId, onClose }: { parentId: string | null; onClose: () => void }) {
-  const f = useFiles()
-  const go = async (work: () => Promise<unknown>) => {
-    onClose()
-    await work()
-  }
   const drive = useDriveActions()
   const auth = useDriveAuth()
+  const create = useCreate()
+  const prefs = useCreatePrefs()
   const connected = auth.status === 'connected' || auth.status === 'reconnect'
+  const always = effectiveAlways(prefs, connected)
+  const [state, setState] = useState<PickerState>(() => initialPickerState(connected))
+
+  // Pick a kind: it is created where "Save to" says (or where "don't ask again" says).
+  const go = (item: NewItem) => {
+    const chosen: PickerState = always ? { choice: always, folder: prefs.driveFolder, dontAsk: false } : state
+    if (!always) rememberChoice(state)
+    onClose()
+    void create.startWith(item, placementFor(chosen, parentId), parentId)
+  }
+
   return (
     <Modal title="New file" onClose={onClose}>
+      <div className="mb-4">
+        {always ? (
+          <p className="flex items-start gap-2 rounded-ui border border-line px-3 py-2 text-xs text-muted">
+            <Info size={14} aria-hidden="true" className="mt-0.5 shrink-0" />
+            <span>New files are saved to <strong className="text-ink">{choiceLabel(always)}</strong>. You can change this in Storage settings.</span>
+          </p>
+        ) : (
+          <SaveToPicker state={state} onChange={setState} onConnected={() => undefined} />
+        )}
+      </div>
       <div className="space-y-2">
-        <Choice icon={<Network size={20} aria-hidden="true" />} title="Blank mind map" hint="Start from one central topic." onClick={() => void go(() => f.createMap(parentId))} />
-        <Choice icon={<BookOpen size={20} aria-hidden="true" />} title="Knowledge base" hint="A mind map for connected notes: Concepts, Resources, Projects, Notes." onClick={() => void go(() => f.createKb(parentId))} />
-        <Choice icon={<FolderPlus size={20} aria-hidden="true" />} title="Folder" hint="Group files together. Folders can hold folders." onClick={() => f.setDialog({ kind: 'folder', parentId })} />
-        {drive.configured && (
+        <Choice icon={<Network size={20} aria-hidden="true" />} title="Blank mind map" hint="Start from one central topic." onClick={() => go('map')} />
+        <Choice icon={<BookOpen size={20} aria-hidden="true" />} title="Knowledge base" hint="A mind map for connected notes: Concepts, Resources, Projects, Notes." onClick={() => go('kb')} />
+        <Choice icon={<FolderPlus size={20} aria-hidden="true" />} title="Folder" hint="Group files together. Folders can hold folders." onClick={() => go('folder')} />
+        {drive.configured && connected && (
           <Choice
             icon={<Cloud size={20} aria-hidden="true" />}
-            title={connected ? 'Open from Google Drive' : 'Connect Google Drive'}
-            hint={connected ? 'Choose a Wishtaa Maps file from your Drive.' : 'Keep files in your own Drive. Only files this app creates or opens are visible to it.'}
-            onClick={() => void go(() => (connected ? drive.pickFromDrive() : drive.connect()))}
+            title="Open from Google Drive"
+            hint="Choose a Wishtaa Maps file from your Drive."
+            onClick={() => {
+              onClose()
+              void drive.pickFromDrive()
+            }}
           />
         )}
         <Choice icon={<LayoutTemplate size={20} aria-hidden="true" />} title="From template" hint="Coming soon." disabled />
@@ -161,20 +186,10 @@ export function Dialogs() {
   switch (d.kind) {
     case 'new':
       return <NewDialog parentId={d.parentId} onClose={close} />
-    case 'folder':
-      return (
-        <NameForm
-          title="New folder"
-          label="Folder name"
-          initial="New folder"
-          action="Create"
-          onClose={close}
-          onSubmit={(name) => {
-            close()
-            void f.createFolder(name, d.parentId)
-          }}
-        />
-      )
+    case 'saveTo':
+      return <SaveToDialog d={d} onClose={close} />
+    case 'moveLocal':
+      return <MoveLocalDialog file={d.file} onClose={close} />
     case 'rename':
       return (
         <NameForm

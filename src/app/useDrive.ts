@@ -1,7 +1,8 @@
 import { useMemo, useSyncExternalStore } from 'react'
 import type { DriveAuthState } from '@/core/drive/auth'
 import { DriveError } from '@/core/drive/errors'
-import { pickWishtaaFile } from '@/core/drive/picker'
+import type { DriveFolderRef } from '@/core/drive/placement'
+import { pickDriveFolder, pickWishtaaFile } from '@/core/drive/picker'
 import type { ConflictChoice, DriveConflict } from '@/core/drive/repository'
 import type { FileRecord } from '@/core/files/types'
 import { currentFileId, reopenFile } from '@/editor/session'
@@ -48,6 +49,8 @@ export function useDriveActions() {
     return {
       configured: !!driveConfig.clientId,
       connect,
+      /** Signs in first if needed. True when Drive is ready to use. */
+      ensureConnected,
       disconnect: () =>
         run(async () => {
           await driveAuth.disconnect()
@@ -78,6 +81,22 @@ export function useDriveActions() {
           if (!(await ensureConnected())) return null
           const rec = await driveRepository.moveToDrive(file.id)
           notify(`"${rec.name}" is now stored in Google Drive.`)
+          return rec
+        }),
+      /** Google Picker in folder mode: where new files should be saved. */
+      pickFolder: () =>
+        run(async (): Promise<DriveFolderRef | null> => {
+          if (!(await ensureConnected())) return null
+          const token = await driveAuth.getToken()
+          const picked = await pickDriveFolder({ token, apiKey: driveConfig.apiKey, clientId: driveConfig.clientId })
+          return picked ? { id: picked.id, name: picked.name } : null
+        }),
+      /** Brings a Drive file into this browser and moves the Drive copy to Drive's bin. */
+      moveToLocal: (file: FileRecord) =>
+        run(async () => {
+          if (!(await ensureConnected())) return null
+          const rec = await driveRepository.moveToLocal(file.id)
+          notify(`"${rec.name}" is now stored in this browser only. The copy in Google Drive was moved to the Drive bin.`)
           return rec
         }),
       keepLocal: (file: FileRecord) =>

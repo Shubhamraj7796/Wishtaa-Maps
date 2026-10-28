@@ -290,16 +290,42 @@ export class DriveRepository implements FileRepository {
 
   // ---- Drive-specific features ---------------------------------------------------------------------------
 
-  /** Stores an existing local file in Drive from now on. */
-  async moveToDrive(id: string): Promise<FileRecord> {
+  /** A real folder in Drive, inside `parentFolderId` (the Wishtaa Maps folder when not given). */
+  async createDriveFolder(name: string, parentFolderId?: string): Promise<DriveFileMeta> {
+    return this.api.createFolder(name, parentFolderId ?? (await this.api.ensureAppFolder()))
+  }
+
+  /** Stores an existing local file in Drive from now on, in `parentFolderId` (the Wishtaa Maps folder when not given). */
+  async moveToDrive(id: string, parentFolderId?: string): Promise<FileRecord> {
     const f = await this.local.get(id)
     if (!f || f.type === 'folder') throw new DriveError('other', 'Only maps and knowledge bases can be stored in Google Drive.')
     if (this.isDrive(f)) return f
     const content = await this.local.loadContent(id)
     if (!content) throw new DriveError('other', 'This file has no content to save yet.')
-    const parentId = await this.api.ensureAppFolder()
+    const parentId = parentFolderId ?? (await this.api.ensureAppFolder())
     const made = await this.api.create({ name: driveFileName(f.name), parentId, body: await this.pack(f, content) })
     return this.local.update(id, { storage: 'drive', contentRef: made.id, driveMeta: { version: made.version, modifiedTime: made.modifiedTime } })
+  }
+
+  /**
+   * Moves a file out of Drive into this browser: the latest version is brought here, the Drive copy goes to Drive's bin
+   * (recoverable there), and from now on the file lives only in this browser. Nothing changes if Drive can't be reached.
+   */
+  async moveToLocal(id: string): Promise<FileRecord> {
+    const f = await this.local.get(id)
+    if (!f) throw new DriveError('notfound', 'That file no longer exists.')
+    if (!this.isDrive(f)) return f
+    if (!this.api.available()) throw new DriveError('auth', 'Reconnect Google Drive first, so the copy there can be moved to the Drive bin.')
+    if (this.conflictMap.has(id)) throw new DriveConflictError('Choose which version to keep before moving this file out of Google Drive.')
+    await this.loadContent(id) // brings in a newer version made elsewhere, or flags a conflict
+    if (this.conflictMap.has(id)) throw new DriveConflictError('Choose which version to keep before moving this file out of Google Drive.')
+    try {
+      await this.api.trash(f.contentRef)
+    } catch (e) {
+      if (!(e instanceof DriveError && e.kind === 'notfound')) throw e // already gone from Drive: nothing to remove
+    }
+    this.markUnsynced(id, false)
+    return this.local.update(id, { storage: 'local', contentRef: id, driveMeta: null })
   }
 
   /** Stops syncing: the file stays here, in this browser, and the Drive copy is left untouched. */

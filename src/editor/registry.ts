@@ -1,5 +1,6 @@
 import { LAYOUTS } from '@/core/layout/catalog'
 import { THEMES } from '@/core/theme/themes'
+import { requestCreate } from '../app/createBus'
 import * as A from './actions'
 import * as C from './content'
 import {
@@ -93,6 +94,9 @@ export const COMMANDS: Cmd[] = [
   { id: 'nav-down', label: 'Select down', group: 'Navigate', keys: ['ArrowDown'], run: () => A.navigate('down'), palette: false },
   { id: 'search', label: 'Search topics and notes', group: 'Navigate', keys: ['Ctrl+F'], run: A.openSearch },
   { id: 'palette', label: 'Command palette', group: 'Navigate', keys: ['Ctrl+K'], run: () => A.setPalette(true), palette: false },
+  { id: 'newMap', label: 'New mind map…', group: 'Tools', run: () => requestCreate('map') },
+  { id: 'newKb', label: 'New knowledge base…', group: 'Tools', run: () => requestCreate('kb') },
+  { id: 'newFolder', label: 'New folder…', group: 'Tools', run: () => requestCreate('folder') },
   { id: 'help', label: 'Keyboard shortcuts', group: 'Navigate', keys: ['?'], run: () => A.setHelp(true) },
   { id: 'escape', label: 'Close / deselect', group: 'Navigate', keys: ['Escape'], run: escape, palette: false },
 

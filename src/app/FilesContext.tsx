@@ -1,5 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
+import type { CreateOutcome, NewItem } from '@/core/drive/create'
+import type { Placement } from '@/core/drive/placement'
 import { buildStarterContent } from '@/core/files/templates'
 import { descendantsOf } from '@/core/files/tree'
 import type { FileRecord, FileRepository } from '@/core/files/types'
@@ -8,7 +10,9 @@ import { repository } from './repo'
 
 export type Dialog =
   | { kind: 'new'; parentId: string | null }
-  | { kind: 'folder'; parentId: string | null }
+  /** Create something, asking where to save it (or, with `fixed`, in a place already decided). */
+  | { kind: 'saveTo'; item: NewItem; localParentId: string | null; fixed?: Placement; failed?: Extract<CreateOutcome, { status: 'drive-failed' }>; onFolderCreated?: () => void }
+  | { kind: 'moveLocal'; file: FileRecord }
   | { kind: 'rename'; file: FileRecord }
   | { kind: 'move'; ids: string[] }
   | { kind: 'delete'; ids: string[] }
@@ -27,9 +31,6 @@ export interface FilesApi {
   message: string | null
   notify: (text: string) => void
   open: (file: FileRecord, topicId?: string) => void
-  createMap: (parentId?: string | null) => Promise<FileRecord | null>
-  createKb: (parentId?: string | null) => Promise<FileRecord | null>
-  createFolder: (name: string, parentId?: string | null) => Promise<FileRecord | null>
   openSampleKb: () => Promise<void>
   rename: (file: FileRecord, name: string) => Promise<void>
   toggleStar: (file: FileRecord) => Promise<void>
@@ -110,12 +111,6 @@ export function FilesProvider({ repo = repository, children }: { repo?: FileRepo
 
   const api = useMemo<FilesApi>(() => {
     const open = (file: FileRecord, topicId?: string) => navigate(routeForFile(file, topicId))
-    const make = (type: 'map' | 'kb') => async (parentId: string | null = null) =>
-      guard(async () => {
-        const file = await repo.create({ type, parentId, content: buildStarterContent(type === 'kb' ? 'kb' : 'blank') })
-        navigate(routeForFile(file))
-        return file
-      }, null)
     return {
       repo,
       files,
@@ -125,9 +120,6 @@ export function FilesProvider({ repo = repository, children }: { repo?: FileRepo
       message,
       notify,
       open,
-      createMap: make('map'),
-      createKb: make('kb'),
-      createFolder: (name, parentId = null) => guard(() => repo.create({ type: 'folder', name, parentId }), null),
       openSampleKb: async () => {
         const existing = files.find((f) => f.type === 'kb' && !f.trashed && f.name === SAMPLE_KB_NAME)
         if (existing) return open(existing)
