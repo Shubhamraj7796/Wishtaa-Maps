@@ -120,6 +120,12 @@ export function ShapeIcon({ shape, size = 22 }: { shape: Shape; size?: number })
       {shape === 'pill' && <rect x="2" y="3" width="26" height="15" rx="7.5" />}
       {shape === 'ellipse' && <ellipse cx="15" cy="10.5" rx="13" ry="8" />}
       {shape === 'diamond' && <path d="M15 1.5L28 10.5L15 19.5L2 10.5Z" />}
+      {shape === 'doubleCircle' && (
+        <>
+          <circle cx="15" cy="10.5" r="9.5" />
+          <circle cx="15" cy="10.5" r="5" />
+        </>
+      )}
       {shape === 'underline' && <path d="M3 17H27" />}
       {shape === 'underline' && <path d="M8 9h14" strokeDasharray="1.5 3" strokeWidth="1.4" />}
     </svg>

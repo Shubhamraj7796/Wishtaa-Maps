@@ -50,7 +50,7 @@ function hash(id: string): number {
 }
 
 /** CSS for the box of a topic: shape, fill, border and text from its resolved look. */
-function boxStyle(look: Look, id: string): React.CSSProperties {
+function boxStyle(look: Look, id: string, gap: string): React.CSSProperties {
   const hand = look.handDrawn
   const base: React.CSSProperties = {
     color: look.text,
@@ -70,6 +70,11 @@ function boxStyle(look: Look, id: string): React.CSSProperties {
       return { ...base, borderRadius: hand ? HAND_RADII[hash(id) % 4] : 9999 }
     case 'ellipse':
       return { ...base, borderRadius: hand ? HAND_RADII[hash(id) % 4] : '50%' }
+    case 'doubleCircle': {
+      // An outer ring, a gap, then the inner circle holding the text (the ring and the inner circle share the topic's colour).
+      const ring = Math.max(3, Math.round(look.borderWidth * 3))
+      return { ...base, borderRadius: '50%', borderWidth: ring, boxShadow: `inset 0 0 0 4px ${gap}` }
+    }
     case 'diamond':
       return {
         ...base,
@@ -269,7 +274,7 @@ export const TopicView = memo(function TopicView(p: TopicViewProps) {
   const pos = image?.position ?? 'above'
   const behind = pos === 'behind'
 
-  const style: React.CSSProperties = { left: box.x, top: box.y, width: box.w, height: box.h, ...boxStyle(look, box.id), opacity: p.dim ? 0.25 : 1 }
+  const style: React.CSSProperties = { left: box.x, top: box.y, width: box.w, height: box.h, ...boxStyle(look, box.id, p.theme.bg), opacity: p.dim ? 0.25 : 1 }
   const ringColor = p.current ? '#f59e0b' : p.selected ? 'rgb(var(--c-brand))' : p.match ? '#f59e0b' : null
   const diamond = look.shape === 'diamond'
   const ring = ringColor && !diamond ? `0 0 0 3px ${ringColor}${p.selected && !p.current ? ', 0 0 0 5px rgb(var(--c-surface))' : ''}` : undefined
@@ -375,7 +380,7 @@ export const TopicView = memo(function TopicView(p: TopicViewProps) {
       aria-selected={p.selected}
       aria-label={topic.text || (image ? 'Image topic' : 'Empty topic')}
       className={`absolute flex select-none items-center justify-center px-3 leading-none ${simple ? '' : sideBySide ? 'flex-row gap-3 py-2' : 'flex-col gap-1.5 py-2'}`}
-      style={{ ...style, boxShadow: ring, ...glow }}
+      style={{ ...style, ...glow, boxShadow: [style.boxShadow, ring].filter(Boolean).join(', ') || undefined }}
     >
       {behind && picture && <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">{picture}</div>}
       {!behind && pos !== 'below' && pos !== 'right' && picture}

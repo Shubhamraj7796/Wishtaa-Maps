@@ -100,6 +100,10 @@ export function measureTopic(t: TopicData, depth: number, shape: Shape = 'rounde
       }
     }
   }
+  if (shape === 'doubleCircle') {
+    const side = Math.ceil(Math.max(w, h) * 1.35 + 20)
+    return { w: side, h: side }
+  }
   if (shape === 'ellipse') return { w: Math.ceil(w * 1.2), h: Math.ceil(h * 1.25) }
   if (shape === 'diamond') return { w: Math.ceil(w * 1.5), h: Math.ceil(h * 1.6) }
   return { w, h }

@@ -1,3 +1,4 @@
+import type { ThemePreview } from '@/core/theme/apply'
 import { create } from 'zustand'
 import type { SaveSnapshot } from '@/core/autosave'
 import { emptyObjects, type MapObjects, type ObjectRef } from '@/core/model/objects'
@@ -66,6 +67,8 @@ export interface EditorState {
   styleBranch: boolean
   /** Copied topic format; while set, clicking a topic paints it (format painter). */
   painter: TopicStyle | null
+  /** A theme, colour scheme or thickness shown on the canvas while hovering or dragging (never saved). */
+  themePreview: ThemePreview | null
   /** The last copied format (kept after the painter is used). */
   copiedFormat: TopicStyle | null
   /** Diagram objects beside the topic tree. */
@@ -123,6 +126,7 @@ export const useEditor = create<EditorState>(() => ({
   panelTab: 'layout',
   styleBranch: false,
   painter: null,
+  themePreview: null,
   copiedFormat: null,
   objects: emptyObjects(),
   selectedObject: null,

@@ -3,6 +3,7 @@ import { buildScene, type Scene } from '@/core/layout/engine'
 import type { TopicMap } from '@/core/model/tree'
 import type { MapSettings } from '@/core/settings'
 import { resolveTheme } from '@/core/settings'
+import { previewSettings } from '@/core/theme/apply'
 import { levelOf, shapeFor, type ResolvedTheme } from '@/core/theme/resolve'
 import { useEditor } from './store'
 
@@ -54,7 +55,8 @@ export function getScene(): Scene {
 
 export function useTheme(): ResolvedTheme {
   const settings = useEditor((s) => s.settings)
-  return useMemo(() => getTheme(settings), [settings])
+  const preview = useEditor((s) => s.themePreview)
+  return useMemo(() => getTheme(preview ? previewSettings(settings, preview) : settings), [settings, preview])
 }
 
 export function useScene(): Scene {

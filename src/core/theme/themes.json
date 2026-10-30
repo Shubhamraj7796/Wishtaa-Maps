@@ -1,0 +1,3137 @@
+[
+ {
+  "version": 2,
+  "id": "wishtaa",
+  "name": "Wishtaa Classic",
+  "dark": false,
+  "bg": "#f7f8fa",
+  "pattern": "dots",
+  "text": "#1f2937",
+  "palette": [
+   "#0f766e",
+   "#1d4ed8",
+   "#b45309",
+   "#be185d",
+   "#6d28d9",
+   "#15803d",
+   "#b91c1c",
+   "#0e7490"
+  ],
+  "font": "Inter, system-ui, 'Segoe UI', sans-serif",
+  "handDrawn": false,
+  "levels": {
+   "central": {
+    "shape": "rounded",
+    "cornerRadius": null,
+    "fill": "solid",
+    "fillColor": "#1f2937",
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 17,
+    "fontWeight": 600,
+    "textColor": "#ffffff",
+    "branch": {
+     "curve": "auto",
+     "thickness": 3,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "main": {
+    "shape": "rounded",
+    "cornerRadius": null,
+    "fill": "solid",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 600,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 2.4,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "sub": {
+    "shape": "rounded",
+    "cornerRadius": null,
+    "fill": "tint",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 500,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 1.8,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "deeper": {
+    "shape": "rounded",
+    "cornerRadius": null,
+    "fill": "tint",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 500,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 1.5,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   }
+  }
+ },
+ {
+  "version": 2,
+  "id": "ocean",
+  "name": "Ocean",
+  "dark": false,
+  "bg": "#f0f9ff",
+  "pattern": "dots",
+  "text": "#1f2937",
+  "palette": [
+   "#0369a1",
+   "#0e7490",
+   "#1d4ed8",
+   "#0f766e",
+   "#155e75",
+   "#1e40af",
+   "#0284c7",
+   "#047857"
+  ],
+  "font": "Inter, system-ui, 'Segoe UI', sans-serif",
+  "handDrawn": false,
+  "levels": {
+   "central": {
+    "shape": "rounded",
+    "cornerRadius": null,
+    "fill": "solid",
+    "fillColor": "#0c4a6e",
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 17,
+    "fontWeight": 600,
+    "textColor": "#ffffff",
+    "branch": {
+     "curve": "auto",
+     "thickness": 3,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "main": {
+    "shape": "pill",
+    "cornerRadius": null,
+    "fill": "solid",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 600,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 2.4,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "sub": {
+    "shape": "pill",
+    "cornerRadius": null,
+    "fill": "outline",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 500,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 1.8,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "deeper": {
+    "shape": "pill",
+    "cornerRadius": null,
+    "fill": "outline",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 500,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 1.5,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   }
+  }
+ },
+ {
+  "version": 2,
+  "id": "forest",
+  "name": "Forest",
+  "dark": false,
+  "bg": "#f4f8f1",
+  "pattern": "dots",
+  "text": "#1f2937",
+  "palette": [
+   "#166534",
+   "#4d7c0f",
+   "#854d0e",
+   "#15803d",
+   "#3f6212",
+   "#92400e",
+   "#14532d",
+   "#365314"
+  ],
+  "font": "Inter, system-ui, 'Segoe UI', sans-serif",
+  "handDrawn": false,
+  "levels": {
+   "central": {
+    "shape": "rounded",
+    "cornerRadius": null,
+    "fill": "solid",
+    "fillColor": "#14532d",
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 17,
+    "fontWeight": 600,
+    "textColor": "#ffffff",
+    "branch": {
+     "curve": "auto",
+     "thickness": 3,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "main": {
+    "shape": "rounded",
+    "cornerRadius": null,
+    "fill": "solid",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 600,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 2.4,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "sub": {
+    "shape": "rounded",
+    "cornerRadius": null,
+    "fill": "tint",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 500,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 1.8,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "deeper": {
+    "shape": "rounded",
+    "cornerRadius": null,
+    "fill": "tint",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 500,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 1.5,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   }
+  }
+ },
+ {
+  "version": 2,
+  "id": "sunset",
+  "name": "Sunset",
+  "dark": false,
+  "bg": "#fff7ed",
+  "pattern": "dots",
+  "text": "#1f2937",
+  "palette": [
+   "#c2410c",
+   "#be123c",
+   "#b45309",
+   "#9d174d",
+   "#a21caf",
+   "#9a3412",
+   "#be185d",
+   "#c026d3"
+  ],
+  "font": "Inter, system-ui, 'Segoe UI', sans-serif",
+  "handDrawn": false,
+  "levels": {
+   "central": {
+    "shape": "rounded",
+    "cornerRadius": null,
+    "fill": "solid",
+    "fillColor": "#7c2d12",
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 17,
+    "fontWeight": 600,
+    "textColor": "#ffffff",
+    "branch": {
+     "curve": "auto",
+     "thickness": 3,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "main": {
+    "shape": "pill",
+    "cornerRadius": null,
+    "fill": "solid",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 600,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 2.4,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "sub": {
+    "shape": "rounded",
+    "cornerRadius": null,
+    "fill": "tint",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 500,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 1.8,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "deeper": {
+    "shape": "rounded",
+    "cornerRadius": null,
+    "fill": "tint",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 500,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 1.5,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   }
+  }
+ },
+ {
+  "version": 2,
+  "id": "lavender",
+  "name": "Lavender",
+  "dark": false,
+  "bg": "#faf5ff",
+  "pattern": "dots",
+  "text": "#1f2937",
+  "palette": [
+   "#6d28d9",
+   "#7e22ce",
+   "#a21caf",
+   "#4338ca",
+   "#86198f",
+   "#5b21b6",
+   "#6b21a8",
+   "#4f46e5"
+  ],
+  "font": "Inter, system-ui, 'Segoe UI', sans-serif",
+  "handDrawn": false,
+  "levels": {
+   "central": {
+    "shape": "rounded",
+    "cornerRadius": null,
+    "fill": "solid",
+    "fillColor": "#4c1d95",
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 17,
+    "fontWeight": 600,
+    "textColor": "#ffffff",
+    "branch": {
+     "curve": "auto",
+     "thickness": 3,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "main": {
+    "shape": "rounded",
+    "cornerRadius": null,
+    "fill": "solid",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 600,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 2.4,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "sub": {
+    "shape": "rounded",
+    "cornerRadius": null,
+    "fill": "outline",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 500,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 1.8,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "deeper": {
+    "shape": "rounded",
+    "cornerRadius": null,
+    "fill": "outline",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 500,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 1.5,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   }
+  }
+ },
+ {
+  "version": 2,
+  "id": "slate",
+  "name": "Slate",
+  "dark": false,
+  "bg": "#f1f5f9",
+  "pattern": "dots",
+  "text": "#1f2937",
+  "palette": [
+   "#334155",
+   "#1d4ed8",
+   "#0f766e",
+   "#475569",
+   "#1e40af",
+   "#115e59",
+   "#0f172a",
+   "#3730a3"
+  ],
+  "font": "Inter, system-ui, 'Segoe UI', sans-serif",
+  "handDrawn": false,
+  "levels": {
+   "central": {
+    "shape": "rect",
+    "cornerRadius": null,
+    "fill": "solid",
+    "fillColor": "#0f172a",
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 17,
+    "fontWeight": 600,
+    "textColor": "#ffffff",
+    "branch": {
+     "curve": "auto",
+     "thickness": 3,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "main": {
+    "shape": "rect",
+    "cornerRadius": null,
+    "fill": "solid",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 600,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 2.4,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "sub": {
+    "shape": "underline",
+    "cornerRadius": null,
+    "fill": "plain",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 500,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 1.8,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "deeper": {
+    "shape": "underline",
+    "cornerRadius": null,
+    "fill": "plain",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 500,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 1.5,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   }
+  }
+ },
+ {
+  "version": 2,
+  "id": "mono",
+  "name": "Mono",
+  "dark": false,
+  "bg": "#ffffff",
+  "pattern": "none",
+  "text": "#1f2937",
+  "palette": [
+   "#111827",
+   "#374151",
+   "#4b5563",
+   "#1f2937",
+   "#6b7280",
+   "#111827",
+   "#374151",
+   "#4b5563"
+  ],
+  "font": "ui-monospace, 'Cascadia Code', Consolas, monospace",
+  "handDrawn": false,
+  "levels": {
+   "central": {
+    "shape": "rect",
+    "cornerRadius": null,
+    "fill": "solid",
+    "fillColor": "#000000",
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 17,
+    "fontWeight": 600,
+    "textColor": "#ffffff",
+    "branch": {
+     "curve": "auto",
+     "thickness": 2,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "main": {
+    "shape": "rect",
+    "cornerRadius": null,
+    "fill": "outline",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 600,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 1.5,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "sub": {
+    "shape": "underline",
+    "cornerRadius": null,
+    "fill": "plain",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 500,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 1.5,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "deeper": {
+    "shape": "underline",
+    "cornerRadius": null,
+    "fill": "plain",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 500,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 1.5,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   }
+  }
+ },
+ {
+  "version": 2,
+  "id": "paper",
+  "name": "Paper",
+  "dark": false,
+  "bg": "#fbf7ef",
+  "pattern": "none",
+  "text": "#1f2937",
+  "palette": [
+   "#9a3412",
+   "#1e40af",
+   "#166534",
+   "#86198f",
+   "#854d0e",
+   "#0f766e",
+   "#9f1239",
+   "#3730a3"
+  ],
+  "font": "Georgia, 'Times New Roman', serif",
+  "handDrawn": false,
+  "levels": {
+   "central": {
+    "shape": "rounded",
+    "cornerRadius": null,
+    "fill": "solid",
+    "fillColor": "#44403c",
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 17,
+    "fontWeight": 600,
+    "textColor": "#ffffff",
+    "branch": {
+     "curve": "auto",
+     "thickness": 3,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "main": {
+    "shape": "rounded",
+    "cornerRadius": null,
+    "fill": "tint",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 600,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 2.4,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "sub": {
+    "shape": "underline",
+    "cornerRadius": null,
+    "fill": "plain",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 500,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 1.8,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "deeper": {
+    "shape": "underline",
+    "cornerRadius": null,
+    "fill": "plain",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 500,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 1.5,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   }
+  }
+ },
+ {
+  "version": 2,
+  "id": "midnight",
+  "name": "Midnight",
+  "dark": true,
+  "bg": "#0f172a",
+  "pattern": "dots",
+  "text": "#e5e7eb",
+  "palette": [
+   "#60a5fa",
+   "#34d399",
+   "#fbbf24",
+   "#f472b6",
+   "#a78bfa",
+   "#2dd4bf",
+   "#fb923c",
+   "#f87171"
+  ],
+  "font": "Inter, system-ui, 'Segoe UI', sans-serif",
+  "handDrawn": false,
+  "levels": {
+   "central": {
+    "shape": "rounded",
+    "cornerRadius": null,
+    "fill": "solid",
+    "fillColor": "#1e293b",
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 17,
+    "fontWeight": 600,
+    "textColor": "#ffffff",
+    "branch": {
+     "curve": "auto",
+     "thickness": 3,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "main": {
+    "shape": "rounded",
+    "cornerRadius": null,
+    "fill": "solid",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 600,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 2.4,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "sub": {
+    "shape": "rounded",
+    "cornerRadius": null,
+    "fill": "tint",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 500,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 1.8,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "deeper": {
+    "shape": "rounded",
+    "cornerRadius": null,
+    "fill": "tint",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 500,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 1.5,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   }
+  }
+ },
+ {
+  "version": 2,
+  "id": "neon",
+  "name": "Neon Night",
+  "dark": true,
+  "bg": "#0a0a14",
+  "pattern": "grid",
+  "text": "#e5e7eb",
+  "palette": [
+   "#22d3ee",
+   "#a3e635",
+   "#f0abfc",
+   "#fde047",
+   "#fb7185",
+   "#38bdf8",
+   "#4ade80",
+   "#c084fc"
+  ],
+  "font": "Inter, system-ui, 'Segoe UI', sans-serif",
+  "handDrawn": false,
+  "levels": {
+   "central": {
+    "shape": "rounded",
+    "cornerRadius": null,
+    "fill": "solid",
+    "fillColor": "#27272a",
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 17,
+    "fontWeight": 600,
+    "textColor": "#ffffff",
+    "branch": {
+     "curve": "auto",
+     "thickness": 3,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "main": {
+    "shape": "pill",
+    "cornerRadius": null,
+    "fill": "outline",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 600,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 2.4,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "sub": {
+    "shape": "underline",
+    "cornerRadius": null,
+    "fill": "plain",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 500,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 1.8,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "deeper": {
+    "shape": "underline",
+    "cornerRadius": null,
+    "fill": "plain",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 500,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 1.5,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   }
+  }
+ },
+ {
+  "version": 2,
+  "id": "coral",
+  "name": "Coral Reef",
+  "dark": false,
+  "bg": "#fff5f5",
+  "pattern": "dots",
+  "text": "#1f2937",
+  "palette": [
+   "#be123c",
+   "#0e7490",
+   "#c2410c",
+   "#0f766e",
+   "#9f1239",
+   "#155e75",
+   "#b91c1c",
+   "#047857"
+  ],
+  "font": "Inter, system-ui, 'Segoe UI', sans-serif",
+  "handDrawn": false,
+  "levels": {
+   "central": {
+    "shape": "rounded",
+    "cornerRadius": null,
+    "fill": "solid",
+    "fillColor": "#881337",
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 17,
+    "fontWeight": 600,
+    "textColor": "#ffffff",
+    "branch": {
+     "curve": "auto",
+     "thickness": 3,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "main": {
+    "shape": "pill",
+    "cornerRadius": null,
+    "fill": "solid",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 600,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 2.4,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "sub": {
+    "shape": "rounded",
+    "cornerRadius": null,
+    "fill": "tint",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 500,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 1.8,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "deeper": {
+    "shape": "rounded",
+    "cornerRadius": null,
+    "fill": "tint",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 500,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 1.5,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   }
+  }
+ },
+ {
+  "version": 2,
+  "id": "mint",
+  "name": "Mint",
+  "dark": false,
+  "bg": "#f0fdf9",
+  "pattern": "dots",
+  "text": "#1f2937",
+  "palette": [
+   "#0f766e",
+   "#15803d",
+   "#0e7490",
+   "#047857",
+   "#115e59",
+   "#166534",
+   "#155e75",
+   "#065f46"
+  ],
+  "font": "Inter, system-ui, 'Segoe UI', sans-serif",
+  "handDrawn": false,
+  "levels": {
+   "central": {
+    "shape": "rounded",
+    "cornerRadius": null,
+    "fill": "solid",
+    "fillColor": "#134e4a",
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 17,
+    "fontWeight": 600,
+    "textColor": "#ffffff",
+    "branch": {
+     "curve": "auto",
+     "thickness": 3,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "main": {
+    "shape": "rounded",
+    "cornerRadius": null,
+    "fill": "tint",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 600,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 2.4,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "sub": {
+    "shape": "underline",
+    "cornerRadius": null,
+    "fill": "plain",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 500,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 1.8,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "deeper": {
+    "shape": "underline",
+    "cornerRadius": null,
+    "fill": "plain",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 500,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 1.5,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   }
+  }
+ },
+ {
+  "version": 2,
+  "id": "berry",
+  "name": "Berry",
+  "dark": false,
+  "bg": "#fdf2f8",
+  "pattern": "dots",
+  "text": "#1f2937",
+  "palette": [
+   "#be185d",
+   "#7e22ce",
+   "#9d174d",
+   "#a21caf",
+   "#6b21a8",
+   "#be123c",
+   "#86198f",
+   "#9f1239"
+  ],
+  "font": "Inter, system-ui, 'Segoe UI', sans-serif",
+  "handDrawn": false,
+  "levels": {
+   "central": {
+    "shape": "rounded",
+    "cornerRadius": null,
+    "fill": "solid",
+    "fillColor": "#831843",
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 17,
+    "fontWeight": 600,
+    "textColor": "#ffffff",
+    "branch": {
+     "curve": "auto",
+     "thickness": 3,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "main": {
+    "shape": "rounded",
+    "cornerRadius": null,
+    "fill": "solid",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 600,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 2.4,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "sub": {
+    "shape": "rounded",
+    "cornerRadius": null,
+    "fill": "tint",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 500,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 1.8,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "deeper": {
+    "shape": "rounded",
+    "cornerRadius": null,
+    "fill": "tint",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 500,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 1.5,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   }
+  }
+ },
+ {
+  "version": 2,
+  "id": "sand",
+  "name": "Sand",
+  "dark": false,
+  "bg": "#faf6ec",
+  "pattern": "none",
+  "text": "#1f2937",
+  "palette": [
+   "#a16207",
+   "#b45309",
+   "#92400e",
+   "#854d0e",
+   "#713f12",
+   "#9a3412",
+   "#78350f",
+   "#a8501b"
+  ],
+  "font": "Inter, system-ui, 'Segoe UI', sans-serif",
+  "handDrawn": false,
+  "levels": {
+   "central": {
+    "shape": "rounded",
+    "cornerRadius": null,
+    "fill": "solid",
+    "fillColor": "#713f12",
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 17,
+    "fontWeight": 600,
+    "textColor": "#ffffff",
+    "branch": {
+     "curve": "auto",
+     "thickness": 3,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "main": {
+    "shape": "rounded",
+    "cornerRadius": null,
+    "fill": "solid",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 600,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 2.4,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "sub": {
+    "shape": "rounded",
+    "cornerRadius": null,
+    "fill": "tint",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 500,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 1.8,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "deeper": {
+    "shape": "rounded",
+    "cornerRadius": null,
+    "fill": "tint",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 500,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 1.5,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   }
+  }
+ },
+ {
+  "version": 2,
+  "id": "arctic",
+  "name": "Arctic",
+  "dark": false,
+  "bg": "#f8fbff",
+  "pattern": "dots",
+  "text": "#1f2937",
+  "palette": [
+   "#0e7490",
+   "#1d4ed8",
+   "#4338ca",
+   "#0369a1",
+   "#155e75",
+   "#1e40af",
+   "#3730a3",
+   "#0c4a6e"
+  ],
+  "font": "Inter, system-ui, 'Segoe UI', sans-serif",
+  "handDrawn": false,
+  "levels": {
+   "central": {
+    "shape": "rounded",
+    "cornerRadius": null,
+    "fill": "solid",
+    "fillColor": "#1e3a8a",
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 17,
+    "fontWeight": 600,
+    "textColor": "#ffffff",
+    "branch": {
+     "curve": "auto",
+     "thickness": 3,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "main": {
+    "shape": "pill",
+    "cornerRadius": null,
+    "fill": "tint",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 600,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 2.4,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "sub": {
+    "shape": "pill",
+    "cornerRadius": null,
+    "fill": "outline",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 500,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 1.8,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "deeper": {
+    "shape": "pill",
+    "cornerRadius": null,
+    "fill": "outline",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 500,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 1.5,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   }
+  }
+ },
+ {
+  "version": 2,
+  "id": "terra",
+  "name": "Terra",
+  "dark": false,
+  "bg": "#fdf4ee",
+  "pattern": "dots",
+  "text": "#1f2937",
+  "palette": [
+   "#9a3412",
+   "#a16207",
+   "#7c2d12",
+   "#854d0e",
+   "#b45309",
+   "#92400e",
+   "#78350f",
+   "#c2410c"
+  ],
+  "font": "Inter, system-ui, 'Segoe UI', sans-serif",
+  "handDrawn": false,
+  "levels": {
+   "central": {
+    "shape": "rect",
+    "cornerRadius": null,
+    "fill": "solid",
+    "fillColor": "#7c2d12",
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 17,
+    "fontWeight": 600,
+    "textColor": "#ffffff",
+    "branch": {
+     "curve": "auto",
+     "thickness": 3,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "main": {
+    "shape": "rect",
+    "cornerRadius": null,
+    "fill": "solid",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 600,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 2.4,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "sub": {
+    "shape": "rect",
+    "cornerRadius": null,
+    "fill": "tint",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 500,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 1.8,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "deeper": {
+    "shape": "rect",
+    "cornerRadius": null,
+    "fill": "tint",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 500,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 1.5,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   }
+  }
+ },
+ {
+  "version": 2,
+  "id": "candy",
+  "name": "Candy",
+  "dark": false,
+  "bg": "#fff1f8",
+  "pattern": "dots",
+  "text": "#1f2937",
+  "palette": [
+   "#db2777",
+   "#7c3aed",
+   "#0891b2",
+   "#d97706",
+   "#16a34a",
+   "#e11d48",
+   "#9333ea",
+   "#0d9488"
+  ],
+  "font": "'Trebuchet MS', 'Segoe UI', system-ui, sans-serif",
+  "handDrawn": false,
+  "levels": {
+   "central": {
+    "shape": "rounded",
+    "cornerRadius": null,
+    "fill": "solid",
+    "fillColor": "#9d174d",
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 17,
+    "fontWeight": 600,
+    "textColor": "#ffffff",
+    "branch": {
+     "curve": "auto",
+     "thickness": 3,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "main": {
+    "shape": "pill",
+    "cornerRadius": null,
+    "fill": "solid",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 600,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 2.4,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "sub": {
+    "shape": "pill",
+    "cornerRadius": null,
+    "fill": "tint",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 500,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 1.8,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "deeper": {
+    "shape": "pill",
+    "cornerRadius": null,
+    "fill": "tint",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 500,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 1.5,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   }
+  }
+ },
+ {
+  "version": 2,
+  "id": "graphite",
+  "name": "Graphite",
+  "dark": true,
+  "bg": "#18181b",
+  "pattern": "dots",
+  "text": "#e5e7eb",
+  "palette": [
+   "#a1a1aa",
+   "#93c5fd",
+   "#86efac",
+   "#fcd34d",
+   "#fda4af",
+   "#c4b5fd",
+   "#67e8f9",
+   "#fdba74"
+  ],
+  "font": "Inter, system-ui, 'Segoe UI', sans-serif",
+  "handDrawn": false,
+  "levels": {
+   "central": {
+    "shape": "rounded",
+    "cornerRadius": null,
+    "fill": "solid",
+    "fillColor": "#3f3f46",
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 17,
+    "fontWeight": 600,
+    "textColor": "#ffffff",
+    "branch": {
+     "curve": "auto",
+     "thickness": 3,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "main": {
+    "shape": "rounded",
+    "cornerRadius": null,
+    "fill": "solid",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 600,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 2.4,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "sub": {
+    "shape": "rounded",
+    "cornerRadius": null,
+    "fill": "tint",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 500,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 1.8,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "deeper": {
+    "shape": "rounded",
+    "cornerRadius": null,
+    "fill": "tint",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 500,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 1.5,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   }
+  }
+ },
+ {
+  "version": 2,
+  "id": "sky",
+  "name": "Sky",
+  "dark": false,
+  "bg": "#eff6ff",
+  "pattern": "dots",
+  "text": "#1f2937",
+  "palette": [
+   "#2563eb",
+   "#0284c7",
+   "#4f46e5",
+   "#0891b2",
+   "#1d4ed8",
+   "#0369a1",
+   "#4338ca",
+   "#0e7490"
+  ],
+  "font": "Inter, system-ui, 'Segoe UI', sans-serif",
+  "handDrawn": false,
+  "levels": {
+   "central": {
+    "shape": "ellipse",
+    "cornerRadius": null,
+    "fill": "solid",
+    "fillColor": "#1e40af",
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 17,
+    "fontWeight": 600,
+    "textColor": "#ffffff",
+    "branch": {
+     "curve": "auto",
+     "thickness": 3,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "main": {
+    "shape": "ellipse",
+    "cornerRadius": null,
+    "fill": "solid",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 600,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 2.4,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "sub": {
+    "shape": "pill",
+    "cornerRadius": null,
+    "fill": "tint",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 500,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 1.8,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "deeper": {
+    "shape": "pill",
+    "cornerRadius": null,
+    "fill": "tint",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 500,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 1.5,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   }
+  }
+ },
+ {
+  "version": 2,
+  "id": "citrus",
+  "name": "Citrus",
+  "dark": false,
+  "bg": "#fefce8",
+  "pattern": "dots",
+  "text": "#1f2937",
+  "palette": [
+   "#a16207",
+   "#4d7c0f",
+   "#c2410c",
+   "#15803d",
+   "#854d0e",
+   "#3f6212",
+   "#9a3412",
+   "#166534"
+  ],
+  "font": "Inter, system-ui, 'Segoe UI', sans-serif",
+  "handDrawn": false,
+  "levels": {
+   "central": {
+    "shape": "rounded",
+    "cornerRadius": null,
+    "fill": "solid",
+    "fillColor": "#365314",
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 17,
+    "fontWeight": 600,
+    "textColor": "#ffffff",
+    "branch": {
+     "curve": "auto",
+     "thickness": 3,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "main": {
+    "shape": "rounded",
+    "cornerRadius": null,
+    "fill": "solid",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 600,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 2.4,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "sub": {
+    "shape": "rounded",
+    "cornerRadius": null,
+    "fill": "tint",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 500,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 1.8,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "deeper": {
+    "shape": "rounded",
+    "cornerRadius": null,
+    "fill": "tint",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 500,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 1.5,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   }
+  }
+ },
+ {
+  "version": 2,
+  "id": "plum",
+  "name": "Plum",
+  "dark": true,
+  "bg": "#1e1028",
+  "pattern": "dots",
+  "text": "#e5e7eb",
+  "palette": [
+   "#e879f9",
+   "#a78bfa",
+   "#f9a8d4",
+   "#c4b5fd",
+   "#f0abfc",
+   "#d8b4fe",
+   "#fda4af",
+   "#93c5fd"
+  ],
+  "font": "Inter, system-ui, 'Segoe UI', sans-serif",
+  "handDrawn": false,
+  "levels": {
+   "central": {
+    "shape": "rounded",
+    "cornerRadius": null,
+    "fill": "solid",
+    "fillColor": "#581c87",
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 17,
+    "fontWeight": 600,
+    "textColor": "#ffffff",
+    "branch": {
+     "curve": "auto",
+     "thickness": 3,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "main": {
+    "shape": "pill",
+    "cornerRadius": null,
+    "fill": "solid",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 600,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 2.4,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "sub": {
+    "shape": "rounded",
+    "cornerRadius": null,
+    "fill": "tint",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 500,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 1.8,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "deeper": {
+    "shape": "rounded",
+    "cornerRadius": null,
+    "fill": "tint",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 500,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 1.5,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   }
+  }
+ },
+ {
+  "version": 2,
+  "id": "meadow",
+  "name": "Meadow",
+  "dark": false,
+  "bg": "#f7fee7",
+  "pattern": "dots",
+  "text": "#1f2937",
+  "palette": [
+   "#4d7c0f",
+   "#15803d",
+   "#a16207",
+   "#0f766e",
+   "#3f6212",
+   "#166534",
+   "#854d0e",
+   "#047857"
+  ],
+  "font": "Inter, system-ui, 'Segoe UI', sans-serif",
+  "handDrawn": false,
+  "levels": {
+   "central": {
+    "shape": "rounded",
+    "cornerRadius": null,
+    "fill": "solid",
+    "fillColor": "#3f6212",
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 17,
+    "fontWeight": 600,
+    "textColor": "#ffffff",
+    "branch": {
+     "curve": "auto",
+     "thickness": 3,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "main": {
+    "shape": "rounded",
+    "cornerRadius": null,
+    "fill": "tint",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 600,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 2.4,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "sub": {
+    "shape": "underline",
+    "cornerRadius": null,
+    "fill": "plain",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 500,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 1.8,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "deeper": {
+    "shape": "underline",
+    "cornerRadius": null,
+    "fill": "plain",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 500,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 1.5,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   }
+  }
+ },
+ {
+  "version": 2,
+  "id": "ember",
+  "name": "Ember",
+  "dark": true,
+  "bg": "#1c1210",
+  "pattern": "dots",
+  "text": "#e5e7eb",
+  "palette": [
+   "#fb923c",
+   "#f87171",
+   "#fbbf24",
+   "#fb7185",
+   "#fdba74",
+   "#fca5a5",
+   "#fcd34d",
+   "#f97316"
+  ],
+  "font": "Inter, system-ui, 'Segoe UI', sans-serif",
+  "handDrawn": false,
+  "levels": {
+   "central": {
+    "shape": "rounded",
+    "cornerRadius": null,
+    "fill": "solid",
+    "fillColor": "#7c2d12",
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 17,
+    "fontWeight": 600,
+    "textColor": "#ffffff",
+    "branch": {
+     "curve": "auto",
+     "thickness": 3,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "main": {
+    "shape": "rounded",
+    "cornerRadius": null,
+    "fill": "solid",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 600,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 2.4,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "sub": {
+    "shape": "rounded",
+    "cornerRadius": null,
+    "fill": "tint",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 500,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 1.8,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "deeper": {
+    "shape": "rounded",
+    "cornerRadius": null,
+    "fill": "tint",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 500,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 1.5,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   }
+  }
+ },
+ {
+  "version": 2,
+  "id": "blueprint",
+  "name": "Blueprint",
+  "dark": true,
+  "bg": "#0b3a6b",
+  "pattern": "grid",
+  "text": "#e0f2fe",
+  "palette": [
+   "#e0f2fe",
+   "#7dd3fc",
+   "#bae6fd",
+   "#fde68a",
+   "#a5f3fc",
+   "#fecdd3",
+   "#bbf7d0",
+   "#ddd6fe"
+  ],
+  "font": "ui-monospace, 'Cascadia Code', Consolas, monospace",
+  "handDrawn": false,
+  "levels": {
+   "central": {
+    "shape": "rect",
+    "cornerRadius": null,
+    "fill": "solid",
+    "fillColor": "#082f55",
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 17,
+    "fontWeight": 600,
+    "textColor": "#ffffff",
+    "branch": {
+     "curve": "auto",
+     "thickness": 3,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "main": {
+    "shape": "rect",
+    "cornerRadius": null,
+    "fill": "outline",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 600,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 2.4,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "sub": {
+    "shape": "underline",
+    "cornerRadius": null,
+    "fill": "plain",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 500,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 1.8,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "deeper": {
+    "shape": "underline",
+    "cornerRadius": null,
+    "fill": "plain",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 500,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 1.5,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   }
+  }
+ },
+ {
+  "version": 2,
+  "id": "notebook",
+  "name": "Notebook (hand-drawn)",
+  "dark": false,
+  "bg": "#fffef8",
+  "pattern": "lines",
+  "text": "#1f2937",
+  "palette": [
+   "#1d4ed8",
+   "#b91c1c",
+   "#15803d",
+   "#7e22ce",
+   "#b45309",
+   "#0e7490",
+   "#be185d",
+   "#4d7c0f"
+  ],
+  "font": "'Segoe Print', 'Bradley Hand', 'Comic Sans MS', 'Chalkboard SE', cursive",
+  "handDrawn": true,
+  "levels": {
+   "central": {
+    "shape": "rounded",
+    "cornerRadius": null,
+    "fill": "solid",
+    "fillColor": "#1e3a8a",
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 17,
+    "fontWeight": 600,
+    "textColor": "#ffffff",
+    "branch": {
+     "curve": "auto",
+     "thickness": 3,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "main": {
+    "shape": "rounded",
+    "cornerRadius": null,
+    "fill": "tint",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 600,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 2.4,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "sub": {
+    "shape": "underline",
+    "cornerRadius": null,
+    "fill": "plain",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 500,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 1.8,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "deeper": {
+    "shape": "underline",
+    "cornerRadius": null,
+    "fill": "plain",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 500,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 1.5,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   }
+  }
+ },
+ {
+  "version": 2,
+  "id": "whiteboard",
+  "name": "Whiteboard (hand-drawn)",
+  "dark": false,
+  "bg": "#ffffff",
+  "pattern": "none",
+  "text": "#1f2937",
+  "palette": [
+   "#2563eb",
+   "#dc2626",
+   "#16a34a",
+   "#9333ea",
+   "#ea580c",
+   "#0891b2",
+   "#db2777",
+   "#65a30d"
+  ],
+  "font": "'Segoe Print', 'Bradley Hand', 'Comic Sans MS', 'Chalkboard SE', cursive",
+  "handDrawn": true,
+  "levels": {
+   "central": {
+    "shape": "rounded",
+    "cornerRadius": null,
+    "fill": "solid",
+    "fillColor": "#111827",
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 17,
+    "fontWeight": 600,
+    "textColor": "#ffffff",
+    "branch": {
+     "curve": "auto",
+     "thickness": 3,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "main": {
+    "shape": "rounded",
+    "cornerRadius": null,
+    "fill": "outline",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 600,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 2.4,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "sub": {
+    "shape": "underline",
+    "cornerRadius": null,
+    "fill": "plain",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 500,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 1.8,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "deeper": {
+    "shape": "underline",
+    "cornerRadius": null,
+    "fill": "plain",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 500,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 1.5,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   }
+  }
+ },
+ {
+  "version": 2,
+  "id": "orbit",
+  "name": "Orbit",
+  "dark": false,
+  "bg": "#f8fafc",
+  "pattern": "dots",
+  "text": "#1f2937",
+  "font": "Inter, system-ui, 'Segoe UI', sans-serif",
+  "handDrawn": false,
+  "palette": [
+   "#2563eb",
+   "#0891b2",
+   "#7c3aed",
+   "#0f766e",
+   "#db2777",
+   "#ea580c",
+   "#65a30d",
+   "#4f46e5"
+  ],
+  "levels": {
+   "central": {
+    "shape": "doubleCircle",
+    "cornerRadius": null,
+    "fill": "solid",
+    "fillColor": "#1e3a8a",
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 17,
+    "fontWeight": 600,
+    "textColor": "#ffffff",
+    "branch": {
+     "curve": "auto",
+     "thickness": 6,
+     "taper": true,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "main": {
+    "shape": "pill",
+    "cornerRadius": null,
+    "fill": "outline",
+    "fillColor": null,
+    "borderWidth": 2.5,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 600,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 6,
+     "taper": true,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "sub": {
+    "shape": "underline",
+    "cornerRadius": null,
+    "fill": "plain",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 500,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 3.5,
+     "taper": true,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "deeper": {
+    "shape": "underline",
+    "cornerRadius": null,
+    "fill": "plain",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 500,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 2.5,
+     "taper": true,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   }
+  }
+ },
+ {
+  "version": 2,
+  "id": "halo",
+  "name": "Halo",
+  "dark": true,
+  "bg": "#0b1020",
+  "pattern": "dots",
+  "text": "#e5e7eb",
+  "font": "Inter, system-ui, 'Segoe UI', sans-serif",
+  "handDrawn": false,
+  "palette": [
+   "#60a5fa",
+   "#34d399",
+   "#fbbf24",
+   "#f472b6",
+   "#a78bfa",
+   "#2dd4bf",
+   "#fb923c",
+   "#f87171"
+  ],
+  "levels": {
+   "central": {
+    "shape": "doubleCircle",
+    "cornerRadius": null,
+    "fill": "solid",
+    "fillColor": "#38bdf8",
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 17,
+    "fontWeight": 600,
+    "textColor": "#082f49",
+    "branch": {
+     "curve": "auto",
+     "thickness": 5,
+     "taper": true,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "main": {
+    "shape": "pill",
+    "cornerRadius": null,
+    "fill": "tint",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 600,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 5,
+     "taper": true,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "sub": {
+    "shape": "underline",
+    "cornerRadius": null,
+    "fill": "plain",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 500,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 3,
+     "taper": true,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "deeper": {
+    "shape": "underline",
+    "cornerRadius": null,
+    "fill": "plain",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 500,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 2,
+     "taper": true,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   }
+  }
+ },
+ {
+  "version": 2,
+  "id": "soft-pastel",
+  "name": "Soft Pastel",
+  "dark": false,
+  "bg": "#fffaf5",
+  "pattern": "none",
+  "text": "#44403c",
+  "font": "'Trebuchet MS', 'Segoe UI', system-ui, sans-serif",
+  "handDrawn": false,
+  "palette": [
+   "#f9a8d4",
+   "#fdba74",
+   "#fde68a",
+   "#bbf7d0",
+   "#a5f3fc",
+   "#bfdbfe",
+   "#c4b5fd",
+   "#f5d0fe"
+  ],
+  "levels": {
+   "central": {
+    "shape": "pill",
+    "cornerRadius": null,
+    "fill": "solid",
+    "fillColor": "#fde68a",
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 17,
+    "fontWeight": 600,
+    "textColor": "#78350f",
+    "branch": {
+     "curve": "auto",
+     "thickness": 3,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "main": {
+    "shape": "pill",
+    "cornerRadius": null,
+    "fill": "solid",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 600,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 3,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "sub": {
+    "shape": "pill",
+    "cornerRadius": null,
+    "fill": "tint",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 500,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 2.4,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "deeper": {
+    "shape": "pill",
+    "cornerRadius": null,
+    "fill": "tint",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 500,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 1.8,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   }
+  }
+ },
+ {
+  "version": 2,
+  "id": "brush",
+  "name": "Brush",
+  "dark": false,
+  "bg": "#fdfcf9",
+  "pattern": "none",
+  "text": "#1f2937",
+  "font": "Inter, system-ui, 'Segoe UI', sans-serif",
+  "handDrawn": false,
+  "palette": [
+   "#dc2626",
+   "#ea580c",
+   "#ca8a04",
+   "#16a34a",
+   "#0891b2",
+   "#2563eb",
+   "#7c3aed",
+   "#c026d3"
+  ],
+  "levels": {
+   "central": {
+    "shape": "ellipse",
+    "cornerRadius": null,
+    "fill": "solid",
+    "fillColor": "#111827",
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 17,
+    "fontWeight": 600,
+    "textColor": "#ffffff",
+    "branch": {
+     "curve": "curve",
+     "thickness": 12,
+     "taper": true,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "main": {
+    "shape": "underline",
+    "cornerRadius": null,
+    "fill": "plain",
+    "fillColor": null,
+    "borderWidth": 3,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 600,
+    "textColor": null,
+    "branch": {
+     "curve": "curve",
+     "thickness": 12,
+     "taper": true,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "sub": {
+    "shape": "underline",
+    "cornerRadius": null,
+    "fill": "plain",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 500,
+    "textColor": null,
+    "branch": {
+     "curve": "curve",
+     "thickness": 7,
+     "taper": true,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "deeper": {
+    "shape": "underline",
+    "cornerRadius": null,
+    "fill": "plain",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 500,
+    "textColor": null,
+    "branch": {
+     "curve": "curve",
+     "thickness": 4,
+     "taper": true,
+     "falloff": 1,
+     "dash": "solid"
+    }
+   }
+  }
+ },
+ {
+  "version": 2,
+  "id": "underline",
+  "name": "Underline",
+  "dark": false,
+  "bg": "#ffffff",
+  "pattern": "none",
+  "text": "#1f2937",
+  "font": "Inter, system-ui, 'Segoe UI', sans-serif",
+  "handDrawn": false,
+  "palette": [
+   "#0f766e",
+   "#1d4ed8",
+   "#b45309",
+   "#be185d",
+   "#6d28d9",
+   "#15803d",
+   "#b91c1c",
+   "#0e7490"
+  ],
+  "levels": {
+   "central": {
+    "shape": "pill",
+    "cornerRadius": null,
+    "fill": "solid",
+    "fillColor": "#111827",
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 17,
+    "fontWeight": 600,
+    "textColor": "#ffffff",
+    "branch": {
+     "curve": "roundedElbow",
+     "thickness": 2.5,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "main": {
+    "shape": "underline",
+    "cornerRadius": null,
+    "fill": "plain",
+    "fillColor": null,
+    "borderWidth": 3,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 600,
+    "textColor": null,
+    "branch": {
+     "curve": "roundedElbow",
+     "thickness": 2.5,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "sub": {
+    "shape": "underline",
+    "cornerRadius": null,
+    "fill": "plain",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 500,
+    "textColor": null,
+    "branch": {
+     "curve": "roundedElbow",
+     "thickness": 2,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   },
+   "deeper": {
+    "shape": "underline",
+    "cornerRadius": null,
+    "fill": "plain",
+    "fillColor": null,
+    "borderWidth": 2,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 500,
+    "textColor": null,
+    "branch": {
+     "curve": "roundedElbow",
+     "thickness": 1.8,
+     "taper": false,
+     "falloff": 0.6,
+     "dash": "solid"
+    }
+   }
+  }
+ },
+ {
+  "version": 2,
+  "id": "clear",
+  "name": "Clear Contrast",
+  "dark": false,
+  "bg": "#ffffff",
+  "pattern": "none",
+  "text": "#000000",
+  "font": "Inter, system-ui, 'Segoe UI', sans-serif",
+  "handDrawn": false,
+  "palette": [
+   "#0b3d91",
+   "#8a1c00",
+   "#005a32",
+   "#5b0f91",
+   "#7a4100",
+   "#00566b",
+   "#a00040",
+   "#374100"
+  ],
+  "levels": {
+   "central": {
+    "shape": "rect",
+    "cornerRadius": null,
+    "fill": "solid",
+    "fillColor": "#000000",
+    "borderWidth": 3,
+    "fontFamily": null,
+    "fontSize": 18,
+    "fontWeight": 700,
+    "textColor": "#ffffff",
+    "branch": {
+     "curve": "auto",
+     "thickness": 4,
+     "taper": false,
+     "falloff": 0.5,
+     "dash": "solid"
+    }
+   },
+   "main": {
+    "shape": "rect",
+    "cornerRadius": null,
+    "fill": "solid",
+    "fillColor": null,
+    "borderWidth": 3,
+    "fontFamily": null,
+    "fontSize": 15,
+    "fontWeight": 700,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 4,
+     "taper": false,
+     "falloff": 0.5,
+     "dash": "solid"
+    }
+   },
+   "sub": {
+    "shape": "rect",
+    "cornerRadius": null,
+    "fill": "outline",
+    "fillColor": null,
+    "borderWidth": 3,
+    "fontFamily": null,
+    "fontSize": 15,
+    "fontWeight": 600,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 3.5,
+     "taper": false,
+     "falloff": 0.5,
+     "dash": "solid"
+    }
+   },
+   "deeper": {
+    "shape": "rect",
+    "cornerRadius": null,
+    "fill": "outline",
+    "fillColor": null,
+    "borderWidth": 2.5,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 600,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 3,
+     "taper": false,
+     "falloff": 0.5,
+     "dash": "solid"
+    }
+   }
+  }
+ },
+ {
+  "version": 2,
+  "id": "clear-dark",
+  "name": "Clear Contrast Dark",
+  "dark": true,
+  "bg": "#000000",
+  "pattern": "none",
+  "text": "#ffffff",
+  "font": "Inter, system-ui, 'Segoe UI', sans-serif",
+  "handDrawn": false,
+  "palette": [
+   "#ffd400",
+   "#00e5ff",
+   "#7cff6b",
+   "#ff8ad8",
+   "#ffa94d",
+   "#a5b4fc",
+   "#ff8f8f",
+   "#5eead4"
+  ],
+  "levels": {
+   "central": {
+    "shape": "rect",
+    "cornerRadius": null,
+    "fill": "solid",
+    "fillColor": "#ffffff",
+    "borderWidth": 3,
+    "fontFamily": null,
+    "fontSize": 18,
+    "fontWeight": 700,
+    "textColor": "#000000",
+    "branch": {
+     "curve": "auto",
+     "thickness": 4,
+     "taper": false,
+     "falloff": 0.5,
+     "dash": "solid"
+    }
+   },
+   "main": {
+    "shape": "rect",
+    "cornerRadius": null,
+    "fill": "solid",
+    "fillColor": null,
+    "borderWidth": 3,
+    "fontFamily": null,
+    "fontSize": 15,
+    "fontWeight": 700,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 4,
+     "taper": false,
+     "falloff": 0.5,
+     "dash": "solid"
+    }
+   },
+   "sub": {
+    "shape": "rect",
+    "cornerRadius": null,
+    "fill": "outline",
+    "fillColor": null,
+    "borderWidth": 3,
+    "fontFamily": null,
+    "fontSize": 15,
+    "fontWeight": 600,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 3.5,
+     "taper": false,
+     "falloff": 0.5,
+     "dash": "solid"
+    }
+   },
+   "deeper": {
+    "shape": "rect",
+    "cornerRadius": null,
+    "fill": "outline",
+    "fillColor": null,
+    "borderWidth": 2.5,
+    "fontFamily": null,
+    "fontSize": 14,
+    "fontWeight": 600,
+    "textColor": null,
+    "branch": {
+     "curve": "auto",
+     "thickness": 3,
+     "taper": false,
+     "falloff": 0.5,
+     "dash": "solid"
+    }
+   }
+  }
+ }
+]

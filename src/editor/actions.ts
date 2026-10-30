@@ -22,8 +22,9 @@ import { LOCAL, snapshotTopics } from '@/core/model/doc'
 import type { BranchDir } from '@/core/model/topic'
 import type { TopicStyle } from '@/core/model/types'
 import { isLayoutId } from '@/core/layout/catalog'
-import { MAX_CUSTOM_THEMES, setSetting, type MapSettings } from '@/core/settings'
-import { DEFAULT_THEME_ID, type Theme } from '@/core/theme/themes'
+import { setSetting, type MapSettings } from '@/core/settings'
+import { applyColorScheme, applyTheme, type ThemePreview } from '@/core/theme/apply'
+import { DEFAULT_THEME_ID, findTheme, type Theme } from '@/core/theme/themes'
 import { ancestorIds, buildIndex, childrenOf, topLevelOnly } from '@/core/model/tree'
 import { outlineToBranches, parseOutline, toOutline } from '@/core/io/outline'
 import { revealAncestors, searchTopics } from '@/core/search'
@@ -382,28 +383,44 @@ export function changeSetting<K extends keyof MapSettings>(key: K, value: MapSet
   setSetting(mapDoc, key, value)
 }
 
-export const selectTheme = (id: string) => setSetting(mapDoc, 'themeId', id)
-
-/** Saves a theme the user designed (updating it in place if it is already custom) and switches to it. One undo step. */
-export function saveCustomTheme(theme: Theme, asNew = false) {
-  const cur = get().settings.customThemes
-  const exists = cur.some((t) => t.id === theme.id)
-  const update = exists && !asNew
-  const id = update ? theme.id : `custom-${Date.now().toString(36)}`
-  const saved: Theme = { ...theme, id }
-  const next = update ? cur.map((t) => (t.id === id ? saved : t)) : [...cur.slice(-(MAX_CUSTOM_THEMES - 1)), saved]
-  mapDoc.ydoc.transact(() => {
-    mapDoc.settings.set('customThemes', next)
-    mapDoc.settings.set('themeId', id)
-  }, LOCAL)
+/** Applies a theme by id as one undo step. Topics keep their own overrides unless `resetOverrides` is set. */
+export function selectTheme(id: string, opts: { resetOverrides?: boolean } = {}) {
+  const { customThemes } = get().settings
+  applyTheme(mapDoc, findTheme(id, customThemes), opts)
+  setThemePreview(null)
 }
 
-export function deleteCustomTheme(id: string) {
+/** Applies a theme that is not built in (from the user's library or a file); it is kept inside the map. */
+export function applyThemeData(theme: Theme, opts: { resetOverrides?: boolean } = {}) {
+  applyTheme(mapDoc, theme, opts)
+  setThemePreview(null)
+}
+
+/** Removes a custom theme stored inside this map. If the map uses it, the default theme is applied instead. One undo step. */
+export function removeMapTheme(id: string) {
   const { customThemes, themeId } = get().settings
   mapDoc.ydoc.transact(() => {
     mapDoc.settings.set('customThemes', customThemes.filter((t) => t.id !== id))
     if (themeId === id) mapDoc.settings.set('themeId', DEFAULT_THEME_ID)
   }, LOCAL)
+}
+
+/** Colour scheme for branches (null = the theme's own colours). Colours only. One undo step. */
+export function setColorScheme(id: string | null) {
+  applyColorScheme(mapDoc, id)
+  setThemePreview(null)
+}
+
+/** Branch thickness for the whole map in px (null = the theme's). One undo step per call: commit on release, not per drag tick. */
+export function setBranchThickness(px: number | null) {
+  setSetting(mapDoc, 'branchThickness', px)
+  setThemePreview(null)
+}
+
+/** Shows a theme, colour scheme or thickness on the canvas without saving anything (null stops). */
+export function setThemePreview(p: ThemePreview | null) {
+  if (get().themePreview === p) return
+  set({ themePreview: p })
 }
 
 /** Applies style changes to the selected topics (and their branches when that option is on). */

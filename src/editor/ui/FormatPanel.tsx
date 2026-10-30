@@ -1,62 +1,18 @@
-import { Suspense, useMemo, useState } from 'react'
+import { Suspense } from 'react'
 import { LAYOUTS, LAYOUT_GROUPS, layoutDef } from '@/core/layout/catalog'
 import { BRANCH_DIRS, type BranchDir } from '@/core/model/topic'
-import { SHAPES, type Shape } from '@/core/model/types'
+import { SHAPES } from '@/core/model/types'
 import { MAX_SPACING, MIN_SPACING } from '@/core/settings'
-import { isHex, readableText } from '@/core/theme/color'
-import { resolveLook, type ResolvedTheme } from '@/core/theme/resolve'
-import { FONT_OPTIONS, PATTERNS, THEMES, type NodeMode, type Pattern, type Theme } from '@/core/theme/themes'
+import { resolveLook } from '@/core/theme/resolve'
+import { FONT_OPTIONS } from '@/core/theme/themes'
 import { Icon, LayoutThumb, LineIcon, ShapeIcon, type IconName } from '@/ui/icons'
 import * as A from '../actions'
 import { DetailsPanelLazy } from './lazyPanels'
 import { MarkPanel } from './MarkPanel'
+import { Check, Color, Row, Section, field } from './panelKit'
+import { ThemeTab } from './ThemePanel'
 import { getScene, useScene, useTheme } from '../scene'
 import { useEditor, type PanelTab } from '../store'
-
-const field = 'rounded-ui border border-line bg-surface px-2 py-1 text-sm'
-
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <label className="flex items-center justify-between gap-3 text-sm">
-      <span className="shrink-0">{label}</span>
-      {children}
-    </label>
-  )
-}
-
-function Check({ label, checked, onChange, hint }: { label: string; checked: boolean; onChange: (v: boolean) => void; hint?: string }) {
-  return (
-    <label className="flex items-start gap-2 text-sm" title={hint}>
-      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="mt-0.5 h-4 w-4 accent-[rgb(var(--c-brand))]" />
-      <span>{label}</span>
-    </label>
-  )
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="space-y-2 border-b border-line px-4 py-3">
-      <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">{title}</h3>
-      {children}
-    </section>
-  )
-}
-
-function Color({ label, value, onChange, onClear }: { label: string; value: string; onChange: (v: string) => void; onClear?: () => void }) {
-  return (
-    <div className="flex items-center justify-between gap-2 text-sm">
-      <span>{label}</span>
-      <span className="flex items-center gap-1.5">
-        <input aria-label={label} type="color" value={isHex(value) ? value : '#ffffff'} onChange={(e) => onChange(e.target.value)} className="h-7 w-9 cursor-pointer rounded border border-line bg-transparent p-0.5" />
-        {onClear && (
-          <button type="button" onClick={onClear} className="rounded px-1.5 text-xs text-muted hover:text-ink" title="Back to the theme's colour">
-            Auto
-          </button>
-        )}
-      </span>
-    </div>
-  )
-}
 
 // ---------------------------------------------------------------------------------------------
 
@@ -157,245 +113,7 @@ function LayoutTab() {
 
 // ---------------------------------------------------------------------------------------------
 
-function ThemeCard({ theme, active, onPick, onDelete }: { theme: Theme; active: boolean; onPick: () => void; onDelete?: () => void }) {
-  return (
-    <div className="relative">
-      <button
-        type="button"
-        aria-pressed={active}
-        aria-label={`${theme.name} theme`}
-        onClick={onPick}
-        className={`block w-full overflow-hidden rounded-ui border text-left ${active ? 'border-brand ring-2 ring-brand/40' : 'border-line hover:border-muted'}`}
-      >
-        <div className="flex h-12 items-center gap-1 px-2" style={{ background: theme.bg }}>
-          <span className="h-4 w-8 rounded" style={{ background: theme.root.fill }} />
-          {theme.palette.slice(0, 5).map((c, i) => (
-            <span key={i} className="h-3 w-3 rounded-full" style={{ background: c }} />
-          ))}
-        </div>
-        <div className="truncate bg-surface px-2 py-1 text-xs">{theme.name}</div>
-      </button>
-      {onDelete && (
-        <button
-          type="button"
-          aria-label={`Delete theme ${theme.name}`}
-          onClick={onDelete}
-          className="absolute right-1 top-1 grid h-5 w-5 place-items-center rounded-full bg-surface/90 text-xs shadow"
-        >
-          ×
-        </button>
-      )}
-    </div>
-  )
-}
-
-function ThemeEditor({ base }: { base: ResolvedTheme }) {
-  const customThemes = useEditor((s) => s.settings.customThemes)
-  const customIds = useMemo(() => customThemes.map((t) => t.id), [customThemes])
-  const [draft, setDraft] = useState<Theme | null>(null)
-  const start = () => {
-    const { rainbow: _rainbow, ...theme } = base
-    void _rainbow
-    setDraft({ ...theme, name: customIds.includes(base.id) ? base.name : `${base.name} (mine)` })
-  }
-  if (!draft) {
-    return (
-      <button type="button" onClick={start} className={`${field} w-full hover:bg-bg`}>
-        Edit this theme…
-      </button>
-    )
-  }
-  const set = (patch: Partial<Theme>) => setDraft({ ...draft, ...patch })
-  const isCustom = customIds.includes(draft.id)
-  const modes: NodeMode[] = ['solid', 'tint', 'outline', 'plain']
-  const shapeSelect = (value: Shape, onChange: (s: Shape) => void) => (
-    <select value={value} onChange={(e) => onChange(e.target.value as Shape)} className={field}>
-      {SHAPES.map((sh) => (
-        <option key={sh} value={sh}>
-          {sh}
-        </option>
-      ))}
-    </select>
-  )
-  const modeSelect = (value: NodeMode, onChange: (m: NodeMode) => void) => (
-    <select value={value} onChange={(e) => onChange(e.target.value as NodeMode)} className={field}>
-      {modes.map((m) => (
-        <option key={m} value={m}>
-          {m}
-        </option>
-      ))}
-    </select>
-  )
-  return (
-    <div className="space-y-2 rounded-ui border border-line p-3">
-      <Row label="Name">
-        <input value={draft.name} maxLength={40} onChange={(e) => set({ name: e.target.value })} className={`${field} w-40`} />
-      </Row>
-      <Color label="Background" value={draft.bg} onChange={(v) => set({ bg: v })} />
-      <Color label="Text" value={draft.text} onChange={(v) => set({ text: v })} />
-      <Color label="Central topic" value={draft.root.fill} onChange={(v) => set({ root: { ...draft.root, fill: v, text: readableText(v) } })} />
-      <div>
-        <div className="mb-1 text-sm">Branch colours</div>
-        <div className="flex flex-wrap gap-1.5">
-          {draft.palette.map((c, i) => (
-            <input
-              key={i}
-              type="color"
-              aria-label={`Branch colour ${i + 1}`}
-              value={c}
-              onChange={(e) => set({ palette: draft.palette.map((p, j) => (j === i ? e.target.value : p)) })}
-              className="h-7 w-9 cursor-pointer rounded border border-line bg-transparent p-0.5"
-            />
-          ))}
-        </div>
-      </div>
-      <Row label="Central shape">{shapeSelect(draft.root.shape, (shape) => set({ root: { ...draft.root, shape } }))}</Row>
-      <Row label="Main topics">{modeSelect(draft.l1.mode, (m) => set({ l1: { ...draft.l1, mode: m } }))}</Row>
-      <Row label="Main shape">{shapeSelect(draft.l1.shape, (shape) => set({ l1: { ...draft.l1, shape } }))}</Row>
-      <Row label="Sub topics">{modeSelect(draft.l2.mode, (m) => set({ l2: { ...draft.l2, mode: m } }))}</Row>
-      <Row label="Sub shape">{shapeSelect(draft.l2.shape, (shape) => set({ l2: { ...draft.l2, shape } }))}</Row>
-      <Row label="Line thickness">
-        <input type="number" min={1} max={10} step={0.5} value={draft.lineWidth} onChange={(e) => set({ lineWidth: Math.min(10, Math.max(1, Number(e.target.value) || 3)) })} className={`${field} w-20`} />
-      </Row>
-      <Row label="Font">
-        <select value={draft.font} onChange={(e) => set({ font: e.target.value })} className={field}>
-          {FONT_OPTIONS.map((f) => (
-            <option key={f.label} value={f.value}>
-              {f.label}
-            </option>
-          ))}
-        </select>
-      </Row>
-      <Row label="Pattern">
-        <select value={draft.pattern} onChange={(e) => set({ pattern: e.target.value as Pattern })} className={field}>
-          {PATTERNS.map((p) => (
-            <option key={p} value={p}>
-              {p}
-            </option>
-          ))}
-        </select>
-      </Row>
-      <Check label="Dark canvas" checked={draft.dark} onChange={(v) => set({ dark: v })} />
-      <Check label="Hand-drawn" checked={draft.handDrawn} onChange={(v) => set({ handDrawn: v })} />
-      <div className="flex flex-wrap gap-2 pt-1">
-        <button
-          type="button"
-          onClick={() => {
-            A.saveCustomTheme(draft, true)
-            setDraft(null)
-          }}
-          className="rounded-ui bg-brand px-3 py-1.5 text-sm font-medium text-brand-ink"
-        >
-          Save as new theme
-        </button>
-        {isCustom && (
-          <button
-            type="button"
-            onClick={() => {
-              A.saveCustomTheme(draft, false)
-              setDraft(null)
-            }}
-            className={`${field} hover:bg-bg`}
-          >
-            Update “{draft.name}”
-          </button>
-        )}
-        <button type="button" onClick={() => setDraft(null)} className={`${field} hover:bg-bg`}>
-          Cancel
-        </button>
-      </div>
-    </div>
-  )
-}
-
-function ThemeTab() {
-  const s = useEditor((st) => st.settings)
-  const theme = useTheme()
-  return (
-    <>
-      <Section title="Theme gallery">
-        <div className="grid grid-cols-2 gap-2">
-          {THEMES.map((t) => (
-            <ThemeCard key={t.id} theme={t} active={s.themeId === t.id} onPick={() => A.selectTheme(t.id)} />
-          ))}
-        </div>
-        {s.customThemes.length > 0 && (
-          <>
-            <div className="pt-2 text-xs text-muted">My themes</div>
-            <div className="grid grid-cols-2 gap-2">
-              {s.customThemes.map((t) => (
-                <ThemeCard key={t.id} theme={t} active={s.themeId === t.id} onPick={() => A.selectTheme(t.id)} onDelete={() => A.deleteCustomTheme(t.id)} />
-              ))}
-            </div>
-          </>
-        )}
-      </Section>
-      <Section title="Colours and style">
-        <Check label="Rainbow branch colours" checked={s.rainbow} onChange={(v) => A.changeSetting('rainbow', v)} />
-        <Row label="Hand-drawn style">
-          <select
-            value={s.handDrawn === null ? 'theme' : s.handDrawn ? 'on' : 'off'}
-            onChange={(e) => A.changeSetting('handDrawn', e.target.value === 'theme' ? null : e.target.value === 'on')}
-            className={field}
-          >
-            <option value="theme">Follow theme</option>
-            <option value="on">On</option>
-            <option value="off">Off</option>
-          </select>
-        </Row>
-        <div>
-          <div className="mb-1 flex items-center justify-between text-sm">
-            <span>Palette</span>
-            {s.palette && (
-              <button type="button" onClick={() => A.changeSetting('palette', null)} className="text-xs text-muted hover:text-ink">
-                Use theme palette
-              </button>
-            )}
-          </div>
-          <div className="flex flex-wrap gap-1.5">
-            {theme.palette.map((c, i) => (
-              <input
-                key={i}
-                type="color"
-                aria-label={`Palette colour ${i + 1}`}
-                value={c}
-                onChange={(e) => A.changeSetting('palette', theme.palette.map((p, j) => (j === i ? e.target.value : p)))}
-                className="h-7 w-9 cursor-pointer rounded border border-line bg-transparent p-0.5"
-              />
-            ))}
-          </div>
-        </div>
-      </Section>
-      <Section title="Background">
-        <Color
-          label="Colour"
-          value={theme.bg}
-          onChange={(v) => A.changeSetting('background', { ...s.background, color: v })}
-          onClear={s.background.color ? () => A.changeSetting('background', { ...s.background, color: null }) : undefined}
-        />
-        <Row label="Pattern">
-          <select
-            value={s.background.pattern ?? ''}
-            onChange={(e) => A.changeSetting('background', { ...s.background, pattern: (e.target.value || null) as Pattern | null })}
-            className={field}
-          >
-            <option value="">Theme default</option>
-            {PATTERNS.map((p) => (
-              <option key={p} value={p}>
-                {p}
-              </option>
-            ))}
-          </select>
-        </Row>
-      </Section>
-      <Section title="Theme editor">
-        <ThemeEditor base={theme} />
-      </Section>
-    </>
-  )
-}
-
-// ---------------------------------------------------------------------------------------------
+const SHAPE_NAMES: Record<(typeof SHAPES)[number], string> = { rounded: 'rounded box', rect: 'box', pill: 'pill', ellipse: 'ellipse', diamond: 'diamond', underline: 'underline', doubleCircle: 'double circle' }
 
 function StyleTab() {
   const selected = useEditor((st) => st.selected)
@@ -431,7 +149,7 @@ function StyleTab() {
               <Icon name="theme" size={16} />
             </button>
             {SHAPES.map((sh) => (
-              <button key={sh} type="button" aria-pressed={st.shape === sh} aria-label={`Shape: ${sh}`} title={sh} onClick={() => A.styleSelected({ shape: sh })} className={`grid h-9 w-11 place-items-center rounded-ui border ${st.shape === sh ? 'border-brand bg-brand/15' : 'border-line hover:bg-bg'}`}>
+              <button key={sh} type="button" aria-pressed={st.shape === sh} aria-label={`Shape: ${SHAPE_NAMES[sh]}`} title={SHAPE_NAMES[sh]} onClick={() => A.styleSelected({ shape: sh })} className={`grid h-9 w-11 place-items-center rounded-ui border ${st.shape === sh ? 'border-brand bg-brand/15' : 'border-line hover:bg-bg'}`}>
                 <ShapeIcon shape={sh} size={26} />
               </button>
             ))}

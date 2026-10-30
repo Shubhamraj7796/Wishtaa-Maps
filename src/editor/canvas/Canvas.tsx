@@ -28,6 +28,7 @@ import { useEditor } from '../store'
 import { finishLinkPick, finishRelationship } from '../content'
 import { Minimap } from './Minimap'
 import { ObjectsLayer } from './ObjectsLayer'
+import { taperedBranchPath } from '@/core/theme/taper'
 import { bracePath, edgePath, patternStyle, wedgePath } from './paths'
 import { TopicView } from './TopicView'
 
@@ -323,7 +324,8 @@ export function Canvas() {
   scene.boxes.forEach((b) => {
     if (b.x + b.w >= vx0 && b.x <= vx1 && b.y + b.h >= vy0 && b.y <= vy1) visible.push(b)
   })
-  const paths: { key: string; d: string; color: string; width: number; dash: string | undefined }[] = []
+  const paths: { key: string; d: string; color: string; width: number; dash: string | undefined; taper: boolean }[] = []
+  const mapConnector = settings.connector
   for (const e of scene.edges) {
     const a = scene.boxes.get(e.from)
     const b = scene.boxes.get(e.to)
@@ -334,7 +336,13 @@ export function Canvas() {
     const maxY = Math.max(a.y + a.h, b.y + b.h)
     if (maxX < vx0 || minX > vx1 || maxY < vy0 || minY > vy1) continue
     const line = resolveLine(theme, { depth: b.depth, branch: b.branch, style: topics[e.to]?.style })
-    paths.push({ key: e.to, d: edgePath(a, b, e), color: line.color, width: line.width, dash: DASH[line.style] })
+    // The map's own connector choice beats the theme; otherwise the theme level decides how the branch bends.
+    const themed = mapConnector === 'auto' && line.curve !== 'auto'
+    if (themed && line.curve === 'none') continue
+    const kind = themed ? (line.curve === 'curve' ? 'curve' : line.curve === 'straight' ? 'straight' : 'elbow') : e.kind
+    const d = edgePath(a, b, { ...e, kind }, themed && line.curve === 'roundedElbow' ? 24 : 10)
+    const taper = line.taper && line.width > line.endWidth && line.style === 'solid'
+    paths.push({ key: e.to, d: taper ? taperedBranchPath(d, line.width, line.endWidth) : d, color: line.color, width: line.width, dash: DASH[line.style], taper })
   }
 
   const dragTargetBox = drag?.target ? scene.boxes.get(drag.target.id) : undefined
@@ -397,7 +405,11 @@ export function Canvas() {
               )
             )}
             {paths.map((p) => (
-              <path key={p.key} d={p.d} fill="none" stroke={p.color} strokeWidth={p.width} strokeDasharray={p.dash} strokeLinecap="round" strokeLinejoin="round" />
+              p.taper ? (
+                <path key={p.key} d={p.d} fill={p.color} stroke="none" />
+              ) : (
+                <path key={p.key} d={p.d} fill="none" stroke={p.color} strokeWidth={p.width} strokeDasharray={p.dash} strokeLinecap="round" strokeLinejoin="round" />
+              )
             ))}
           </g>
         </svg>

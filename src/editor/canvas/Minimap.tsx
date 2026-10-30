@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import type { Scene } from '@/core/layout/mindmap'
 import { setViewport } from '../actions'
 import { useEditor } from '../store'
+import { centralFill } from '@/core/theme/model'
 import { accentFor } from '@/core/theme/resolve'
 import { useTheme } from '../scene'
 
@@ -36,7 +37,7 @@ export function Minimap({ scene }: { scene: Scene }) {
     ctx.clearRect(0, 0, W, H)
     const sel = new Set(selected)
     scene.boxes.forEach((bx) => {
-      ctx.fillStyle = sel.has(bx.id) ? '#f59e0b' : bx.branch < 0 ? theme.root.fill : accentFor(theme, bx.branch)
+      ctx.fillStyle = sel.has(bx.id) ? '#f59e0b' : bx.branch < 0 ? centralFill(theme) : accentFor(theme, bx.branch)
       ctx.globalAlpha = bx.depth > 2 ? 0.45 : 0.85
       ctx.fillRect(offX + (bx.x - x0) * scale, offY + (bx.y - y0) * scale, Math.max(2, bx.w * scale), Math.max(1.5, bx.h * scale))
     })

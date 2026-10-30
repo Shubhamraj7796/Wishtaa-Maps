@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+### Themes, colour schemes and branch styling (Phase 1 of 3)
+- **New theme model (format version 2)**: a theme defines, for the central, main, sub and deeper levels, the shape, fill style,
+  border, font, text colour, and the branch curve, thickness, taper and dash. Themes are JSON (`themes.json`), so adding one
+  needs no code. Older maps open unchanged: a recording of how all 26 earlier themes drew is replayed by a test.
+- **Theme gallery** with Light, Dark and Custom tabs: live SVG mini-map previews (drawn lazily), hover or focus to preview on
+  the canvas, click to apply as one undo step. 33 themes now (7 new): double-circle centre (Orbit, Halo), pastel, tapered
+  brush, underline, and high-contrast light and dark (7:1).
+- **Colour schemes**: 15 palettes (rainbow, warm, cool, pastel, earthy, five one-colour families, two colour-blind-safe).
+  Main branches take colours in order, sub-branches inherit; changing the scheme recolours without changing shapes.
+- **Branch thickness slider (1 to 20 px) and Taper**: map-wide overrides of the theme; tapered branches are thick at the parent
+  and thinner toward the topic. Dragging the slider is one undo step.
+- **Custom themes**: save the map's current look, customise, rename, duplicate, delete, export and import as JSON. They are
+  stored through a repository interface (browser storage now) and kept inside each map that uses them.
+- **Double circle** shape (outer ring, gap, inner disc) for any topic.
+- Applying a theme keeps your per-topic overrides unless you choose to reset them. `.emmx` imports keep their colours as
+  topic overrides on the default theme.
+- See docs/themes.md.
+
 ### Import: choose where to save
 - The import dialog has **Save to** (This browser or Google Drive with the connected account), with the same defaults,
   remembered choice, Drive folder choice, "Connect Google Drive" and "Don't ask again" as New file.

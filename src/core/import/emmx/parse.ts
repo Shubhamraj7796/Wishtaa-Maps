@@ -180,6 +180,8 @@ async function convertShape(
   imageCache: Map<string, ImportedImage | null>
 ): Promise<ImportedTopic> {
   const { text, fontPt, color } = textOf(shape)
+  // Colours become the topic's own overrides (fill, outline, branch colour, text); the map keeps the default theme.
+  // TODO: map MindMaster shape types (the topic's geometry and ShapeStyle) to our shapes once there are more sample files.
   const style: TopicStyle = {}
 
   const fill = parseEmmxColor(attrV(path(shape, 'ShapeFormat', 'FillFormat', 'Color')))

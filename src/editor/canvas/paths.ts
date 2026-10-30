@@ -53,8 +53,8 @@ export function roundedPolyline(pts: Pt[], radius: number): string {
 const horizontal = (s: Side) => s === 'l' || s === 'r'
 const vertical = (s: Side) => s === 't' || s === 'b'
 
-/** SVG path between two topics for the given connector style. */
-export function edgePath(a: LaidOut, b: LaidOut, e: SceneEdge): string {
+/** SVG path between two topics for the given connector style. `radius` is the corner radius of elbow connectors. */
+export function edgePath(a: LaidOut, b: LaidOut, e: SceneEdge, radius = 10): string {
   const p1 = anchor(a, e.fromSide, e.fromDx, e.dxFromRight)
   const p2 = anchor(b, e.toSide)
   if (e.kind === 'straight' || e.fromSide === 'c' || e.toSide === 'c') return `M${f(p1.x)} ${f(p1.y)}L${f(p2.x)} ${f(p2.y)}`
@@ -74,7 +74,7 @@ export function edgePath(a: LaidOut, b: LaidOut, e: SceneEdge): string {
   }
 
   // elbow
-  const r = 10
+  const r = radius
   if (horizontal(e.fromSide) && horizontal(e.toSide)) {
     const mx = (p1.x + p2.x) / 2
     return roundedPolyline([p1, { x: mx, y: p1.y }, { x: mx, y: p2.y }, p2], r)

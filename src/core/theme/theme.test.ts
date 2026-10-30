@@ -12,7 +12,9 @@ import {
   setSetting,
   snapshotSettings,
 } from '../settings'
+import golden from './golden-v1.json'
 import { contrast, hexToRgb, isHex, luminance, mix, readableText } from './color'
+import { centralFill, centralText } from './model'
 import { accentFor, DASH, levelOf, resolveLine, resolveLook, shapeFor } from './resolve'
 import { DEFAULT_THEME_ID, PATTERNS, THEMES, findTheme, type Theme } from './themes'
 
@@ -63,7 +65,7 @@ describe('theme gallery', () => {
   it('keeps every text colour readable (4.5:1) on its background in every theme', () => {
     for (const t of THEMES) {
       expect(contrast(t.text, t.bg), `${t.id} text on background`).toBeGreaterThanOrEqual(4.5)
-      expect(contrast(t.root.text, t.root.fill), `${t.id} root`).toBeGreaterThanOrEqual(4.5)
+      expect(contrast(centralText(t), centralFill(t)), `${t.id} root`).toBeGreaterThanOrEqual(4.5)
       const rt = resolveTheme({ ...DEFAULT_SETTINGS, themeId: t.id })
       t.palette.forEach((_, branch) => {
         for (const depth of [1, 2, 3]) {
@@ -83,11 +85,12 @@ describe('resolving how a topic looks', () => {
   const theme = resolveTheme(DEFAULT_SETTINGS)
 
   it('follows the theme by level', () => {
-    expect(levelOf(0, true)).toBe('root')
-    expect(levelOf(1, false)).toBe('l1')
-    expect(levelOf(4, false)).toBe('l2')
+    expect(levelOf(0, true)).toBe('central')
+    expect(levelOf(1, false)).toBe('main')
+    expect(levelOf(2, false)).toBe('sub')
+    expect(levelOf(4, false)).toBe('deeper')
     const root = resolveLook(theme, { depth: 0, branch: -1, isRoot: true })
-    expect(root.fill).toBe(theme.root.fill)
+    expect(root.fill).toBe(centralFill(theme))
     const l1 = resolveLook(theme, { depth: 1, branch: 0, isRoot: false })
     expect(l1.fill).toBe(theme.palette[0]) // solid
     const l2 = resolveLook(theme, { depth: 2, branch: 0, isRoot: false })
@@ -114,7 +117,7 @@ describe('resolving how a topic looks', () => {
   it('a layout shape (bubbles) beats the theme but not the topic', () => {
     expect(resolveLook(theme, { depth: 1, branch: 0, isRoot: false, layoutShape: 'ellipse' }).shape).toBe('ellipse')
     expect(resolveLook(theme, { depth: 1, branch: 0, isRoot: false, layoutShape: 'ellipse', style: { shape: 'rect' } }).shape).toBe('rect')
-    expect(shapeFor(theme, 'root')).toBe(theme.root.shape)
+    expect(shapeFor(theme, 'central')).toBe(theme.levels.central.shape)
   })
 
   it('connector lines take colour from the branch and width/style from the topic or theme', () => {
@@ -154,15 +157,23 @@ describe('map settings', () => {
     expect(readSettings({ spacing: 0 }).spacing).toBe(MIN_SPACING)
   })
 
-  it('sanitise custom themes (colours, fonts, shapes) and cap how many are kept', () => {
+  it('sanitise custom themes (colours, fonts, shapes, sizes) and cap how many are kept', () => {
     const base = THEMES[1] as Theme
-    const t = sanitizeTheme({ ...base, id: 'c1', name: 'Mine', font: 'x; background: url(evil)', root: { ...base.root, shape: 'star' }, lineWidth: 500 })
+    const t = sanitizeTheme({ ...base, id: 'c1', name: 'Mine', font: 'x; background: url(evil)', levels: { ...base.levels, central: { ...base.levels.central, shape: 'star', branch: { ...base.levels.central.branch, thickness: 500 } } } })
     expect(t?.font).toContain('Inter') // unsafe font string replaced
-    expect(t?.root.shape).toBe('rounded')
-    expect(t?.lineWidth).toBe(10)
+    expect(t?.levels.central.shape).toBe('rounded')
+    expect(t?.levels.central.branch.thickness).toBe(20)
     expect(sanitizeTheme({ ...base, bg: 'red' })).toBeNull()
     const many = Array.from({ length: 50 }, (_, i) => ({ ...base, id: `c${i}`, name: `T${i}` }))
     expect(readSettings({ customThemes: many }).customThemes).toHaveLength(MAX_CUSTOM_THEMES)
+  })
+
+  it('still accepts a theme saved in the old format (version 1)', () => {
+    const v1 = (golden.themes as unknown[])[1]
+    const t = sanitizeTheme(v1)
+    expect(t?.version).toBe(2)
+    expect(t?.levels.central.fillColor).toBe((v1 as { root: { fill: string } }).root.fill)
+    expect(readSettings({ customThemes: [v1] }).customThemes[0]?.version).toBe(2)
   })
 
   it('apply the map’s overrides on top of the chosen theme', () => {

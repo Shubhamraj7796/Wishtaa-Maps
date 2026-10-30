@@ -1,4 +1,5 @@
 import type { Scene } from '../layout/types'
+import { centralFill } from '../theme/model'
 import { accentFor, type ResolvedTheme } from '../theme/resolve'
 
 const W = 240
@@ -14,7 +15,7 @@ export function makeThumbnail(scene: Scene, theme: ResolvedTheme): string {
   const b = scene.bounds
   const bg = `<rect width="${W}" height="${H}" fill="${esc(theme.bg)}"/>`
   if (!scene.boxes.size || b.w <= 0 || b.h <= 0) {
-    return svg(`${bg}<rect x="95" y="62" width="50" height="26" rx="8" fill="${esc(theme.root.fill)}"/>`)
+    return svg(`${bg}<rect x="95" y="62" width="50" height="26" rx="8" fill="${esc(centralFill(theme))}"/>`)
   }
   const pad = 10
   const k = Math.min((W - pad * 2) / b.w, (H - pad * 2) / b.h)
@@ -39,7 +40,7 @@ export function makeThumbnail(scene: Scene, theme: ResolvedTheme): string {
 
   for (const box of scene.boxes.values()) {
     if (box.depth > maxDepth) continue
-    const color = box.branch < 0 ? theme.root.fill : accentFor(theme, box.branch)
+    const color = box.branch < 0 ? centralFill(theme) : accentFor(theme, box.branch)
     const w = Math.max(minSide * 2, box.w * k)
     const h = Math.max(minSide, box.h * k)
     parts.push(`<rect x="${(box.x * k + ox).toFixed(1)}" y="${(box.y * k + oy).toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" rx="${Math.min(3, h / 2).toFixed(1)}" fill="${esc(color)}" opacity="${box.depth > 1 ? 0.55 : 0.95}"/>`)
