@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Import: choose where to save
+- The import dialog has **Save to** (This browser or Google Drive with the connected account), with the same defaults,
+  remembered choice, Drive folder choice, "Connect Google Drive" and "Don't ask again" as New file.
+- The question is skipped inside a local folder (imports there) and on the Google Drive page (imports into the Drive
+  folder being viewed, new "Import .emmx" button); the New file dialog's Import uses the choice made there.
+- In Drive the `.wishtaa` file (with its pictures) is created first, so the first autosave updates it. If Drive fails:
+  Retry or Import to this browser instead; the imported map is never lost.
+
 ### Import MindMaster / EdrawMind (.emmx) files
 - **Import** (Home, All files, New file dialog) opens an `.emmx` as normal, editable Wishtaa maps, one per page. Topic
   tree, text, pictures at their displayed size, which side main topics were on, and the original fill, outline, branch

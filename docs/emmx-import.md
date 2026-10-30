@@ -62,4 +62,27 @@ A shape of an unknown type that sits inside the topic tree is imported as a norm
   A topic style can carry `lineColor` (the connector colour).
 - Tests: `emmx.test.ts` uses `tests/fixtures/IND_AS_2.emmx` and small synthetic files.
 
-Imported maps are saved in this browser. Use **Move to Google Drive** on the file to keep it in Drive.
+## Where the imported maps are saved ("Save to")
+
+Import asks the same question as New file: **Save to** This browser or Google Drive (with the connected account),
+with the same remembered choice, the same Drive folder choice (default: the "Wishtaa Maps" folder; "Choose another
+folder" opens Google Picker) and "Connect Google Drive" when Drive is not connected. "Don't ask again" (and its reset in
+Storage settings) applies here too.
+
+The question is skipped when the place is obvious, exactly as for New file:
+
+| Where you start the import | What happens |
+|---|---|
+| Inside a local folder in All files | Imported into that folder, in this browser |
+| Google Drive page ("Import .emmx") | Imported into the Drive folder being viewed |
+| Home, the top of All files, the New file dialog | Asks "Save to" (the New file dialog uses the choice made there) |
+
+In Drive, each map is first kept in this browser (so it can never be lost) and then created in Drive as a `.wishtaa` file
+with its pictures inside, the same way pasted pictures travel. The first autosave therefore updates that Drive file
+instead of making a duplicate.
+
+If Drive fails (offline, sign-in expired, Drive full) a message explains why and offers **Retry** (only the maps that
+failed are retried; a Drive folder that no longer exists falls back to the Wishtaa Maps folder) or **Import to this
+browser instead**. The imported maps stay in All files either way, even if the message is closed.
+
+In code: `importToPlacement` and `retryDriveUpload` in `src/app/importEmmx.ts`; `ImportDialog` in `src/app/importFlow.tsx`.

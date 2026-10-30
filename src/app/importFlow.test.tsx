@@ -44,6 +44,13 @@ function choose(...files: File[]) {
   input?.onchange?.(new Event('change'))
 }
 
+/** Clicks an Import card. Where the place isn't decided, the "Save to" dialog appears first: press Choose file. */
+async function startImport(label: string) {
+  fireEvent.click((await screen.findByText(label)).closest('button') as HTMLButtonElement)
+  const dialog = screen.queryByRole('dialog', { name: 'Import' })
+  if (dialog) fireEvent.click(within(dialog).getByRole('button', { name: 'Choose file…' }))
+}
+
 beforeEach(() => {
   installMemoryLocalStorage()
   repo = new RepositoryCore(new MemoryBackend(), () => (t += 1000))
@@ -66,6 +73,10 @@ describe('Import entry points', () => {
     expect(card.disabled).toBe(false)
     expect(within(card).queryByText('Soon')).toBeNull()
     fireEvent.click(card)
+    const dialog = await screen.findByRole('dialog', { name: 'Import' })
+    expect(within(dialog).getByText('Save to')).toBeTruthy()
+    expect(lastChooser()).toBeNull() // asks where to save before choosing the file
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Choose file…' }))
     expect(lastChooser()?.accept).toBe('.emmx')
   })
 
@@ -73,7 +84,7 @@ describe('Import entry points', () => {
     mount('/files')
     const card = (await screen.findByText('Import file')).closest('button') as HTMLButtonElement
     expect(card.disabled).toBe(false)
-    fireEvent.click(card)
+    await startImport('Import file')
     expect(lastChooser()).not.toBeNull()
   })
 
@@ -92,7 +103,7 @@ describe('Import entry points', () => {
 describe('importing from the screen', () => {
   it('a clean import opens the new map straight away', async () => {
     mount('/home')
-    fireEvent.click((await screen.findByText('Import')).closest('button') as HTMLButtonElement)
+    await startImport('Import')
     choose(sample())
     await waitFor(() => expect(where()).toMatch(/^\/map\/.+/))
     const [rec] = await repo.list({ parentId: null })
@@ -104,7 +115,8 @@ describe('importing from the screen', () => {
   it('imports into the folder being viewed', async () => {
     const folder = await repo.create({ type: 'folder', name: 'Work' })
     mount(`/files/${folder.id}`)
-    fireEvent.click((await screen.findByText('Import file')).closest('button') as HTMLButtonElement)
+    await startImport('Import file') // inside a folder: no question, straight to the file chooser
+    expect(screen.queryByRole('dialog', { name: 'Import' })).toBeNull()
     choose(sample())
     await waitFor(() => expect(where()).toMatch(/^\/map\//))
     expect((await repo.list({ parentId: folder.id })).map((f) => f.name)).toEqual(['IND_AS_2'])
@@ -113,7 +125,7 @@ describe('importing from the screen', () => {
   it('shows what was left out, and what to send samples of, instead of opening the map', async () => {
     const shapes = basicShapes({ extra: topic({ id: 30, type: 'FloatTopic', text: 'x' }) + topic({ id: 31, type: 'FloatTopic', text: 'y' }), main1: { extra: '<Notes/>' } })
     mount('/home')
-    fireEvent.click((await screen.findByText('Import')).closest('button') as HTMLButtonElement)
+    await startImport('Import')
     choose(new File([simple(shapes) as BlobPart], 'odd.emmx'))
     const dialog = await screen.findByRole('dialog', { name: 'Imported 1 map' })
     expect(within(dialog).getByText('odd')).toBeTruthy()
@@ -127,7 +139,7 @@ describe('importing from the screen', () => {
 
   it('says clearly when a file cannot be imported, and creates nothing', async () => {
     mount('/home')
-    fireEvent.click((await screen.findByText('Import')).closest('button') as HTMLButtonElement)
+    await startImport('Import')
     choose(new File(['definitely not a zip file, just some words in a file'], 'broken.emmx'))
     const dialog = await screen.findByRole('dialog', { name: 'Nothing was imported' })
     expect(within(dialog).getByRole('alert').textContent).toMatch(/not a valid \.emmx/)
@@ -138,7 +150,7 @@ describe('importing from the screen', () => {
 
   it('imports several files at once and reports each', async () => {
     mount('/home')
-    fireEvent.click((await screen.findByText('Import')).closest('button') as HTMLButtonElement)
+    await startImport('Import')
     choose(new File([simple() as BlobPart], 'one.emmx'), new File(['nope nope nope nope nope nope nope'], 'two.emmx'))
     const dialog = await screen.findByRole('dialog', { name: 'Imported 1 map' })
     expect(within(dialog).getByRole('region', { name: 'one.emmx' })).toBeTruthy()

@@ -8,7 +8,7 @@ import { countAffected, useFiles } from './FilesContext'
 import { Modal, buttonDanger, buttonPrimary, buttonSecondary } from './Modal'
 import { BookOpen, Cloud, FilePlus2, FolderPlus, Info, LayoutTemplate, Network, Upload } from './icons'
 import { StorageSettings } from './DriveUi'
-import { ImportReportDialog, useImportEmmx } from './importFlow'
+import { ImportDialog, ImportReportDialog, useImportEmmx } from './importFlow'
 import { plural } from './format'
 import { useDriveActions, useDriveAuth } from './useDrive'
 
@@ -109,8 +109,11 @@ function NewDialog({ parentId, onClose }: { parentId: string | null; onClose: ()
           title="Import"
           hint="Open a MindMaster or EdrawMind .emmx file."
           onClick={() => {
+            // Uses the "Save to" choice made above, so there is no second question.
+            const chosen: PickerState = always ? { choice: always, folder: prefs.driveFolder, dontAsk: false } : state
+            if (!always) rememberChoice(state)
             onClose()
-            importer.pick(parentId)
+            importer.pickWith(placementFor(chosen, parentId), parentId)
           }}
         />
       </div>
@@ -240,6 +243,8 @@ export function Dialogs() {
       )
     case 'storage':
       return <StorageSettings onClose={close} />
+    case 'import':
+      return <ImportDialog d={d} onClose={close} />
     case 'importReport':
       return <ImportReportDialog report={d.report} onClose={close} />
     case 'templateInfo':

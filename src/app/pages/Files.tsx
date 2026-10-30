@@ -216,7 +216,7 @@ export default function Files() {
           <section aria-label="Create" className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <ActionCard icon={<Network size={20} aria-hidden="true" />} title="New mind map" hint="Blank, one central topic" onClick={() => create.start('map', { source: 'files' })} />
             <ActionCard icon={<FolderPlus size={20} aria-hidden="true" />} title="New folder" hint="Group your files" onClick={() => create.start('folder', { source: 'files' })} />
-            <ActionCard icon={<Upload size={20} aria-hidden="true" />} title="Import file" hint="MindMaster or EdrawMind .emmx" onClick={() => importer.pick(folderId)} />
+            <ActionCard icon={<Upload size={20} aria-hidden="true" />} title="Import file" hint="MindMaster or EdrawMind .emmx" onClick={() => importer.pick({ source: 'files' })} />
             <ActionCard icon={<Sparkles size={20} aria-hidden="true" />} title="AI mind map" hint="Coming soon" badge="Soon" disabled />
           </section>
         </>

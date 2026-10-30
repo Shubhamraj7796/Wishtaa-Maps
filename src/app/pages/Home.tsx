@@ -40,7 +40,7 @@ export default function Home() {
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <ActionCard icon={<Network size={20} aria-hidden="true" />} title="Blank mind map" hint="One central topic" onClick={() => create.start('map', { source: 'home' })} />
           <ActionCard icon={<LayoutTemplate size={20} aria-hidden="true" />} title="From template" hint="Ready-made layouts" badge="Soon" onClick={() => f.setDialog({ kind: 'templateInfo' })} />
-          <ActionCard icon={<Upload size={20} aria-hidden="true" />} title="Import" hint="MindMaster or EdrawMind .emmx" onClick={() => importer.pick(null)} />
+          <ActionCard icon={<Upload size={20} aria-hidden="true" />} title="Import" hint="MindMaster or EdrawMind .emmx" onClick={() => importer.pick({ source: 'home' })} />
           <ActionCard icon={<BookOpen size={20} aria-hidden="true" />} title="New knowledge base" hint="Connected notes" onClick={() => create.start('kb', { source: 'home' })} />
         </div>
       </section>

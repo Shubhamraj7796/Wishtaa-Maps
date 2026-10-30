@@ -3,6 +3,8 @@ import { MAX_IMPORT_DIMENSION } from '@/core/import/emmx/images'
 import { MAX_FILE_BYTES } from '@/core/import/emmx/zip'
 import { buildMapContent } from '@/core/import/emmx/build'
 import { saveMetaFromContent } from '@/core/files/content'
+import { DriveError } from '@/core/drive/errors'
+import type { Placement } from '@/core/drive/placement'
 import type { FileRecord, FileRepository } from '@/core/files/types'
 import type { ImageStore } from '@/core/images/store'
 
@@ -131,4 +133,63 @@ export async function importEmmx(file: PickedFile, deps: ImportDeps): Promise<Im
     if (!(e instanceof EmmxError)) console.error('[emmx import] failed', e)
   }
   return summary
+}
+
+// ---- Saving imported maps in Google Drive ------------------------------------------------------------------------
+
+/** The Drive operation import needs (implemented by `DriveRepository`, or a wrapper that signs in first). */
+export interface DriveSender {
+  moveToDrive(id: string, parentFolderId?: string): Promise<FileRecord>
+}
+
+export interface DriveUploadFailure {
+  summaryIndex: number
+  fileIndex: number
+  error: DriveError
+}
+
+/** The result of importing to a chosen place. Failures are Drive uploads that did not work; those maps are safe in this browser. */
+export interface ImportOutcome {
+  summaries: ImportSummary[]
+  failures: DriveUploadFailure[]
+}
+
+const asDriveError = (e: unknown): DriveError => (e instanceof DriveError ? e : new DriveError('other', e instanceof Error && e.message ? e.message : 'Something went wrong with Google Drive.'))
+
+async function upload(outcome: ImportOutcome, targets: { summaryIndex: number; fileIndex: number }[], drive: DriveSender, folderId: string | undefined): Promise<ImportOutcome> {
+  const summaries = outcome.summaries.map((s) => ({ ...s, files: [...s.files] }))
+  const failures: DriveUploadFailure[] = []
+  for (const t of targets) {
+    const f = summaries[t.summaryIndex]?.files[t.fileIndex]
+    if (!f) continue
+    try {
+      const record = await drive.moveToDrive(f.record.id, folderId)
+      ;(summaries[t.summaryIndex] as ImportSummary).files[t.fileIndex] = { ...f, record }
+    } catch (e) {
+      failures.push({ ...t, error: asDriveError(e) })
+    }
+  }
+  return { summaries, failures }
+}
+
+/**
+ * Imports files to a chosen place. In Drive, each map is first created in this browser (so it can never be lost) and
+ * then created in Drive as a `.wishtaa` file together with its pictures, so the first autosave updates that file instead
+ * of making a copy. A Drive failure is reported in `failures`; the map stays in this browser.
+ */
+export async function importToPlacement(files: PickedFile[], deps: Omit<ImportDeps, 'parentId'>, placement: Placement, drive: DriveSender): Promise<ImportOutcome> {
+  const summaries: ImportSummary[] = []
+  for (const file of files) summaries.push(await importEmmx(file, { ...deps, parentId: placement.storage === 'local' ? placement.parentId : null }))
+  const outcome: ImportOutcome = { summaries, failures: [] }
+  if (placement.storage === 'local') return outcome
+  const targets = summaries.flatMap((s, summaryIndex) => s.files.map((_, fileIndex) => ({ summaryIndex, fileIndex })))
+  return upload(outcome, targets, drive, placement.folder?.id)
+}
+
+/** Tries Drive again for the maps that failed. A folder that no longer exists falls back to the Wishtaa Maps folder. */
+export async function retryDriveUpload(outcome: ImportOutcome, drive: DriveSender, placement: Placement): Promise<ImportOutcome> {
+  const gone = outcome.failures.some((f) => f.error.kind === 'notfound')
+  const folderId = gone || placement.storage !== 'drive' ? undefined : placement.folder?.id
+  const next = await upload(outcome, outcome.failures, drive, folderId)
+  return next
 }

@@ -3,11 +3,12 @@ import { useSearchParams } from 'react-router-dom'
 import { FOLDER_MIME, type DriveFileMeta } from '@/core/drive/client'
 import { nameFromDrive } from '@/core/drive/format'
 import { useCreate } from '../createFlow'
+import { useImportEmmx } from '../importFlow'
 import { driveAuth } from '../drive'
 import { FileKindIcon } from '../FileBrowser'
 import { useFiles } from '../FilesContext'
 import { timeAgo } from '../format'
-import { BookOpen, Cloud, Folder, FolderPlus, Info, Network, RotateCcw } from '../icons'
+import { BookOpen, Cloud, Folder, FolderPlus, Info, Network, RotateCcw, Upload } from '../icons'
 import { buttonPrimary, buttonSecondary } from '../Modal'
 import { driveRepository } from '../repo'
 import { EmptyState, Page, PageHeader } from '../ui'
@@ -22,6 +23,7 @@ interface Crumb {
 function DriveBrowser({ initialFolder }: { initialFolder: { id: string; name: string } | null }) {
   const actions = useDriveActions()
   const create = useCreate()
+  const importer = useImportEmmx()
   const [trail, setTrail] = useState<Crumb[]>([{ id: undefined, name: 'Wishtaa Maps' }, ...(initialFolder ? [initialFolder] : [])])
   const [items, setItems] = useState<DriveFileMeta[] | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -69,6 +71,7 @@ function DriveBrowser({ initialFolder }: { initialFolder: { id: string; name: st
         <button type="button" className={buttonSecondary} onClick={() => make('map')}><Network size={15} aria-hidden="true" /> New mind map</button>
         <button type="button" className={buttonSecondary} onClick={() => make('kb')}><BookOpen size={15} aria-hidden="true" /> New knowledge base</button>
         <button type="button" className={buttonSecondary} onClick={() => make('folder')}><FolderPlus size={15} aria-hidden="true" /> New folder</button>
+        <button type="button" className={buttonSecondary} onClick={() => importer.pick({ source: 'drive', driveFolder: here.id ? { id: here.id, name: here.name } : null, onDone: () => void load() })}><Upload size={15} aria-hidden="true" /> Import .emmx</button>
       </div>
       <nav aria-label="Drive folders" className="mb-3 flex flex-wrap items-center gap-1 text-sm text-muted">
         {trail.map((c, i) => (
