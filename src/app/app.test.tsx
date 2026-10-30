@@ -83,7 +83,7 @@ describe('sidebar', () => {
 })
 
 describe('New file dialog', () => {
-  it('offers the file kinds, with templates and import marked as coming soon', async () => {
+  it('offers the file kinds, with templates marked as coming soon and import available', async () => {
     mount()
     fireEvent.click(await screen.findByRole('button', { name: /new file/i }))
     const dialog = await screen.findByRole('dialog', { name: 'New file' })
@@ -91,7 +91,7 @@ describe('New file dialog', () => {
     const template = within(dialog).getByText('From template').closest('button') as HTMLButtonElement
     const imp = within(dialog).getByText('Import').closest('button') as HTMLButtonElement
     expect(template.disabled).toBe(true)
-    expect(imp.disabled).toBe(true)
+    expect(imp.disabled).toBe(false) // .emmx import is available
   })
 
   it('creates a blank mind map and opens it at /map/:id', async () => {

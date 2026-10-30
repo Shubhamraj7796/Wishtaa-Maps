@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+### Import MindMaster / EdrawMind (.emmx) files
+- **Import** (Home, All files, New file dialog) opens an `.emmx` as normal, editable Wishtaa maps, one per page. Topic
+  tree, text, pictures at their displayed size, which side main topics were on, and the original fill, outline, branch
+  and text colours and font sizes. Import only; no `.emmx` export.
+- **Pictures keep their original bytes** (PNG, JPEG, GIF, WebP detected from the first bytes), stored once per distinct
+  picture; only pictures over 4000 px are reduced. SVG and oversized or damaged pictures are refused.
+- Placeholder texts ("Main Topic", "Subtopic", ...) are cleared on topics that have a picture (option, on by default).
+- **Nothing unknown is fatal**: unsupported shapes and content are skipped, counted and listed in a report (and logged
+  with their type names so samples can be sent).
+- **Safe by design**: 50 MB / 2,000 entries / 200 MB limits, only known entries read, no path from entry names,
+  traversal in picture locations refused, strict XML with no DOCTYPE or entities.
+- Main topics can carry a chosen side in the balanced mind map; topic style gains a connector colour.
+- See docs/emmx-import.md. New dependency: `fflate` (ZIP reading).
+
 ### Choose where new files are stored
 - **"Save to" when creating** a mind map, knowledge base or folder: This browser or Google Drive (with the connected
   account). Drive is the default when connected, otherwise This browser; the last choice and the last Drive folder are

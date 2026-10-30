@@ -37,6 +37,8 @@ export type TopicData = Omit<Topic, 'mapId'> & {
   attachments?: Attachment[]
   /** Per-branch layout override (this topic's own descendants). */
   branchDir?: BranchDir | null
+  /** For a main topic (child of the central topic): which side it sits on in the balanced mind map. Unset = automatic. */
+  side?: 'left' | 'right' | null
   /** Manual shift of this branch from its automatic position (branch free positioning). */
   offset?: { x: number; y: number } | null
 }

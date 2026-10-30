@@ -355,12 +355,35 @@ function buildBoth(c: Ctx, t: TopicData, depth: number, m: Size, kt: TopicData[]
   const totalH = trial.reduce((s, k, i) => s + k.h + (i ? c.gv : 0), 0)
   const right: Block[] = []
   const left: Block[] = []
-  let acc = 0
-  trial.forEach((k, i) => {
-    if (acc < totalH / 2) right.push(k)
-    else left.push(build(c, kt[i] as TopicData, depth + 1, c.childDir('left', kt[i] as TopicData, depth + 1), i))
-    acc += k.h + c.gv
-  })
+  const chosen = (k: TopicData) => (k.side === 'left' || k.side === 'right' ? k.side : null)
+  if (kt.some((k) => chosen(k))) {
+    // Some main topics have a chosen side (for example an imported map): keep them there, and put the others on
+    // whichever side is shorter so far.
+    let hR = 0
+    let hL = 0
+    trial.forEach((b, i) => {
+      const s = chosen(kt[i] as TopicData)
+      if (s === 'right') hR += b.h + c.gv
+      else if (s === 'left') hL += b.h + c.gv
+    })
+    trial.forEach((b, i) => {
+      const k = kt[i] as TopicData
+      const side = chosen(k) ?? (hR <= hL ? 'right' : 'left')
+      if (!chosen(k)) {
+        if (side === 'right') hR += b.h + c.gv
+        else hL += b.h + c.gv
+      }
+      if (side === 'right') right.push(b)
+      else left.push(build(c, k, depth + 1, c.childDir('left', k, depth + 1), i))
+    })
+  } else {
+    let acc = 0
+    trial.forEach((k, i) => {
+      if (acc < totalH / 2) right.push(k)
+      else left.push(build(c, kt[i] as TopicData, depth + 1, c.childDir('left', kt[i] as TopicData, depth + 1), i))
+      acc += k.h + c.gv
+    })
+  }
   const colH = (col: Block[]) => col.reduce((s, k, i) => s + (c.overlap ? k.m.h : k.h) + (i ? c.gv : 0), 0)
   const colW = (col: Block[]) => (col.length ? Math.max(...col.map((k) => k.w)) : 0)
   const hR = colH(right)

@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { LAST_OPEN_KEY } from '@/editor/session'
 import { useCreate } from '../createFlow'
+import { useImportEmmx } from '../importFlow'
 import { useFiles } from '../FilesContext'
 import { FileBrowser, FileKindIcon } from '../FileBrowser'
 import { timeAgo } from '../format'
@@ -21,6 +22,7 @@ const noop = () => undefined
 export default function Home() {
   const f = useFiles()
   const create = useCreate()
+  const importer = useImportEmmx()
   const live = useMemo(() => f.files.filter((x) => !x.trashed && x.type !== 'folder'), [f.files])
   const recent = useMemo(() => [...live].sort((a, b) => b.modifiedAt - a.modifiedAt).slice(0, 8), [live])
   const starred = useMemo(() => f.files.filter((x) => x.starred && !x.trashed), [f.files])
@@ -38,7 +40,7 @@ export default function Home() {
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <ActionCard icon={<Network size={20} aria-hidden="true" />} title="Blank mind map" hint="One central topic" onClick={() => create.start('map', { source: 'home' })} />
           <ActionCard icon={<LayoutTemplate size={20} aria-hidden="true" />} title="From template" hint="Ready-made layouts" badge="Soon" onClick={() => f.setDialog({ kind: 'templateInfo' })} />
-          <ActionCard icon={<Upload size={20} aria-hidden="true" />} title="Import" hint="Bring in a file" badge="Soon" onClick={() => f.setDialog({ kind: 'importInfo' })} />
+          <ActionCard icon={<Upload size={20} aria-hidden="true" />} title="Import" hint="MindMaster or EdrawMind .emmx" onClick={() => importer.pick(null)} />
           <ActionCard icon={<BookOpen size={20} aria-hidden="true" />} title="New knowledge base" hint="Connected notes" onClick={() => create.start('kb', { source: 'home' })} />
         </div>
       </section>

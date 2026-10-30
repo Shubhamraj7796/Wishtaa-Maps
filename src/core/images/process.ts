@@ -66,3 +66,28 @@ export async function processImageFile(file: Blob): Promise<ProcessedImage> {
   if (!blob) throw new ImageError("Couldn't process that image in this browser.")
   return { blob, width, height, type: blob.type }
 }
+
+/**
+ * Reduces a picture so its longest side is `max` px, keeping its format (a GIF becomes a PNG) and aspect ratio.
+ * Used only for very large imported pictures; everything else keeps its original bytes.
+ */
+export async function downscaleImage(blob: Blob, max: number): Promise<ProcessedImage> {
+  let bitmap: ImageBitmap
+  try {
+    bitmap = await createImageBitmap(blob)
+  } catch {
+    throw new ImageError("Couldn't read that image. It may be damaged or in an unsupported format.")
+  }
+  const { width, height } = fitWithin(bitmap.width, bitmap.height, max)
+  const canvas = document.createElement('canvas')
+  canvas.width = width
+  canvas.height = height
+  const ctx = canvas.getContext('2d')
+  if (!ctx) throw new ImageError("Couldn't process that image in this browser.")
+  ctx.drawImage(bitmap, 0, 0, width, height)
+  bitmap.close()
+  const type = blob.type === 'image/jpeg' || blob.type === 'image/webp' ? blob.type : 'image/png'
+  const out = await toBlob(canvas, type, 0.92)
+  if (!out) throw new ImageError("Couldn't process that image in this browser.")
+  return { blob: out, width, height, type: out.type || type }
+}

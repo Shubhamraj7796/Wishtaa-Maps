@@ -8,6 +8,7 @@ import { countAffected, useFiles } from './FilesContext'
 import { Modal, buttonDanger, buttonPrimary, buttonSecondary } from './Modal'
 import { BookOpen, Cloud, FilePlus2, FolderPlus, Info, LayoutTemplate, Network, Upload } from './icons'
 import { StorageSettings } from './DriveUi'
+import { ImportReportDialog, useImportEmmx } from './importFlow'
 import { plural } from './format'
 import { useDriveActions, useDriveAuth } from './useDrive'
 
@@ -61,6 +62,7 @@ function NewDialog({ parentId, onClose }: { parentId: string | null; onClose: ()
   const drive = useDriveActions()
   const auth = useDriveAuth()
   const create = useCreate()
+  const importer = useImportEmmx()
   const prefs = useCreatePrefs()
   const connected = auth.status === 'connected' || auth.status === 'reconnect'
   const always = effectiveAlways(prefs, connected)
@@ -102,7 +104,15 @@ function NewDialog({ parentId, onClose }: { parentId: string | null; onClose: ()
           />
         )}
         <Choice icon={<LayoutTemplate size={20} aria-hidden="true" />} title="From template" hint="Coming soon." disabled />
-        <Choice icon={<Upload size={20} aria-hidden="true" />} title="Import" hint="Coming soon." disabled />
+        <Choice
+          icon={<Upload size={20} aria-hidden="true" />}
+          title="Import"
+          hint="Open a MindMaster or EdrawMind .emmx file."
+          onClick={() => {
+            onClose()
+            importer.pick(parentId)
+          }}
+        />
       </div>
     </Modal>
   )
@@ -230,11 +240,12 @@ export function Dialogs() {
       )
     case 'storage':
       return <StorageSettings onClose={close} />
-    case 'importInfo':
+    case 'importReport':
+      return <ImportReportDialog report={d.report} onClose={close} />
     case 'templateInfo':
       return (
         <Modal title="Coming soon" onClose={close}>
-          <p className="text-sm text-muted">{d.kind === 'importInfo' ? 'Importing files' : 'Templates'} will arrive in a later update.</p>
+          <p className="text-sm text-muted">Templates will arrive in a later update.</p>
           <div className="mt-4 flex justify-end">
             <button type="button" onClick={close} className={buttonPrimary}>OK</button>
           </div>

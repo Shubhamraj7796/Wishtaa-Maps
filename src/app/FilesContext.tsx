@@ -5,6 +5,7 @@ import type { Placement } from '@/core/drive/placement'
 import { buildStarterContent } from '@/core/files/templates'
 import { descendantsOf } from '@/core/files/tree'
 import type { FileRecord, FileRepository } from '@/core/files/types'
+import type { ImportReport } from './importEmmx'
 import { routeForFile, setNavigator } from './navigation'
 import { repository } from './repo'
 
@@ -18,7 +19,7 @@ export type Dialog =
   | { kind: 'delete'; ids: string[] }
   | { kind: 'emptyBin' }
   | { kind: 'storage' }
-  | { kind: 'importInfo' }
+  | { kind: 'importReport'; report: ImportReport }
   | { kind: 'templateInfo' }
 
 export interface FilesApi {

@@ -32,6 +32,8 @@ export interface TopicStyle {
   fontSize?: number
   fontWeight?: number
   italic?: boolean
+  /** Colour of the connector line leading to this topic (otherwise the branch colour of the theme). */
+  lineColor?: string
   /** Style and thickness of the connector line leading to this topic. */
   lineStyle?: LineStyle
   lineWidth?: number

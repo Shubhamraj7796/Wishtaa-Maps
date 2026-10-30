@@ -99,7 +99,7 @@ export interface Line {
 /** Connector leading to a topic: colour from its branch, width and style from the topic or theme. */
 export function resolveLine(theme: ResolvedTheme, a: { depth: number; branch: number; style?: TopicStyle }): Line {
   return {
-    color: accentFor(theme, a.branch),
+    color: a.style?.lineColor ?? accentFor(theme, a.branch),
     width: a.style?.lineWidth ?? Math.max(1.5, theme.lineWidth - a.depth * 0.6),
     style: a.style?.lineStyle ?? 'solid',
   }

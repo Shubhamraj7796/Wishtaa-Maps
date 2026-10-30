@@ -5,6 +5,7 @@ import { DEFAULT_SORT, type FileRecord, type SortSpec } from '@/core/files/types
 import { routeForFile } from '../navigation'
 import { DRAG_TYPE, FileBrowser } from '../FileBrowser'
 import { useCreate } from '../createFlow'
+import { useImportEmmx } from '../importFlow'
 import { useFiles } from '../FilesContext'
 import { fileSize, plural, timeAgo } from '../format'
 import { FilePlus2, FolderInput, FolderPlus, ImageIcon, Network, Paperclip, RotateCcw, Sparkles, Star, StickyNote, Trash2, Upload, Users, X } from '../icons'
@@ -150,6 +151,7 @@ function ResourcesList() {
 export default function Files() {
   const f = useFiles()
   const create = useCreate()
+  const importer = useImportEmmx()
   const { folderId = null } = useParams()
   const [params, setParams] = useSearchParams()
   const tab = (TABS.find((t) => t.id === params.get('tab'))?.id ?? 'files') as Tab
@@ -214,7 +216,7 @@ export default function Files() {
           <section aria-label="Create" className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <ActionCard icon={<Network size={20} aria-hidden="true" />} title="New mind map" hint="Blank, one central topic" onClick={() => create.start('map', { source: 'files' })} />
             <ActionCard icon={<FolderPlus size={20} aria-hidden="true" />} title="New folder" hint="Group your files" onClick={() => create.start('folder', { source: 'files' })} />
-            <ActionCard icon={<Upload size={20} aria-hidden="true" />} title="Import file" hint="Coming soon" badge="Soon" onClick={() => f.setDialog({ kind: 'importInfo' })} />
+            <ActionCard icon={<Upload size={20} aria-hidden="true" />} title="Import file" hint="MindMaster or EdrawMind .emmx" onClick={() => importer.pick(folderId)} />
             <ActionCard icon={<Sparkles size={20} aria-hidden="true" />} title="AI mind map" hint="Coming soon" badge="Soon" disabled />
           </section>
         </>
