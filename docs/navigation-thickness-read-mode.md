@@ -33,7 +33,7 @@ least 1.5 px wide on screen (`onScreenWidths`).
 Old maps have no explicit thickness, so they use Auto and may look bolder.
 
 ## 3. Read mode
-Header switch **Edit | Read** (Ctrl+Shift+R), a "Read mode" badge, and "Read only" with a lock where the save status was.
+Header switch **Edit | Read** (Alt+R, Option+R on a Mac), a "Read mode" badge, and "Read only" with a lock where the save status was.
 
 **Nothing is written.** Three layers:
 1. `lockDoc` (`src/core/model/lock.ts`): a locked document ignores every `transact`, so no command, setting, theme or style change can reach the map even if a code path forgot to check.

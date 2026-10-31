@@ -54,7 +54,7 @@ export function AddPictureMenu() {
     { icon: 'details', label: touch ? 'Choose from Photos' : 'Choose from gallery', hint: 'Including a screenshot saved on this device', source: 'gallery' },
     ...(canReadClipboardImage() ? [{ icon: 'copy' as IconName, label: 'Paste image from clipboard', hint: 'Or select a topic and press Ctrl+V', source: 'paste' as PictureSource }] : []),
     canCaptureScreen()
-      ? { icon: 'preview', label: 'Capture screen', hint: 'Take one picture of a screen or window you choose', source: 'capture', keys: 'Ctrl+Shift+S' }
+      ? { icon: 'preview', label: 'Capture screen', hint: 'Take one picture of a screen or window you choose', source: 'capture', keys: 'Alt+Shift+Q' }
       : { icon: 'preview', label: 'Capture screen', hint: CAPTURE_UNSUPPORTED, disabledNote: CAPTURE_UNSUPPORTED },
   ]
   const mine = [...new Set([...pictureIdsInMap(), ...recentPictures().filter((id) => !pictureIdsInMap().includes(id))])].slice(0, 24)

@@ -98,10 +98,10 @@ export function StyleTab() {
       )}
       <Section title="Format painter">
         <div className="flex flex-wrap gap-2">
-          <button type="button" onClick={A.copyFormat} aria-label="Copy format" title="Copy format (Ctrl+Alt+C)" className={`${field} flex items-center gap-1.5 hover:bg-bg`}>
+          <button type="button" onClick={A.copyFormat} aria-label="Copy format" title="Copy format (Alt+Shift+C)" className={`${field} flex items-center gap-1.5 hover:bg-bg`}>
             <Icon name="copy" size={15} /> Copy
           </button>
-          <button type="button" onClick={A.pasteFormat} disabled={!copied} aria-label="Paste format" title="Paste format (Ctrl+Alt+V)" className={`${field} flex items-center gap-1.5 hover:bg-bg disabled:opacity-40`}>
+          <button type="button" onClick={A.pasteFormat} disabled={!copied} aria-label="Paste format" title="Paste format (Alt+Shift+V)" className={`${field} flex items-center gap-1.5 hover:bg-bg disabled:opacity-40`}>
             <Icon name="format" size={15} /> Paste
           </button>
           <button type="button" aria-pressed={!!painter} onClick={A.togglePainter} aria-label="Format painter" title="Format painter" className={`${field} flex items-center gap-1.5 ${painter ? 'border-brand bg-brand/15' : 'hover:bg-bg'}`}>

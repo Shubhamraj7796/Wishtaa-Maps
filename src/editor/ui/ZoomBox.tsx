@@ -49,7 +49,7 @@ export function ZoomBox() {
         setText(String(percent))
         setEditing(true)
       }}
-      title="Click to type a zoom value. Ctrl+1 resets to 100%."
+      title="Click to type a zoom value. Alt+Z resets to 100%."
       aria-label={`Zoom ${percent} percent. Click to type a value`}
       className="w-11 text-center hover:text-ink"
     >

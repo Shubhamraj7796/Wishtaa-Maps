@@ -15,7 +15,7 @@
 Shape, fill, border colour and width, text colour, font family, size, bold, italic, and the line to the parent
 (solid/dashed/dotted, thickness). Anything unset follows the theme. A custom fill picks readable text automatically.
 "Apply to the whole branch" restyles descendants too. **Format painter** copies a topic's style and paints others
-(Shift keeps painting); Ctrl+Alt+C / Ctrl+Alt+V copy and paste a format.
+(Shift keeps painting); Alt+Shift+C / Alt+Shift+V copy and paste a format.
 
 ## Map settings (`src/core/settings.ts`)
 Stored in the document's `settings` map, so they save, sync and undo like topics: layout, line style, spacing, overlap,

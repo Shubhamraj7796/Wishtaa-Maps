@@ -22,11 +22,11 @@ export function ReadModeSwitch() {
     <div className="flex shrink-0 items-center gap-2">
       <div role="group" aria-label="Mode" className="inline-flex overflow-hidden rounded-ui border border-line">
         {canEdit && (
-          <button type="button" aria-pressed={!readOnly} onClick={() => enterEditMode()} title="Edit mode (Ctrl+Shift+R switches)" className={seg(!readOnly)}>
+          <button type="button" aria-pressed={!readOnly} onClick={() => enterEditMode()} title="Edit mode (Alt+R, Option+R on a Mac, switches)" className={seg(!readOnly)}>
             Edit
           </button>
         )}
-        <button type="button" aria-pressed={readOnly} onClick={() => void enterReadMode()} title="Read mode: nothing can be changed (Ctrl+Shift+R switches)" className={seg(readOnly)}>
+        <button type="button" aria-pressed={readOnly} onClick={() => void enterReadMode()} title="Read mode: nothing can be changed (Alt+R, Option+R on a Mac, switches)" className={seg(readOnly)}>
           Read
         </button>
       </div>

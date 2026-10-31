@@ -591,13 +591,13 @@ export function copyFormat() {
   const t = id ? get().topics[id] : undefined
   if (!t) return
   set({ copiedFormat: structuredClone(t.style) })
-  showNotice('Format copied. Paste it with Ctrl+Alt+V, or use the format painter.')
+  showNotice('Format copied. Paste it with Alt+Shift+V, or use the format painter.')
 }
 
 export function pasteFormat() {
   const f = get().copiedFormat
   if (!f) {
-    showNotice('Copy a topic’s format first (Ctrl+Alt+C).')
+    showNotice('Copy a topic’s format first (Alt+Shift+C).')
     return
   }
   replaceTopicStyle(mapDoc, get().selected, f, get().styleScope === 'branch')

@@ -106,13 +106,26 @@ describe('switching to Read mode', () => {
     expect(screen.queryByText('Read only')).toBeNull()
   })
 
-  it('Ctrl+Shift+R toggles it, and it is listed with its shortcut', async () => {
-    expect(COMMANDS.find((c) => c.id === 'readMode')?.keys).toContain('Ctrl+Shift+R')
-    fireEvent.keyDown(window, { key: 'R', ctrlKey: true, shiftKey: true })
+  it('Alt+R toggles it (also as Option+R on a Mac), and it is listed with its shortcut', async () => {
+    expect(COMMANDS.find((c) => c.id === 'readMode')?.keys).toEqual(['Alt+R'])
+    fireEvent.keyDown(window, { key: 'r', code: 'KeyR', altKey: true })
     await act(async () => void (await new Promise((r) => setTimeout(r, 50))))
     expect(isReadOnly()).toBe(true)
-    fireEvent.keyDown(window, { key: 'R', ctrlKey: true, shiftKey: true })
+    fireEvent.keyDown(window, { key: '®', code: 'KeyR', altKey: true }) // Option+R types a symbol on a Mac: the physical key counts
     expect(isReadOnly()).toBe(false)
+  })
+
+  it('Ctrl+Shift+R and Ctrl+R are left to the browser: not handled and not default-prevented', async () => {
+    for (const init of [
+      { key: 'R', code: 'KeyR', ctrlKey: true, shiftKey: true },
+      { key: 'r', code: 'KeyR', ctrlKey: true },
+      { key: 'R', code: 'KeyR', metaKey: true, shiftKey: true },
+      { key: 'r', code: 'KeyR', metaKey: true },
+    ]) {
+      const notPrevented = fireEvent.keyDown(window, init) // false when something called preventDefault
+      expect(notPrevented, JSON.stringify(init)).toBe(true)
+      expect(isReadOnly()).toBe(false)
+    }
   })
 })
 

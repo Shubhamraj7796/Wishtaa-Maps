@@ -134,8 +134,13 @@ describe('thumbnails come first', () => {
     expect(thumb).not.toHaveBeenCalled()
     await put('th-2', new Blob(['full-size'], { type: 'image/png' }))
     rerender(<Show id="th-2" thumb={false} />)
-    await waitFor(() => expect(text('th-2')).not.toBe(small), { timeout: 4000 })
-    expect(text('th-2')).toMatch(/^blob:/)
+    await waitFor(
+      () => {
+        expect(text('th-2')).toMatch(/^blob:/) // not the empty moment in between
+        expect(text('th-2')).not.toBe(small)
+      },
+      { timeout: 4000 }
+    )
   })
 })
 

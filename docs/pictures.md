@@ -9,7 +9,7 @@ is one menu: a bottom sheet on a touch screen, a popover on a desktop.
 | Take photo | opens the camera app (`<input capture>`); shown on touch devices and where a camera can be reached |
 | Choose from Photos / gallery | choose from the device (this is how a screenshot taken with the device buttons is added on a tablet) |
 | Paste image from clipboard | a button using `navigator.clipboard.read`; friendly messages if refused or empty. Ctrl/Cmd+V on a selected topic still works |
-| Capture screen (Ctrl+Shift+S) | `getDisplayMedia`, video only. The browser's own picker asks what to share. ONE frame is drawn at the real size, then every track is stopped. Hidden/disabled where the browser cannot do it (found by feature detection, never by user agent) |
+| Capture screen (Alt+Shift+Q) | `getDisplayMedia`, video only. The browser's own picker asks what to share. ONE frame is drawn at the real size, then every track is stopped. Hidden/disabled where the browser cannot do it (found by feature detection, never by user agent) |
 | Drag and drop | an image file, or a picture from another app (Split View), onto a topic |
 | Insert from my pictures | pictures already in this map and recent ones: a new reference to the same picture, nothing new stored |
 

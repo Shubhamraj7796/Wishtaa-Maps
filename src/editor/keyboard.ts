@@ -12,6 +12,12 @@ function typing(t: EventTarget | null): boolean {
   return !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)
 }
 
+/** A dialog (or a pop-up that works like one) has its own keys. */
+function inDialog(t: EventTarget | null): boolean {
+  const el = t as HTMLElement | null
+  return !!el?.closest?.('[role="dialog"], [aria-modal="true"]')
+}
+
 /** A focused button keeps Enter and Space for itself (activating it). */
 function onButton(t: EventTarget | null): boolean {
   return !!(t as HTMLElement | null)?.closest?.('button')
@@ -27,6 +33,8 @@ export function installKeyboard(): () => void {
       return
     }
     if (typing(e.target)) return
+    // Escape still closes things; every other shortcut waits while a dialog is open or a topic is being edited.
+    if (e.key !== 'Escape' && (inDialog(e.target) || useEditor.getState().editingId !== null)) return
     const cmd = commandFor(e)
     if (!cmd) return
     e.preventDefault()
