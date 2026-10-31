@@ -8,6 +8,7 @@ import { countAffected, useFiles } from './FilesContext'
 import { Modal, buttonDanger, buttonPrimary, buttonSecondary } from './Modal'
 import { BookOpen, Cloud, FilePlus2, FolderPlus, Info, LayoutTemplate, Network, Upload } from './icons'
 import { StorageSettings } from './DriveUi'
+import { PreferencesDialog } from './PreferencesDialog'
 import { ImportDialog, ImportReportDialog, useImportEmmx } from './importFlow'
 import { plural } from './format'
 import { useDriveActions, useDriveAuth } from './useDrive'
@@ -243,6 +244,8 @@ export function Dialogs() {
       )
     case 'storage':
       return <StorageSettings onClose={close} />
+    case 'preferences':
+      return <PreferencesDialog onClose={close} />
     case 'import':
       return <ImportDialog d={d} onClose={close} />
     case 'importReport':

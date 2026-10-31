@@ -16,6 +16,7 @@ import { ObjectBar } from '@/editor/ui/ObjectBar'
 import { OutlineView } from '@/editor/ui/OutlineView'
 import { CommandPalette, ContextMenu, NoticeToast, SearchBar, ShortcutSheet } from '@/editor/ui/Overlays'
 import { QuickToolbar } from '@/editor/ui/QuickToolbar'
+import { ZoomBox } from '@/editor/ui/ZoomBox'
 import { SaveStatus } from '@/editor/ui/SaveStatus'
 import { closeFile, openFile, renameOpenFile } from '@/editor/session'
 import type { FileRecord } from '@/core/files/types'
@@ -85,7 +86,6 @@ function Editor({ file }: { file: FileRecord }) {
   const [params] = useSearchParams()
   const topicParam = params.get('topic')
   const backTo = file.parentId ? `/files/${file.parentId}` : isKb ? '/kb' : '/files'
-  const zoom = useEditor((s) => s.viewport.k)
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme
@@ -228,9 +228,7 @@ function Editor({ file }: { file: FileRecord }) {
           <button type="button" onClick={() => A.zoomBy(0.8)} aria-label="Zoom out" title="Zoom out" className="grid h-7 w-7 place-items-center rounded hover:bg-bg hover:text-ink">
             <Icon name="zoomOut" size={16} />
           </button>
-          <button type="button" onClick={A.zoomTo100} title="Reset to 100%" className="w-11 text-center hover:text-ink">
-            {Math.round(zoom * 100)}%
-          </button>
+          <ZoomBox />
           <button type="button" onClick={() => A.zoomBy(1.25)} aria-label="Zoom in" title="Zoom in" className="grid h-7 w-7 place-items-center rounded hover:bg-bg hover:text-ink">
             <Icon name="zoomIn" size={16} />
           </button>

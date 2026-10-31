@@ -19,6 +19,7 @@ export type Dialog =
   | { kind: 'delete'; ids: string[] }
   | { kind: 'emptyBin' }
   | { kind: 'storage' }
+  | { kind: 'preferences' }
   /** Import .emmx files: asks where to save (or, with `fixed` and `files`, imports to a place already decided). */
   | { kind: 'import'; localParentId: string | null; fixed?: Placement; files?: File[]; onDone?: () => void }
   | { kind: 'importReport'; report: ImportReport }

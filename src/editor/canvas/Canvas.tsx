@@ -17,9 +17,10 @@ import {
   selectOnly,
   setViewport,
   toggleSelect,
-  zoomAround,
   type DropMode,
 } from '../actions'
+import { accumulate, clampZoom, emptyPending, flingStep, flingVelocity, flush, wheelAction, wheelBelongsElsewhere, type Sample } from '../navigation'
+import { useSettings } from '@/stores/settings'
 import { addImageToTopic, firstImageFile, hasFiles, resetImageSize, selectImage } from '../images'
 import { spaceDown } from '../keyboard'
 import { showNotice } from '../notice'
@@ -35,7 +36,7 @@ import { TopicView } from './TopicView'
 
 type Gesture =
   | { kind: 'none' }
-  | { kind: 'pan'; sx: number; sy: number; vx: number; vy: number; moved: boolean }
+  | { kind: 'pan'; sx: number; sy: number; vx: number; vy: number; moved: boolean; samples: Sample[] }
   | { kind: 'box'; sx: number; sy: number; base: string[]; moved: boolean }
   | { kind: 'node'; id: string; sx: number; sy: number; started: boolean; additive: boolean; ids: string[]; exclude: Set<string> }
   | { kind: 'pinch'; d0: number; k0: number; wx: number; wy: number }
@@ -105,18 +106,66 @@ export function Canvas() {
     }
   }, [canvasSize.w, scene])
 
-  // Wheel zoom (non-passive so the page does not scroll).
+  // Wheel and trackpad: two-finger scroll moves the map, Ctrl + wheel (and a trackpad pinch) zooms around the pointer.
+  // Non-passive so the page itself neither scrolls nor zooms; events are gathered and applied once per animation frame.
   useEffect(() => {
     const el = host.current
     if (!el) return
+    let pending = emptyPending()
+    let raf = 0
+    const apply = () => {
+      raf = 0
+      const p = pending
+      pending = emptyPending()
+      setViewport(flush(useEditor.getState().viewport, p))
+    }
     const onWheel = (e: WheelEvent) => {
-      e.preventDefault()
+      if (wheelBelongsElsewhere(e.target)) return // a text box, the notes editor or a scrolling panel keeps its own scrolling
+      e.preventDefault() // stops the browser zooming the whole page on Ctrl + wheel / pinch, and scrolling the page
+      stopFling()
+      const mode = useSettings.getState().mouseWheel
+      const action = wheelAction(e, mode)
+      if (action.kind === 'pan' && !useSettings.getState().wheelHintSeen) {
+        useSettings.getState().markWheelHintSeen()
+        showNotice('Tip: hold Ctrl and scroll, or pinch on a trackpad, to zoom.', 8000)
+      }
       const r = el.getBoundingClientRect()
-      zoomAround(Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.0015)), e.clientX - r.left, e.clientY - r.top)
+      pending = accumulate(pending, action, e.clientX - r.left, e.clientY - r.top)
+      if (!raf) raf = requestAnimationFrame(apply)
     }
     el.addEventListener('wheel', onWheel, { passive: false })
-    return () => el.removeEventListener('wheel', onWheel)
+    return () => {
+      el.removeEventListener('wheel', onWheel)
+      if (raf) cancelAnimationFrame(raf)
+    }
   }, [])
+
+  // A light glide after a finger flick on a touch screen.
+  const fling = useRef(0)
+  const stopFling = () => {
+    if (fling.current) cancelAnimationFrame(fling.current)
+    fling.current = 0
+  }
+  const startFling = (vel: { vx: number; vy: number }) => {
+    stopFling()
+    let v: { vx: number; vy: number } | null = vel
+    let last = performance.now()
+    const step = (now: number) => {
+      if (!v) {
+        fling.current = 0
+        return
+      }
+      const dt = Math.min(48, now - last)
+      last = now
+      const s = flingStep(v, dt)
+      const cur = useEditor.getState().viewport
+      setViewport({ k: cur.k, x: cur.x + s.dx, y: cur.y + s.dy })
+      v = s.next
+      fling.current = v ? requestAnimationFrame(step) : 0
+    }
+    fling.current = requestAnimationFrame(step)
+  }
+  useEffect(() => stopFling, [])
 
   const local = (e: { clientX: number; clientY: number }) => {
     const r = host.current?.getBoundingClientRect()
@@ -208,7 +257,8 @@ export function Canvas() {
     el.setPointerCapture(e.pointerId)
     const v = st.viewport
     const panning = e.button === 1 || spaceDown || e.pointerType === 'touch' || (st.tool === 'pan' && !e.shiftKey)
-    if (panning) g.current = { kind: 'pan', sx: e.clientX, sy: e.clientY, vx: v.x, vy: v.y, moved: false }
+    stopFling()
+    if (panning) g.current = { kind: 'pan', sx: e.clientX, sy: e.clientY, vx: v.x, vy: v.y, moved: false, samples: [{ t: performance.now(), x: e.clientX, y: e.clientY }] }
     else g.current = { kind: 'box', sx: e.clientX, sy: e.clientY, base: additive ? st.selected : [], moved: false }
   }
 
@@ -223,13 +273,15 @@ export function Canvas() {
 
     if (gs.kind === 'pinch' && pointers.current.size >= 2) {
       const [a, b] = [...pointers.current.values()] as [{ x: number; y: number }, { x: number; y: number }]
-      const k = Math.min(3, Math.max(0.1, (gs.k0 * Math.hypot(a.x - b.x, a.y - b.y)) / gs.d0))
+      const k = clampZoom((gs.k0 * Math.hypot(a.x - b.x, a.y - b.y)) / gs.d0)
       const mid = local({ clientX: (a.x + b.x) / 2, clientY: (a.y + b.y) / 2 })
       setViewport({ k, x: mid.x - gs.wx * k, y: mid.y - gs.wy * k })
     } else if (gs.kind === 'pan') {
       const dx = e.clientX - gs.sx
       const dy = e.clientY - gs.sy
       if (Math.abs(dx) + Math.abs(dy) > 2) gs.moved = true
+      gs.samples.push({ t: performance.now(), x: e.clientX, y: e.clientY })
+      if (gs.samples.length > 12) gs.samples.shift()
       setViewport({ k: v.k, x: gs.vx + dx, y: gs.vy + dy })
     } else if (gs.kind === 'box') {
       if (Math.hypot(e.clientX - gs.sx, e.clientY - gs.sy) > DRAG_THRESHOLD) gs.moved = true
@@ -269,6 +321,10 @@ export function Canvas() {
     g.current = { kind: 'none' }
     if (host.current?.hasPointerCapture(e.pointerId)) host.current.releasePointerCapture(e.pointerId)
     if (gs.kind === 'pan' && !gs.moved) clearSelection()
+    else if (gs.kind === 'pan' && e.pointerType === 'touch') {
+      const vel = flingVelocity(gs.samples, performance.now())
+      if (vel) startFling(vel)
+    }
     else if (gs.kind === 'box') {
       setBox(null)
       if (!gs.moved) clearSelection()

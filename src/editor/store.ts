@@ -104,8 +104,7 @@ export interface EditorState {
   helpOpen: boolean
 }
 
-export const MIN_ZOOM = 0.1
-export const MAX_ZOOM = 3
+export { MIN_ZOOM, MAX_ZOOM } from './navigation'
 
 export const useEditor = create<EditorState>(() => ({
   fileId: null,

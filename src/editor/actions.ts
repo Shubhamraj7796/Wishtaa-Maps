@@ -34,7 +34,8 @@ import { addImageReferenceSource } from './images'
 import { getScene, getTheme } from './scene'
 import { mapDoc } from './mapdoc'
 import { showNotice } from './notice'
-import { MAX_ZOOM, MIN_ZOOM, useEditor, type PanelTab, type Viewport } from './store'
+import { MAX_ZOOM, MIN_ZOOM } from './navigation'
+import { useEditor, type PanelTab, type Viewport } from './store'
 
 const get = useEditor.getState
 const set = useEditor.setState
@@ -73,6 +74,13 @@ export function zoomAround(factor: number, cx: number, cy: number) {
 export function zoomBy(factor: number) {
   const { w, h } = get().canvasSize
   zoomAround(factor, w / 2, h / 2)
+}
+/** Zooms to an exact percentage (2 to 400) around the middle of the canvas. */
+export function setZoomPercent(percent: number) {
+  if (!Number.isFinite(percent)) return
+  const { w, h } = get().canvasSize
+  const { viewport: v } = get()
+  zoomAround(Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, percent / 100)) / v.k, w / 2, h / 2)
 }
 export function zoomTo100() {
   const { w, h } = get().canvasSize

@@ -71,6 +71,9 @@ function StorageInfo() {
       <button type="button" onClick={() => f.setDialog({ kind: 'storage' })} className="mt-2 rounded-ui border border-line px-2 py-1 font-medium text-ink hover:bg-bg">
         Storage settings
       </button>
+      <button type="button" onClick={() => f.setDialog({ kind: 'preferences' })} className="ml-2 mt-2 rounded-ui border border-line px-2 py-1 font-medium text-ink hover:bg-bg">
+        Preferences
+      </button>
     </div>
   )
 }
