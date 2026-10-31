@@ -1,16 +1,16 @@
 import { Suspense } from 'react'
 import { LAYOUTS, LAYOUT_GROUPS, layoutDef } from '@/core/layout/catalog'
 import { BRANCH_DIRS, type BranchDir } from '@/core/model/topic'
-import { SHAPES } from '@/core/model/types'
 import { MAX_SPACING, MIN_SPACING } from '@/core/settings'
 import { resolveLook } from '@/core/theme/resolve'
 import { FONT_OPTIONS } from '@/core/theme/themes'
-import { Icon, LayoutThumb, LineIcon, ShapeIcon, type IconName } from '@/ui/icons'
+import { Icon, LayoutThumb, LineIcon, type IconName } from '@/ui/icons'
 import * as A from '../actions'
 import { DetailsPanelLazy } from './lazyPanels'
 import { MarkPanel } from './MarkPanel'
 import { Check, Color, Row, Section, field } from './panelKit'
 import { ThemeTab } from './ThemePanel'
+import { TopicSection } from './TopicStylePanel'
 import { getScene, useScene, useTheme } from '../scene'
 import { useEditor, type PanelTab } from '../store'
 
@@ -113,12 +113,9 @@ function LayoutTab() {
 
 // ---------------------------------------------------------------------------------------------
 
-const SHAPE_NAMES: Record<(typeof SHAPES)[number], string> = { rounded: 'rounded box', rect: 'box', pill: 'pill', ellipse: 'ellipse', diamond: 'diamond', underline: 'underline', doubleCircle: 'double circle' }
-
 function StyleTab() {
   const selected = useEditor((st) => st.selected)
   const topics = useEditor((st) => st.topics)
-  const styleBranch = useEditor((st) => st.styleBranch)
   const painter = useEditor((st) => st.painter)
   const copied = useEditor((st) => st.copiedFormat)
   const theme = useTheme()
@@ -140,27 +137,7 @@ function StyleTab() {
   const num = (v: string) => (v === '' ? undefined : Number(v))
   return (
     <>
-      <Section title={count > 1 ? `Topic style · ${count} topics` : 'Topic style'}>
-        <Check label="Apply to the whole branch" checked={styleBranch} onChange={(v) => useEditor.setState({ styleBranch: v })} />
-        <div className="space-y-1">
-          <div className="text-sm">Shape</div>
-          <div className="flex flex-wrap gap-1.5" role="group" aria-label="Shape">
-            <button type="button" aria-pressed={!st.shape} aria-label="Shape from the theme" title="Follow the theme" onClick={() => A.styleSelected({ shape: undefined })} className={`grid h-9 w-9 place-items-center rounded-ui border ${!st.shape ? 'border-brand bg-brand/15' : 'border-line hover:bg-bg'}`}>
-              <Icon name="theme" size={16} />
-            </button>
-            {SHAPES.map((sh) => (
-              <button key={sh} type="button" aria-pressed={st.shape === sh} aria-label={`Shape: ${SHAPE_NAMES[sh]}`} title={SHAPE_NAMES[sh]} onClick={() => A.styleSelected({ shape: sh })} className={`grid h-9 w-11 place-items-center rounded-ui border ${st.shape === sh ? 'border-brand bg-brand/15' : 'border-line hover:bg-bg'}`}>
-                <ShapeIcon shape={sh} size={26} />
-              </button>
-            ))}
-          </div>
-        </div>
-        <Color label="Fill" value={look.fill === 'transparent' ? theme.bg : look.fill} onChange={(v) => A.styleSelected({ fill: v })} onClear={st.fill ? () => A.styleSelected({ fill: undefined }) : undefined} />
-        <Color label="Border" value={look.border} onChange={(v) => A.styleSelected({ border: v })} onClear={st.border ? () => A.styleSelected({ border: undefined }) : undefined} />
-        <Row label="Border width">
-          <input type="number" min={0} max={8} value={st.borderWidth ?? ''} placeholder={String(look.borderWidth)} onChange={(e) => A.styleSelected({ borderWidth: num(e.target.value) })} className={`${field} w-20`} />
-        </Row>
-      </Section>
+      <TopicSection style={st} look={look} count={count} />
       <Section title="Text">
         <Row label="Font">
           <select value={st.fontFamily ?? ''} onChange={(e) => A.styleSelected({ fontFamily: e.target.value || undefined })} className={field}>

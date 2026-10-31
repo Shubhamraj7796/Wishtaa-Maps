@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
-import type { Shape } from '@/core/model/types'
+import { useEffect, useId, useRef, useState } from 'react'
+import { optsOfLook, shapeGeometry } from '@/core/shapes'
+import { ShapePaint } from '@/ui/ShapePaint'
 import type { Theme } from '@/core/theme/model'
 import { asResolved, resolveLine, resolveLook, type Look, type ResolvedTheme } from '@/core/theme/resolve'
 import { taperedBranchPath } from '@/core/theme/taper'
@@ -32,57 +33,18 @@ const SUBS: { n: Node; parent: number }[] = [
   { parent: 2, n: { x: 108, y: 78, w: 32, h: 9, depth: 2, branch: 2 } },
 ]
 
-const fillOf = (c: string) => (c === 'transparent' ? 'none' : c)
-
-/** One topic drawn as a small shape: same look the real topic gets, scaled down. */
-function MiniShape({ n, look, id }: { n: Node; look: Look; id: string }) {
+/** One topic drawn as a small shape: the same geometry and painting the real topic gets, scaled down. */
+function MiniShape({ n, look, id, uid }: { n: Node; look: Look; id: string; uid: string }) {
   const { x, y, w, h } = n
-  const sw = Math.round(Math.max(0.8, Math.min(2, look.borderWidth * 0.6)) * 100) / 100
-  const stroke = look.border
-  const fill = fillOf(look.fill)
-  const common = { fill, stroke, strokeWidth: sw }
-  const cx = x + w / 2
-  const cy = y + h / 2
-  const shape: Shape = look.shape
-  let body: React.ReactNode
-  switch (shape) {
-    case 'rect':
-      body = <rect x={x} y={y} width={w} height={h} rx={1.2} {...common} />
-      break
-    case 'pill':
-      body = <rect x={x} y={y} width={w} height={h} rx={h / 2} {...common} />
-      break
-    case 'ellipse':
-      body = <ellipse cx={cx} cy={cy} rx={w / 2} ry={h / 2} {...common} />
-      break
-    case 'diamond':
-      body = <polygon points={`${cx},${y} ${x + w},${cy} ${cx},${y + h} ${x},${cy}`} {...common} />
-      break
-    case 'underline':
-      body = (
-        <>
-          {look.fill !== 'transparent' && <rect x={x} y={y} width={w} height={h} fill={look.fill} />}
-          <line x1={x} y1={y + h} x2={x + w} y2={y + h} stroke={stroke} strokeWidth={sw + 0.4} strokeLinecap="round" />
-        </>
-      )
-      break
-    case 'doubleCircle': {
-      const r = Math.min(w, h) / 2
-      body = (
-        <>
-          <circle cx={cx} cy={cy} r={r} fill="none" stroke={stroke} strokeWidth={Math.max(1.4, r * 0.28)} />
-          <circle cx={cx} cy={cy} r={r * 0.55} fill={fill === 'none' ? stroke : fill} stroke="none" />
-        </>
-      )
-      break
-    }
-    default:
-      body = <rect x={x} y={y} width={w} height={h} rx={Math.min(4, h / 3)} {...common} />
-  }
-  const bar = shape === 'doubleCircle' ? Math.min(w, h) * 0.5 : w * 0.55
+  const bw = Math.round(Math.max(0.8, Math.min(2, look.borderWidth * 0.6)) * 100) / 100
+  const mini = { ...look, borderWidth: bw, ringWidth: 2.2, ringGap: 1.4 }
+  const geo = shapeGeometry(look.shape, w, h, optsOfLook(mini))
+  const cx = w / 2
+  const cy = h / 2
+  const bar = look.shape === 'doubleCircle' ? Math.min(w, h) * 0.5 : w * 0.55
   return (
-    <g data-node={id}>
-      {body}
+    <g data-node={id} data-shape={look.shape} transform={`translate(${x} ${y})`}>
+      <ShapePaint geo={geo} look={mini} uid={`${uid}-${id}`} />
       <rect x={cx - bar / 2} y={cy - 0.9} width={bar} height={1.8} rx={0.9} fill={look.text} opacity={0.75} />
     </g>
   )
@@ -105,6 +67,7 @@ function branchPath(from: Node, to: Node, line: ReturnType<typeof resolveLine>) 
  * and taper), so what the gallery shows is what the theme gives.
  */
 export function ThemeThumb({ theme, label }: { theme: ResolvedTheme; label?: string }) {
+  const uid = useId().replace(/:/g, '')
   const look = (n: Node) => resolveLook(theme, { depth: n.depth, branch: n.branch, isRoot: !!n.root })
   const line = (n: Node) => resolveLine(theme, { depth: n.depth, branch: n.branch })
   const edges: { key: string; from: Node; to: Node; depth: number; branch: number }[] = [
@@ -123,12 +86,12 @@ export function ThemeThumb({ theme, label }: { theme: ResolvedTheme; label?: str
           <path key={e.key} d={p.d} fill="none" stroke={l.color} strokeWidth={p.sw} strokeLinecap="round" strokeLinejoin="round" />
         )
       })}
-      <MiniShape n={CENTRAL} look={look(CENTRAL)} id="central" />
+      <MiniShape n={CENTRAL} look={look(CENTRAL)} id="central" uid={uid} />
       {MAINS.map((m, i) => (
-        <MiniShape key={i} n={m} look={look(m)} id={`main${i}`} />
+        <MiniShape key={i} n={m} look={look(m)} id={`main${i}`} uid={uid} />
       ))}
       {SUBS.map((s, i) => (
-        <MiniShape key={i} n={s.n} look={look(s.n)} id={`sub${i}`} />
+        <MiniShape key={i} n={s.n} look={look(s.n)} id={`sub${i}`} uid={uid} />
       ))}
     </svg>
   )

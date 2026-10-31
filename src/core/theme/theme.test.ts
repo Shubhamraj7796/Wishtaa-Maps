@@ -159,7 +159,7 @@ describe('map settings', () => {
 
   it('sanitise custom themes (colours, fonts, shapes, sizes) and cap how many are kept', () => {
     const base = THEMES[1] as Theme
-    const t = sanitizeTheme({ ...base, id: 'c1', name: 'Mine', font: 'x; background: url(evil)', levels: { ...base.levels, central: { ...base.levels.central, shape: 'star', branch: { ...base.levels.central.branch, thickness: 500 } } } })
+    const t = sanitizeTheme({ ...base, id: 'c1', name: 'Mine', font: 'x; background: url(evil)', levels: { ...base.levels, central: { ...base.levels.central, shape: 'hexagonal-prism', branch: { ...base.levels.central.branch, thickness: 500 } } } })
     expect(t?.font).toContain('Inter') // unsafe font string replaced
     expect(t?.levels.central.shape).toBe('rounded')
     expect(t?.levels.central.branch.thickness).toBe(20)

@@ -11,6 +11,7 @@ import {
   Type, Underline, Undo2, Unlink, Unlock, User, Users, X, XCircle, Zap, ZoomIn, ZoomOut, SlidersHorizontal, Share2, Info as InfoIcon,
 } from 'lucide-react'
 import type { Shape } from '@/core/model/types'
+import { shapeGeometry } from '@/core/shapes'
 import type { LineStyle } from '@/core/model/types'
 import type { ArrowEnds } from '@/core/model/objects'
 
@@ -113,21 +114,16 @@ export const hasLayoutThumb = (id: string) => id in THUMBS
 export const thumbIds = () => Object.keys(THUMBS)
 
 export function ShapeIcon({ shape, size = 22 }: { shape: Shape; size?: number }) {
+  const g = shapeGeometry(shape, 30, 21, { bw: 1.6 })
   return (
-    <svg width={size} height={size * 0.7} viewBox="0 0 30 21" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" aria-hidden="true">
-      {shape === 'rounded' && <rect x="2" y="3" width="26" height="15" rx="5" />}
-      {shape === 'rect' && <rect x="2" y="3" width="26" height="15" rx="1" />}
-      {shape === 'pill' && <rect x="2" y="3" width="26" height="15" rx="7.5" />}
-      {shape === 'ellipse' && <ellipse cx="15" cy="10.5" rx="13" ry="8" />}
-      {shape === 'diamond' && <path d="M15 1.5L28 10.5L15 19.5L2 10.5Z" />}
-      {shape === 'doubleCircle' && (
-        <>
-          <circle cx="15" cy="10.5" r="9.5" />
-          <circle cx="15" cy="10.5" r="5" />
-        </>
-      )}
-      {shape === 'underline' && <path d="M3 17H27" />}
-      {shape === 'underline' && <path d="M8 9h14" strokeDasharray="1.5 3" strokeWidth="1.4" />}
+    <svg width={size} height={size * 0.7} viewBox="0 0 30 21" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" strokeLinecap="round" aria-hidden="true">
+      {shape === 'textOnly' && <path d="M5 8h20M9 13h12" strokeDasharray="1.5 2.5" />}
+      {g.layers.map((l, i) => {
+        if (l.kind === 'fillOnly') return null
+        if (l.kind === 'ring') return <path key={i} d={l.d} fill="currentColor" stroke="none" fillRule="evenodd" />
+        if (l.kind === 'inner') return <path key={i} d={l.d} fill="currentColor" stroke="none" />
+        return <path key={i} d={l.d} strokeDasharray={l.dash === '8 5' ? '3 2' : l.dash ? '0.5 2.6' : undefined} />
+      })}
     </svg>
   )
 }

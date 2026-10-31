@@ -2,6 +2,8 @@ import { buildIndex, childrenOf, type ChildIndex, type TopicMap } from '../model
 import type { BranchDir, TopicData, TopicImage } from '../model/topic'
 import type { Shape, TopicStyle } from '../model/types'
 import { countMarks } from '../marks'
+import { clampTopicWidth } from '../theme/resolve'
+import { fitBox, innerWidth } from '../shapes'
 import { computeNumbers } from '../numbering'
 import { noteText } from '../sanitize'
 import { layoutDef, type LayoutDef } from './catalog'
@@ -20,6 +22,38 @@ const ROW_GAP = 22
 const DOWN_GAP = 40
 const INDENT = 28
 const STACK_GAP = 10
+
+/** How many lines `text` takes when each line holds about `perLine` characters (words wrap; long words break). */
+export function wrapLineCount(text: string, perLine: number): number {
+  let lines = 0
+  for (const para of text.split('\n')) {
+    let used = 0
+    let n = 1
+    for (const word of para.split(/\s+/).filter(Boolean)) {
+      let len = word.length
+      while (len > perLine) {
+        // A word longer than a line breaks across lines.
+        if (used > 0) {
+          n++
+          used = 0
+        }
+        n += Math.floor((len - 1) / perLine)
+        len = ((len - 1) % perLine) + 1
+        used = len
+        len = 0
+      }
+      if (len === 0) continue
+      if (used === 0) used = len
+      else if (used + 1 + len <= perLine) used += 1 + len
+      else {
+        n++
+        used = len
+      }
+    }
+    lines += n
+  }
+  return Math.max(1, lines)
+}
 
 /** Space a topic's border and padding take around its content. */
 const PAD_X = 28
@@ -61,8 +95,21 @@ export function measureTopic(t: TopicData, depth: number, shape: Shape = 'rounde
   const marks = countMarks(t.marks)
   const hasTitle = text.trim().length > 0 || marks > 0
   const pad = big ? 56 : 36
-  const textW = Math.min(big ? 340 : 300, Math.max(big ? 120 : 72, Math.ceil(text.length * charW + pad + marks * MARK_W)))
-  const textH = Math.max(big ? 52 : 38, Math.round(fs * 2.2 + 7))
+  let textW = Math.min(big ? 340 : 300, Math.max(big ? 120 : 72, Math.ceil(text.length * charW + pad + marks * MARK_W)))
+  let textH = Math.max(big ? 52 : 38, Math.round(fs * 2.2 + 7))
+  let titleH = 22
+  const ring = { ringWidth: style?.ringWidth, ringGap: style?.ringGap }
+
+  // A custom width: the text wraps inside it instead of staying on one line.
+  const custom = typeof style?.width === 'number' ? clampTopicWidth(style.width) : null
+  if (custom !== null) {
+    const wrapW = Math.max(40, innerWidth(shape, custom, ring) - PAD_X)
+    const lines = wrapLineCount(text, Math.max(4, Math.floor((wrapW - marks * MARK_W) / charW)))
+    const lineH = Math.round(fs * 1.3)
+    textW = Math.ceil(wrapW + PAD_X)
+    titleH = Math.max(22, lines * lineH)
+    textH = Math.max(textH, Math.round(lines * lineH + fs * 0.9 + 7))
+  }
 
   const rows: Size[] = []
   const inline = t.inlineNote?.trim()
@@ -79,7 +126,7 @@ export function measureTopic(t: TopicData, depth: number, shape: Shape = 'rounde
     w = textW
     h = textH
   } else {
-    const all: Size[] = hasTitle || !image ? [{ w: textW, h: 22 }, ...rows] : rows
+    const all: Size[] = hasTitle || !image ? [{ w: textW, h: titleH }, ...rows] : rows
     const contentW = Math.max(...all.map((r) => r.w), 0)
     const stackH = all.reduce((s, r, i) => s + r.h + (i ? ROW_GAP_IN : 0), 0)
     if (!image) {
@@ -100,13 +147,10 @@ export function measureTopic(t: TopicData, depth: number, shape: Shape = 'rounde
       }
     }
   }
-  if (shape === 'doubleCircle') {
-    const side = Math.ceil(Math.max(w, h) * 1.35 + 20)
-    return { w: side, h: side }
-  }
-  if (shape === 'ellipse') return { w: Math.ceil(w * 1.2), h: Math.ceil(h * 1.25) }
-  if (shape === 'diamond') return { w: Math.ceil(w * 1.5), h: Math.ceil(h * 1.6) }
-  return { w, h }
+  // The box a shape needs to hold this content inside its text-safe area (see core/shapes).
+  const fit = fitBox(shape, w, h, ring)
+  // A custom width is a minimum: the topic grows past it only when something inside (a picture, a table) can't shrink.
+  return custom !== null ? { w: Math.max(custom, fit.w), h: shape === 'circle' || shape === 'ring' || shape === 'doubleCircle' ? Math.max(custom, fit.h) : fit.h } : fit
 }
 
 /** Size of a plain text topic (used for summary boxes and similar). */

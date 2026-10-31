@@ -1,4 +1,6 @@
 import type { Decor, LaidOut, SceneEdge, Side } from '@/core/layout/types'
+import type { Shape } from '@/core/model/types'
+import { edgeAtX, shapeAnchors } from '@/core/shapes'
 import { mix } from '@/core/theme/color'
 import type { Pattern } from '@/core/theme/themes'
 
@@ -21,6 +23,26 @@ export function anchor(b: LaidOut, side: Side, dx?: number, fromRight?: boolean)
       return { x: topBottomX, y: b.y + b.h }
     default:
       return { x: b.x + b.w / 2, y: b.y + b.h / 2 }
+  }
+}
+
+/** Shapes whose connection points are the middle of the box sides, exactly as before shapes had outlines. */
+const BOXY = new Set<Shape>(['rounded', 'rect', 'pill', 'softSquare', 'dashedBox', 'dottedBox', 'underline', 'doubleUnderline', 'textOnly'])
+
+/** Where a branch meets a topic of this shape: on the shape's own outline (a heart's tip, a star's point, a circle's edge). */
+export function anchorOnShape(shape: Shape, b: LaidOut, side: Side, dx?: number, fromRight?: boolean): Pt {
+  if (BOXY.has(shape) || side === 'c') return anchor(b, side, dx, fromRight)
+  const a = shapeAnchors(shape, b.w, b.h)
+  switch (side) {
+    case 'l':
+      return { x: b.x + a.l.x, y: b.y + a.l.y }
+    case 'r':
+      return { x: b.x + a.r.x, y: b.y + a.r.y }
+    default: {
+      if (dx === undefined) return side === 't' ? { x: b.x + a.t.x, y: b.y + a.t.y } : { x: b.x + a.b.x, y: b.y + a.b.y }
+      const x = fromRight ? b.w - dx : dx
+      return { x: b.x + x, y: b.y + edgeAtX(shape, b.w, b.h, x, side) }
+    }
   }
 }
 
@@ -53,10 +75,13 @@ export function roundedPolyline(pts: Pt[], radius: number): string {
 const horizontal = (s: Side) => s === 'l' || s === 'r'
 const vertical = (s: Side) => s === 't' || s === 'b'
 
+/** Where a branch meets a topic's box: the middle of a side by default, or on the shape's own outline. */
+export type AnchorFn = (b: LaidOut, side: Side, dx?: number, fromRight?: boolean) => Pt
+
 /** SVG path between two topics for the given connector style. `radius` is the corner radius of elbow connectors. */
-export function edgePath(a: LaidOut, b: LaidOut, e: SceneEdge, radius = 10): string {
-  const p1 = anchor(a, e.fromSide, e.fromDx, e.dxFromRight)
-  const p2 = anchor(b, e.toSide)
+export function edgePath(a: LaidOut, b: LaidOut, e: SceneEdge, radius = 10, anchorOf: AnchorFn = anchor): string {
+  const p1 = anchorOf(a, e.fromSide, e.fromDx, e.dxFromRight)
+  const p2 = anchorOf(b, e.toSide)
   if (e.kind === 'straight' || e.fromSide === 'c' || e.toSide === 'c') return `M${f(p1.x)} ${f(p1.y)}L${f(p2.x)} ${f(p2.y)}`
 
   if (e.kind === 'curve') {

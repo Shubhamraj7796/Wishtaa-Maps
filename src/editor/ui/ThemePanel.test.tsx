@@ -365,9 +365,9 @@ describe('theme preview pictures (snapshots)', () => {
   it('draws a double circle for the central topic of a theme that has one, and a tapered branch where a theme tapers', () => {
     const orbit = renderToStaticMarkup(<ThemeThumb theme={asResolved(findTheme('orbit'))} />)
     expect(orbit).toContain('data-node="central"')
-    expect(orbit.match(/<circle/g)?.length).toBe(2) // outer ring and inner disc
+    expect(orbit).toContain('data-shape="doubleCircle"')
     const plain = renderToStaticMarkup(<ThemeThumb theme={asResolved(findTheme('wishtaa'))} />)
-    expect(plain).not.toContain('<circle')
+    expect(plain).not.toContain('data-shape="doubleCircle"')
     expect(orbit).toMatch(/<path d="M[^"]*Z" fill="#[0-9a-f]{6}"><\/path>/) // tapered branches are filled outlines
     expect(plain).toMatch(/fill="none" stroke=/) // plain branches are strokes
   })

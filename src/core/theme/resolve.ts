@@ -1,4 +1,4 @@
-import type { BranchCurve, LineStyle, Shape, TopicStyle } from '../model/types'
+import type { BranchCurve, Corner, FillKind, FillPattern, LineStyle, Shape, TopicStyle } from '../model/types'
 import { mix, readableText } from './color'
 import { centralFill, centralText, type LevelKey, type NodeMode, type Theme } from './model'
 
@@ -46,6 +46,7 @@ export function inheritNulls(style: TopicStyle | undefined): TopicStyle {
 }
 
 export interface Look {
+  /** The fill colour ('transparent' = no filling). With a gradient or pattern this is the first colour. */
   fill: string
   border: string
   borderWidth: number
@@ -56,6 +57,23 @@ export interface Look {
   italic: boolean
   fontFamily: string
   handDrawn: boolean
+  fillKind: FillKind
+  /** Gradient end colour, or pattern ink. */
+  fill2: string
+  pattern: FillPattern
+  shadow: boolean
+  borderDash: LineStyle
+  borderLine: 'single' | 'double'
+  /** The topic's corner choice (box shapes), and the theme's radius in px, used when the topic has none. */
+  corner: Corner | null
+  cornerPx: number | null
+  /** Double circle: ring thickness and gap in px, ring colour, inner circle colour. */
+  ringWidth: number
+  ringGap: number
+  ringColor: string
+  innerFill: string
+  /** Custom width in px (text wraps), or null to size to the content. */
+  width: number | null
 }
 
 export interface LookArgs {
@@ -78,6 +96,15 @@ function paint(mode: NodeMode, color: string, theme: Theme): { fill: string; bor
   }
 }
 
+/** The shape a topic is drawn with: its own, else the layout's (bubbles), else its level's in the theme. */
+export function resolveShape(theme: Pick<Theme, 'levels'>, a: LookArgs): Shape {
+  return inheritNulls(a.style).shape ?? a.layoutShape ?? theme.levels[levelOf(a.depth, a.isRoot)].shape
+}
+
+export const MIN_TOPIC_WIDTH = 60
+export const MAX_TOPIC_WIDTH = 600
+export const clampTopicWidth = (w: number) => Math.round(Math.min(MAX_TOPIC_WIDTH, Math.max(MIN_TOPIC_WIDTH, w)))
+
 export function resolveLook(theme: ResolvedTheme, a: LookArgs): Look {
   const level = levelOf(a.depth, a.isRoot)
   const L = theme.levels[level]
@@ -87,11 +114,18 @@ export function resolveLook(theme: ResolvedTheme, a: LookArgs): Look {
   if (level === 'central') base.text = centralText(theme)
   else if (L.textColor) base.text = L.textColor
 
-  const shape = s.shape ?? a.layoutShape ?? L.shape
-  const fill = s.fill ?? base.fill
+  const shape = resolveShape(theme, a)
   const border = s.border ?? base.border
-  // A custom fill keeps its text readable unless the text colour was chosen too.
-  const text = s.textColor ?? (s.fill ? readableText(s.fill) : base.text)
+
+  // Filling: what the theme gives, unless the topic turns it on or off or picks a colour.
+  const themeFill = s.fill ?? base.fill
+  const fillKind: FillKind = s.fillKind ?? (themeFill === 'transparent' ? 'none' : 'solid')
+  const turnedOn = fillKind !== 'none' && themeFill === 'transparent'
+  const fill = fillKind === 'none' ? 'transparent' : turnedOn ? color : themeFill
+  // A custom or newly added fill keeps its text readable unless the text colour was chosen too.
+  const text =
+    s.textColor ??
+    (fillKind === 'none' && base.fill !== 'transparent' ? theme.text : s.fill ? readableText(s.fill) : turnedOn ? readableText(fill) : base.text)
   return {
     fill,
     border,
@@ -103,6 +137,19 @@ export function resolveLook(theme: ResolvedTheme, a: LookArgs): Look {
     italic: !!s.italic,
     fontFamily: s.fontFamily ?? L.fontFamily ?? theme.font,
     handDrawn: theme.handDrawn,
+    fillKind,
+    fill2: s.fill2 ?? (fillKind === 'pattern' ? mix(fill === 'transparent' ? color : fill, '#000000', 0.28) : mix(fill === 'transparent' ? color : fill, '#ffffff', 0.5)),
+    pattern: s.pattern ?? 'dots',
+    shadow: s.shadow ?? false,
+    borderDash: s.borderDash ?? 'solid',
+    borderLine: s.borderLine ?? 'single',
+    corner: s.corner ?? null,
+    cornerPx: L.cornerRadius,
+    ringWidth: s.ringWidth ?? 6,
+    ringGap: s.ringGap ?? 4,
+    ringColor: s.ringColor ?? (fill !== 'transparent' ? fill : border),
+    innerFill: s.innerFill ?? fill,
+    width: typeof s.width === 'number' ? clampTopicWidth(s.width) : null,
   }
 }
 

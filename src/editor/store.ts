@@ -57,6 +57,10 @@ export interface EditorState {
   imageSelected: string | null
   /** Size of an image while it is being dragged to a new size. */
   imageLive: ImageLive | null
+  /** The width a topic is being dragged to (shown live; saved as one undo step on release). */
+  widthLive: { id: string; width: number } | null
+  /** What "apply" reaches in the Style panel: the selected topics, all topics at their level, or their whole branch. */
+  styleScope: 'selection' | 'level' | 'branch'
   notice: Notice | null
   menu: { x: number; y: number; topicId: string } | null
   settings: MapSettings
@@ -64,7 +68,6 @@ export interface EditorState {
   minimap: boolean
   panelTab: PanelTab
   /** Apply style changes to the whole branch, not just the selected topics. */
-  styleBranch: boolean
   /** Copied topic format; while set, clicking a topic paints it (format painter). */
   painter: TopicStyle | null
   /** A theme, colour scheme or thickness shown on the canvas while hovering or dragging (never saved). */
@@ -118,13 +121,14 @@ export const useEditor = create<EditorState>(() => ({
   title: 'Untitled map',
   imageSelected: null,
   imageLive: null,
+  widthLive: null,
+  styleScope: 'selection',
   notice: null,
   menu: null,
   settings: DEFAULT_SETTINGS,
   panelOpen: false,
   minimap: true,
   panelTab: 'layout',
-  styleBranch: false,
   painter: null,
   themePreview: null,
   copiedFormat: null,

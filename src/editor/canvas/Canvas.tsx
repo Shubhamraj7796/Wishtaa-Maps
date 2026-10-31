@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { LaidOut } from '@/core/layout/types'
-import { accentFor, DASH, resolveLine } from '@/core/theme/resolve'
+import { accentFor, DASH, resolveLine, resolveShape } from '@/core/theme/resolve'
 import { buildIndex, descendantIds, topLevelOnly } from '@/core/model/tree'
 import {
   applyPainter,
@@ -29,7 +29,7 @@ import { finishLinkPick, finishRelationship } from '../content'
 import { Minimap } from './Minimap'
 import { ObjectsLayer } from './ObjectsLayer'
 import { taperedBranchPath } from '@/core/theme/taper'
-import { bracePath, edgePath, patternStyle, wedgePath } from './paths'
+import { anchorOnShape, bracePath, edgePath, patternStyle, wedgePath } from './paths'
 import { TopicView } from './TopicView'
 
 type Gesture =
@@ -53,6 +53,7 @@ export function Canvas() {
   const theme = useTheme()
   const painter = useEditor((s) => s.painter)
   const minimapOn = useEditor((s) => s.minimap)
+  const widthLive = useEditor((s) => s.widthLive)
   const settings = useEditor((s) => s.settings)
   const tagFilter = useEditor((s) => s.tagFilter)
   const viewport = useEditor((s) => s.viewport)
@@ -326,6 +327,17 @@ export function Canvas() {
   })
   const paths: { key: string; d: string; color: string; width: number; dash: string | undefined; taper: boolean }[] = []
   const mapConnector = settings.connector
+  // Branches attach to each shape's own outline (a circle's edge, a heart's tip), not just the middle of its box.
+  const shapeCache = new Map<string, import('@/core/model/types').Shape>()
+  const shapeOfBox = (b: LaidOut) => {
+    let s = shapeCache.get(b.id)
+    if (!s) {
+      s = resolveShape(theme, { depth: b.depth, branch: b.branch, isRoot: b.id === scene.rootId, style: topics[b.id]?.style, layoutShape: scene.layoutShape })
+      shapeCache.set(b.id, s)
+    }
+    return s
+  }
+  const anchorOf = (b: LaidOut, side: import('@/core/layout/types').Side, dx?: number, fromRight?: boolean) => anchorOnShape(shapeOfBox(b), b, side, dx, fromRight)
   for (const e of scene.edges) {
     const a = scene.boxes.get(e.from)
     const b = scene.boxes.get(e.to)
@@ -340,7 +352,7 @@ export function Canvas() {
     const themed = mapConnector === 'auto' && line.curve !== 'auto'
     if (themed && line.curve === 'none') continue
     const kind = themed ? (line.curve === 'curve' ? 'curve' : line.curve === 'straight' ? 'straight' : 'elbow') : e.kind
-    const d = edgePath(a, b, { ...e, kind }, themed && line.curve === 'roundedElbow' ? 24 : 10)
+    const d = edgePath(a, b, { ...e, kind }, themed && line.curve === 'roundedElbow' ? 24 : 10, anchorOf)
     const taper = line.taper && line.width > line.endWidth && line.style === 'solid'
     paths.push({ key: e.to, d: taper ? taperedBranchPath(d, line.width, line.endWidth) : d, color: line.color, width: line.width, dash: DASH[line.style], taper })
   }
@@ -430,6 +442,8 @@ export function Canvas() {
               imageSelected={soleImageTopic === b.id}
               live={imageLive?.topicId === b.id ? imageLive : null}
               isRoot={b.id === scene.rootId}
+              soleSelected={selected.length === 1 && selected[0] === b.id}
+              widthLive={widthLive?.id === b.id ? widthLive.width : null}
               selected={selectedSet.has(b.id)}
               editing={editingId === b.id}
               match={matchSet.has(b.id)}
@@ -475,6 +489,16 @@ export function Canvas() {
           className="pointer-events-none absolute border border-brand bg-brand/10"
           style={{ left: Math.min(box.x0, box.x1), top: Math.min(box.y0, box.y1), width: Math.abs(box.x1 - box.x0), height: Math.abs(box.y1 - box.y0) }}
         />
+      )}
+      {theme.handDrawn && (
+        <svg width="0" height="0" className="absolute" aria-hidden="true" focusable="false">
+          <defs>
+            <filter id="wishtaa-rough" x="-5%" y="-5%" width="110%" height="110%">
+              <feTurbulence type="fractalNoise" baseFrequency="0.03" numOctaves="2" seed="3" result="n" />
+              <feDisplacementMap in="SourceGraphic" in2="n" scale="3" />
+            </filter>
+          </defs>
+        </svg>
       )}
       {minimapOn && <Minimap scene={scene} />}
     </div>

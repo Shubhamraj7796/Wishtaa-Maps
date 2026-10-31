@@ -23,6 +23,10 @@ const contexts: { name: string; args: LookArgs }[] = [
   { name: 'rootStyle', args: { depth: 0, branch: -1, isRoot: true, style: { fill: '#222222', shape: 'pill' } } },
 ]
 
+/** The look fields that existed when the golden file was recorded. */
+const OLD = ['fill', 'border', 'borderWidth', 'text', 'shape', 'fontSize', 'fontWeight', 'italic', 'fontFamily', 'handDrawn'] as const
+const oldFields = (look: object) => Object.fromEntries(OLD.map((k) => [k, (look as Record<string, unknown>)[k]]))
+
 type Row = { look: unknown; line: { color: string; width: number; style: string }; accent: string }
 const resolved = golden.resolved as unknown as Record<string, Record<string, Row> & { lineStyled: { color: string; width: number; style: string } }>
 
@@ -31,7 +35,7 @@ function check(settings: Parameters<typeof resolveTheme>[0], key: string) {
   const rows = resolved[key] as Record<string, Row> & { lineStyled: { color: string; width: number; style: string } }
   for (const c of contexts) {
     const want = rows[c.name] as Row
-    expect(resolveLook(theme, c.args), `${key} ${c.name} look`).toEqual(want.look)
+    expect(oldFields(resolveLook(theme, c.args)), `${key} ${c.name} look`).toEqual(want.look)
     const line = resolveLine(theme, { depth: c.args.depth, branch: c.args.branch, style: c.args.style })
     expect({ color: line.color, width: line.width, style: line.style }, `${key} ${c.name} line`).toEqual(want.line)
     expect(accentFor(theme, c.args.branch), `${key} ${c.name} accent`).toBe(want.accent)
@@ -65,7 +69,7 @@ describe('maps made before the theme rework look the same', () => {
     const settings = { ...DEFAULT_SETTINGS, themeId: 'ocean', palette: ['#111111', '#222222', '#333333'], background: { color: '#fafafa', pattern: 'grid' as const }, handDrawn: true }
     const theme = resolveTheme(settings)
     const want = resolved['ocean:custom'] as unknown as { look: unknown; bg: string; pattern: string; hand: boolean; accent: string }
-    expect(resolveLook(theme, { depth: 1, branch: 4, isRoot: false })).toEqual(want.look)
+    expect(oldFields(resolveLook(theme, { depth: 1, branch: 4, isRoot: false }))).toEqual(want.look)
     expect(theme.bg).toBe(want.bg)
     expect(theme.pattern).toBe(want.pattern)
     expect(theme.handDrawn).toBe(want.hand)

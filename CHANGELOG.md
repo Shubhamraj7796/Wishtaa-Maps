@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Topic shapes and size (Phase 2 of 3)
+- **30 shapes**, drawn as cached SVG paths with text-safe areas and connection points: boxes, circles, double circle, diamond,
+  hexagon, octagon, cloud, bursts, speech bubble, heart, star, cross, clover, gem, shield, underlines, text only, and more.
+  See `docs/shapes.md`.
+- **Style panel > Topic**: shape picker, corners, filling (solid, gradient, pattern), shadow, custom width, border colour,
+  weight, dash and double border. Apply to the selection, a level or a branch.
+- **Double circle**: inner circle plus outer ring with a gap; fill, ring colour, thickness and gap are separate settings.
+- **Custom width** with text wrapping, a drag handle and Alt+Shift+Left/Right.
+- Tests: a recorded drawing for every shape, picker and panel component tests.
+
 ### Fixed: false "Two versions of this file" conflicts on Google Drive maps
 - **Cause**: after our own save, Drive raises its internal `version` number by itself (thumbnails, indexing, views) while the
   content and modified time stay identical. We compared that number, so our own file looked "changed by someone else".

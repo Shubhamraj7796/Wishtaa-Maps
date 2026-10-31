@@ -24,6 +24,7 @@ import type { TopicStyle } from '@/core/model/types'
 import { isLayoutId } from '@/core/layout/catalog'
 import { setSetting, type MapSettings } from '@/core/settings'
 import { applyColorScheme, applyTheme, type ThemePreview } from '@/core/theme/apply'
+import { clampTopicWidth } from '@/core/theme/resolve'
 import { DEFAULT_THEME_ID, findTheme, type Theme } from '@/core/theme/themes'
 import { ancestorIds, buildIndex, childrenOf, topLevelOnly } from '@/core/model/tree'
 import { outlineToBranches, parseOutline, toOutline } from '@/core/io/outline'
@@ -423,15 +424,50 @@ export function setThemePreview(p: ThemePreview | null) {
   set({ themePreview: p })
 }
 
-/** Applies style changes to the selected topics (and their branches when that option is on). */
+/** The topics a style change reaches: the selection, every topic at the selection's level, or the selection's whole branch. */
+export function styleTargets(): { ids: string[]; withBranch: boolean } {
+  const { selected, styleScope } = get()
+  if (styleScope === 'level') {
+    const scene = getScene()
+    const depths = new Set(selected.map((id) => scene.boxes.get(id)?.depth).filter((d): d is number => d !== undefined))
+    const ids: string[] = []
+    scene.boxes.forEach((b, id) => {
+      if (depths.has(b.depth)) ids.push(id)
+    })
+    return { ids, withBranch: false }
+  }
+  return { ids: selected, withBranch: styleScope === 'branch' }
+}
+
+/** Applies style changes to the selected topics (or their level, or their branch, per the scope chosen). One undo step. */
 export function styleSelected(patch: Partial<TopicStyle>) {
-  const { selected, styleBranch } = get()
-  setTopicStyle(mapDoc, selected, patch, styleBranch)
+  const { ids, withBranch } = styleTargets()
+  setTopicStyle(mapDoc, ids, patch, withBranch)
 }
 
 export function resetStyleSelected() {
-  const { selected, styleBranch } = get()
-  replaceTopicStyle(mapDoc, selected, {}, styleBranch)
+  const { ids, withBranch } = styleTargets()
+  replaceTopicStyle(mapDoc, ids, {}, withBranch)
+}
+
+export const setStyleScope = (styleScope: 'selection' | 'level' | 'branch') => set({ styleScope })
+
+/** Shows a width on the topic while its handle is dragged (nothing is saved). */
+export const setTopicWidthLive = (widthLive: { id: string; width: number } | null) => set({ widthLive })
+
+/** Sets the custom width of the selected topics (null = automatic), one undo step. Follows the scope. */
+export function commitTopicWidth(width: number | null) {
+  styleSelected({ width: width === null ? undefined : clampTopicWidth(width) })
+}
+
+/** Makes the selected topics wider or narrower (the keyboard way of resizing). */
+export function nudgeTopicWidth(delta: number) {
+  const scene = getScene()
+  const { selected, topics } = get()
+  const first = selected[0]
+  if (!first) return
+  const base = topics[first]?.style.width ?? scene.boxes.get(first)?.w ?? 160
+  commitTopicWidth(base + delta)
 }
 
 export function setSelectedBranchDir(dir: BranchDir | null) {
@@ -453,7 +489,7 @@ export function pasteFormat() {
     showNotice('Copy a topic’s format first (Ctrl+Alt+C).')
     return
   }
-  replaceTopicStyle(mapDoc, get().selected, f, get().styleBranch)
+  replaceTopicStyle(mapDoc, get().selected, f, get().styleScope === 'branch')
 }
 
 /** Format painter: copy the selected topic's format, then click topics to paint them. */

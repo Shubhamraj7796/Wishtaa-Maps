@@ -3,12 +3,14 @@ import type { LaidOut } from '@/core/layout/types'
 import { liveOffset, resizeImage, type Corner } from '@/core/images/resize'
 import type { TopicData, TopicImage } from '@/core/model/topic'
 import type { Shape } from '@/core/model/types'
+import { optsOfLook, shapeGeometry, textArea } from '@/core/shapes'
+import { ShapePaint } from '@/ui/ShapePaint'
 import { readableText } from '@/core/theme/color'
 import { noteText } from '@/core/sanitize'
 import { tagColor } from '@/core/settings'
-import { resolveLook, type Look, type ResolvedTheme } from '@/core/theme/resolve'
+import { clampTopicWidth, resolveLook, type ResolvedTheme } from '@/core/theme/resolve'
 import { Icon } from '@/ui/icons'
-import { cancelEdit, cmdAddChild, commitEdit, selectOnly } from '../actions'
+import { cancelEdit, cmdAddChild, commitEdit, commitTopicWidth, selectOnly, setTopicWidthLive } from '../actions'
 import { followLink, openTab, toggleTaskDone } from '../content'
 import { commitImageSize, removeImage, setImageLive, useImageUrl } from '../images'
 import { useEditor, type ImageLive } from '../store'
@@ -27,6 +29,10 @@ export interface TopicViewProps {
   imageSelected: boolean
   live: ImageLive | null
   isRoot: boolean
+  /** The only selected topic (it gets the width handle). */
+  soleSelected: boolean
+  /** The width this topic is being dragged to, or null. */
+  widthLive: number | null
   selected: boolean
   editing: boolean
   match: boolean
@@ -34,59 +40,6 @@ export interface TopicViewProps {
   /** Faded because it doesn't match the tag filter. */
   dim: boolean
   hidden: number
-}
-
-const HAND_RADII = [
-  '255px 18px 225px 18px / 18px 225px 18px 255px',
-  '18px 255px 18px 225px / 255px 18px 225px 18px',
-  '225px 16px 255px 20px / 20px 255px 16px 225px',
-  '16px 225px 20px 255px / 225px 20px 255px 16px',
-]
-
-function hash(id: string): number {
-  let h = 0
-  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) | 0
-  return Math.abs(h)
-}
-
-/** CSS for the box of a topic: shape, fill, border and text from its resolved look. */
-function boxStyle(look: Look, id: string, gap: string): React.CSSProperties {
-  const hand = look.handDrawn
-  const base: React.CSSProperties = {
-    color: look.text,
-    fontFamily: look.fontFamily,
-    fontSize: look.fontSize,
-    fontWeight: look.fontWeight,
-    fontStyle: look.italic ? 'italic' : 'normal',
-    background: look.fill,
-    borderColor: look.border,
-    borderWidth: look.borderWidth,
-    borderStyle: 'solid',
-  }
-  switch (look.shape) {
-    case 'rect':
-      return { ...base, borderRadius: hand ? HAND_RADII[hash(id) % 4] : 4 }
-    case 'pill':
-      return { ...base, borderRadius: hand ? HAND_RADII[hash(id) % 4] : 9999 }
-    case 'ellipse':
-      return { ...base, borderRadius: hand ? HAND_RADII[hash(id) % 4] : '50%' }
-    case 'doubleCircle': {
-      // An outer ring, a gap, then the inner circle holding the text (the ring and the inner circle share the topic's colour).
-      const ring = Math.max(3, Math.round(look.borderWidth * 3))
-      return { ...base, borderRadius: '50%', borderWidth: ring, boxShadow: `inset 0 0 0 4px ${gap}` }
-    }
-    case 'diamond':
-      return {
-        ...base,
-        borderStyle: 'none',
-        background: look.fill === 'transparent' ? `${look.border}33` : look.fill,
-        clipPath: 'polygon(50% 0, 100% 50%, 50% 100%, 0 50%)',
-      }
-    case 'underline':
-      return { ...base, borderStyle: 'none none solid none', borderRadius: 0, background: look.fill }
-    default:
-      return { ...base, borderRadius: hand ? HAND_RADII[hash(id) % 4] : 12 }
-  }
 }
 
 function Editor({ id, text, inRow }: { id: string; text: string; inRow: boolean }) {
@@ -274,24 +227,35 @@ export const TopicView = memo(function TopicView(p: TopicViewProps) {
   const pos = image?.position ?? 'above'
   const behind = pos === 'behind'
 
-  const style: React.CSSProperties = { left: box.x, top: box.y, width: box.w, height: box.h, ...boxStyle(look, box.id, p.theme.bg), opacity: p.dim ? 0.25 : 1 }
+  // The shape is an SVG drawn behind the content; the content sits in the shape's text-safe area.
+  const W = p.widthLive ?? box.w
+  const geo = shapeGeometry(look.shape, W, box.h, optsOfLook(look))
+  const area = textArea(look.shape, W, box.h, { ringWidth: look.ringWidth, ringGap: look.ringGap })
+  const wrapped = look.width !== null || p.widthLive !== null
+  const filter = [look.handDrawn ? 'url(#wishtaa-rough)' : '', look.shadow ? 'drop-shadow(0 3px 4px rgba(0,0,0,.28))' : ''].filter(Boolean).join(' ')
+  const style: React.CSSProperties = { left: box.x, top: box.y, width: W, height: box.h, opacity: p.dim ? 0.25 : 1, filter: filter || undefined }
   const ringColor = p.current ? '#f59e0b' : p.selected ? 'rgb(var(--c-brand))' : p.match ? '#f59e0b' : null
-  const diamond = look.shape === 'diamond'
-  const ring = ringColor && !diamond ? `0 0 0 3px ${ringColor}${p.selected && !p.current ? ', 0 0 0 5px rgb(var(--c-surface))' : ''}` : undefined
-  const glow = diamond && ringColor ? { filter: `drop-shadow(0 0 3px ${ringColor}) drop-shadow(0 0 2px ${ringColor})` } : undefined
   const backdrop = behind ? { background: `${p.theme.bg}d0`, borderRadius: 6, padding: '0 6px' } : undefined
 
   const title = hasTitle && (
-    <div className={`flex min-w-0 max-w-full items-center justify-center gap-1 ${simple ? 'h-full w-full' : 'h-[22px]'}`} style={backdrop}>
+    <div className={`flex min-w-0 max-w-full items-center justify-center gap-1 ${simple ? 'h-full w-full' : wrapped ? 'min-h-[22px]' : 'h-[22px]'}`} style={backdrop}>
       {marks.map((m, i) => (
         <MarkBadge key={`${m}-${i}`} mark={m} />
       ))}
       {p.number && <span className="shrink-0 opacity-70">{p.number}</span>}
-      {p.editing ? <Editor id={box.id} text={topic.text} inRow={!simple} /> : <span className="min-w-0 truncate">{topic.text || ' '}</span>}
+      {p.editing ? (
+        <Editor id={box.id} text={topic.text} inRow={!simple} />
+      ) : wrapped ? (
+        <span className="min-w-0 whitespace-pre-wrap text-center" style={{ lineHeight: 1.3, overflowWrap: 'anywhere' }}>
+          {topic.text || ' '}
+        </span>
+      ) : (
+        <span className="min-w-0 truncate">{topic.text || ' '}</span>
+      )}
     </div>
   )
 
-  const content = (
+  const body = (
     <>
       {title}
       {inline && (
@@ -373,25 +337,52 @@ export const TopicView = memo(function TopicView(p: TopicViewProps) {
   )
   const sideBySide = pos === 'left' || pos === 'right'
 
+  const content = [
+    behind && picture ? (
+      <div key="behind" className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+        {picture}
+      </div>
+    ) : null,
+    !behind && pos !== 'below' && pos !== 'right' ? picture : null,
+    behind ? (
+      <div key="c" className="relative z-10 flex flex-col items-center gap-1.5">
+        {body}
+      </div>
+    ) : sideBySide ? (
+      <div key="c" className="flex min-w-0 flex-col items-center gap-1.5">
+        {body}
+      </div>
+    ) : (
+      body
+    ),
+    !behind && (pos === 'below' || pos === 'right') ? picture : null,
+  ]
+
   return (
-    <div
-      data-topic={box.id}
-      role="treeitem"
-      aria-selected={p.selected}
-      aria-label={topic.text || (image ? 'Image topic' : 'Empty topic')}
-      className={`absolute flex select-none items-center justify-center px-3 leading-none ${simple ? '' : sideBySide ? 'flex-row gap-3 py-2' : 'flex-col gap-1.5 py-2'}`}
-      style={{ ...style, ...glow, boxShadow: [style.boxShadow, ring].filter(Boolean).join(', ') || undefined }}
-    >
-      {behind && picture && <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">{picture}</div>}
-      {!behind && pos !== 'below' && pos !== 'right' && picture}
-      {behind ? (
-        <div className="relative z-10 flex flex-col items-center gap-1.5">{content}</div>
-      ) : sideBySide ? (
-        <div className="flex min-w-0 flex-col items-center gap-1.5">{content}</div>
-      ) : (
-        content
-      )}
-      {!behind && (pos === 'below' || pos === 'right') && picture}
+    <div data-topic={box.id} role="treeitem" aria-selected={p.selected} aria-label={topic.text || (image ? 'Image topic' : 'Empty topic')} className="absolute select-none" style={style}>
+      <svg width={W} height={box.h} viewBox={`0 0 ${W} ${box.h}`} className="pointer-events-none absolute left-0 top-0 overflow-visible" aria-hidden="true" focusable="false">
+        {ringColor && (
+          <>
+            <defs>
+              <mask id={`${box.id}-m`} maskUnits="userSpaceOnUse" x={-20} y={-20} width={W + 40} height={box.h + 40}>
+                <rect x={-20} y={-20} width={W + 40} height={box.h + 40} fill="white" />
+                <path d={geo.outline} fill="black" stroke="black" strokeWidth={1} />
+              </mask>
+            </defs>
+            <g mask={`url(#${box.id}-m)`} fill="none" strokeLinejoin="round">
+              {p.selected && !p.current && <path d={geo.outline} stroke="rgb(var(--c-surface))" strokeWidth={10} />}
+              <path d={geo.outline} stroke={ringColor} strokeWidth={6} />
+            </g>
+          </>
+        )}
+        <ShapePaint geo={geo} look={look} uid={box.id} />
+      </svg>
+      <div
+        className={`absolute flex items-center justify-center px-3 leading-none ${simple ? '' : sideBySide ? 'flex-row gap-3 py-2' : 'flex-col gap-1.5 py-2'}`}
+        style={{ left: area.x, top: area.y, width: area.w, height: area.h, color: look.text, fontFamily: look.fontFamily, fontSize: look.fontSize, fontWeight: look.fontWeight, fontStyle: look.italic ? 'italic' : 'normal' }}
+      >
+        {content}
+      </div>
       {p.hidden > 0 && (
         <button
           type="button"
@@ -403,6 +394,50 @@ export const TopicView = memo(function TopicView(p: TopicViewProps) {
           {p.hidden}
         </button>
       )}
+      {p.selected && p.soleSelected && !p.editing && <WidthHandle id={box.id} width={W} />}
     </div>
   )
 })
+
+/**
+ * A grip on the right edge of the selected topic: drag to give it a custom width (the text wraps), double-click to go back
+ * to automatic. Saved as one undo step when released. Keyboard: Alt+Shift+Left and Right.
+ */
+function WidthHandle({ id, width }: { id: string; width: number }) {
+  const drag = useRef<{ x: number; w: number; k: number } | null>(null)
+  const end = (commit: boolean) => (e: React.PointerEvent<HTMLButtonElement>) => {
+    if (!drag.current) return
+    drag.current = null
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId)
+    const live = useEditor.getState().widthLive
+    setTopicWidthLive(null)
+    if (commit && live) commitTopicWidth(live.width)
+  }
+  return (
+    <button
+      type="button"
+      aria-label="Resize width: drag, or press Alt+Shift+Left or Right. Double-click for automatic width"
+      title="Drag to set a custom width (double-click: automatic)"
+      className="absolute top-1/2 z-20 h-7 w-2.5 -translate-y-1/2 cursor-ew-resize rounded-full border border-surface bg-brand shadow"
+      style={{ left: width - 5, touchAction: 'none' }}
+      onPointerDown={(e) => {
+        e.stopPropagation()
+        e.preventDefault()
+        e.currentTarget.setPointerCapture(e.pointerId)
+        drag.current = { x: e.clientX, w: width, k: useEditor.getState().viewport.k }
+        setTopicWidthLive({ id, width })
+      }}
+      onPointerMove={(e) => {
+        const d = drag.current
+        if (d) setTopicWidthLive({ id, width: clampTopicWidth(d.w + (e.clientX - d.x) / d.k) })
+      }}
+      onPointerUp={end(true)}
+      onPointerCancel={end(false)}
+      onDoubleClick={(e) => {
+        e.stopPropagation()
+        commitTopicWidth(null)
+      }}
+      onClick={(e) => e.stopPropagation()}
+    />
+  )
+}
