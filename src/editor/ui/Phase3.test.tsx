@@ -411,3 +411,55 @@ describe('relationship line controls', () => {
     await waitFor(() => expect(rel(id)?.color).toBe('#2563eb'))
   })
 })
+
+describe('automatic branch thickness in the controls', () => {
+  it('a branch starts on Auto; moving the slider makes it manual; Auto brings it back, one undo step each', () => {
+    render(<BranchControls />)
+    const auto = screen.getByRole('checkbox', { name: 'Automatic thickness' }) as HTMLInputElement
+    expect(auto.checked).toBe(true)
+    const slider = screen.getByRole('slider', { name: 'Thickness' })
+    fireEvent.change(slider, { target: { value: '12' } })
+    fireEvent.pointerUp(slider)
+    expect(styleOf(child).lineWidth).toBe(12)
+    expect((screen.getByRole('checkbox', { name: 'Automatic thickness' }) as HTMLInputElement).checked).toBe(false)
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Automatic thickness' }))
+    expect(styleOf(child).lineWidth).toBeUndefined()
+    expect(undoSteps()).toBe(2)
+  })
+
+  it('unticking Auto keeps the width it had, as a manual value', () => {
+    render(<BranchControls />)
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Automatic thickness' }))
+    expect(typeof styleOf(child).lineWidth).toBe('number')
+  })
+
+  it('"Reset to automatic" clears thickness and taper on the selection in one undo step', () => {
+    A.styleSelected({ lineWidth: 9, taper: false, lineColor: '#ff0000' })
+    mapDoc.undo.stopCapturing()
+    mapDoc.undo.clear()
+    render(<BranchControls />)
+    fireEvent.click(screen.getByRole('button', { name: 'Reset to automatic' }))
+    expect(styleOf(child).lineWidth).toBeUndefined()
+    expect(styleOf(child).taper).toBeUndefined()
+    expect(styleOf(child).lineColor).toBe('#ff0000') // colour is not part of thickness
+    expect(undoSteps()).toBe(1)
+    act(() => A.cmdUndo())
+    expect(styleOf(child)).toMatchObject({ lineWidth: 9, taper: false })
+  })
+
+  it('resetting the whole map clears every branch and the map-wide setting, in one undo step', () => {
+    A.styleSelected({ lineWidth: 9 })
+    act(() => A.selectOnly(grandchild))
+    A.styleSelected({ lineWidth: 5, taper: true })
+    act(() => A.changeSetting('branchThickness', 7))
+    mapDoc.undo.stopCapturing()
+    mapDoc.undo.clear()
+    A.resetBranchesToAuto('map')
+    expect(styleOf(child).lineWidth).toBeUndefined()
+    expect(styleOf(grandchild).lineWidth).toBeUndefined()
+    expect(useEditor.getState().settings.branchThickness).toBeNull()
+    expect(undoSteps()).toBe(1)
+    A.resetBranchesToAuto('map') // nothing left to reset: no empty undo step
+    expect(undoSteps()).toBe(1)
+  })
+})

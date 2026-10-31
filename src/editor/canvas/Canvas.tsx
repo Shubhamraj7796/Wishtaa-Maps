@@ -29,6 +29,7 @@ import { useEditor } from '../store'
 import { finishLinkPick, finishRelationship } from '../content'
 import { Minimap } from './Minimap'
 import { ObjectsLayer } from './ObjectsLayer'
+import { onScreenWidths } from '@/core/theme/autoBranch'
 import { samplePath, taperedBranchPath } from '@/core/theme/taper'
 import { arrowHeadPath } from './objects'
 import { anchorOnShape, bracePath, edgePath, patternStyle, wedgePath } from './paths'
@@ -393,6 +394,8 @@ export function Canvas() {
   scene.boxes.forEach((b) => {
     if (b.x + b.w >= vx0 && b.x <= vx1 && b.y + b.h >= vy0 && b.y <= vy1) visible.push(b)
   })
+  const rootBox = scene.boxes.get(scene.rootId)
+  const centralSize = rootBox ? Math.max(rootBox.w, rootBox.h) : 0
   const paths: { key: string; d: string; color: string; width: number; dash: string | undefined; taper: boolean; opacity: number; arrow: string | null }[] = []
   const mapConnector = settings.connector
   // Branches attach to each shape's own outline (a circle's edge, a heart's tip), not just the middle of its box.
@@ -415,21 +418,22 @@ export function Canvas() {
     const minY = Math.min(a.y, b.y)
     const maxY = Math.max(a.y + a.h, b.y + b.h)
     if (maxX < vx0 || minX > vx1 || maxY < vy0 || minY > vy1) continue
-    const line = resolveLine(theme, { depth: b.depth, branch: b.branch, style: topics[e.to]?.style })
+    const line = resolveLine(theme, { depth: b.depth, branch: b.branch, style: topics[e.to]?.style, size: Math.max(b.w, b.h), centralSize: centralSize })
+    const shown = onScreenWidths(line.width, line.endWidth, k)
     // The map's own connector choice beats the theme; otherwise the theme level decides how the branch bends.
     const themed = mapConnector === 'auto' && line.curve !== 'auto'
     if (themed && line.curve === 'none') continue
     const kind = themed ? (line.curve === 'curve' ? 'curve' : line.curve === 'straight' ? 'straight' : 'elbow') : e.kind
     const d = edgePath(a, b, { ...e, kind }, themed && line.curve === 'roundedElbow' ? 24 : 10, anchorOf)
-    const taper = line.taper && line.width > line.endWidth && line.style === 'solid'
+    const taper = line.taper && shown.width > shown.endWidth && line.style === 'solid'
     let arrow: string | null = null
     if (line.arrow) {
       const pts = samplePath(d)
       const tip = pts[pts.length - 1]
       const before = pts[pts.length - 2]
-      if (tip && before) arrow = arrowHeadPath(tip, Math.atan2(tip.y - before.y, tip.x - before.x), Math.max(11, (taper ? line.width : line.endWidth) * 3.2))
+      if (tip && before) arrow = arrowHeadPath(tip, Math.atan2(tip.y - before.y, tip.x - before.x), Math.max(11, (taper ? shown.width : shown.endWidth) * 3.2))
     }
-    paths.push({ key: e.to, d: taper ? taperedBranchPath(d, line.width, line.endWidth) : d, color: line.color, width: line.width, dash: DASH[line.style], taper, opacity: line.opacity, arrow })
+    paths.push({ key: e.to, d: taper ? taperedBranchPath(d, shown.width, shown.endWidth) : d, color: line.color, width: shown.width, dash: DASH[line.style], taper, opacity: line.opacity, arrow })
   }
 
   const dragTargetBox = drag?.target ? scene.boxes.get(drag.target.id) : undefined

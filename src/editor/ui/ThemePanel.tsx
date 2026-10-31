@@ -355,7 +355,13 @@ export function ThemeTab() {
       </Section>
 
       <Section title="Branches">
-        <Row label={`Thickness: ${Math.round(thickness * 10) / 10} px`}>
+        <Check
+          label="Automatic thickness"
+          checked={!hasThickness}
+          onChange={(v) => A.setBranchThickness(v ? null : Math.round(theme.levels.main.branch.thickness * 2) / 2)}
+          hint="Bold near the centre and thinner outwards, worked out from how big each topic is"
+        />
+        <Row label={hasThickness || drag !== null ? `Thickness: ${Math.round(thickness * 10) / 10} px` : 'Thickness: automatic'}>
           <input
             type="range"
             aria-label="Branch thickness"
@@ -374,14 +380,12 @@ export function ThemeTab() {
             className="w-36 accent-[rgb(var(--c-brand))]"
           />
         </Row>
-        {hasThickness && (
-          <button type="button" onClick={() => A.setBranchThickness(null)} className="text-xs text-muted hover:text-ink">
-            Use the theme's thickness
-          </button>
-        )}
+        <button type="button" onClick={() => A.resetBranchesToAuto('map')} className="text-xs text-muted hover:text-ink">
+          Reset all branches to automatic
+        </button>
         <Row label="Taper (thick to thin)">
           <select aria-label="Taper" value={taperValue} onChange={(e) => A.changeSetting('taper', e.target.value === 'theme' ? null : e.target.value === 'on')} className={field}>
-            <option value="theme">Follow theme</option>
+            <option value="theme">Automatic (tapered)</option>
             <option value="on">On</option>
             <option value="off">Off</option>
           </select>

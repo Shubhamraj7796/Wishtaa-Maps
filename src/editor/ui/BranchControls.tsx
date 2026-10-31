@@ -25,7 +25,7 @@ export function curvePatch(choice: BranchCurve | 'tapered'): Partial<TopicStyle>
   return { branchCurve: choice, taper: false }
 }
 
-export const MAX_BRANCH_SLIDER = 20
+export const MAX_BRANCH_SLIDER = 28
 
 /** Colour, thickness, curve, dash and arrow head of the branch leading to the selected topic. */
 export function BranchControls() {
@@ -42,7 +42,9 @@ export function BranchControls() {
     return <p className="text-sm text-muted">Select a topic (not the central one) to style the branch that leads to it.</p>
   }
   const st = topic.style
-  const line = resolveLine(theme, { depth: box.depth, branch: box.branch, style: st })
+  const rootBox = scene.boxes.get(scene.rootId)
+  const line = resolveLine(theme, { depth: box.depth, branch: box.branch, style: st, size: Math.max(box.w, box.h), centralSize: rootBox ? Math.max(rootBox.w, rootBox.h) : 0 })
+  const mapManual = theme.branchThickness !== null
   const mode = A.branchMode()
   const set = (p: Partial<TopicStyle>) => A.commitStyle(p, mode)
   const curveValue = line.taper ? 'tapered' : (st.branchCurve ?? 'auto')
@@ -72,7 +74,25 @@ export function BranchControls() {
         onOpacityCommit={(v) => set({ lineOpacity: v >= 1 ? undefined : v })}
       />
 
-      <Slider label="Thickness" value={Math.min(MAX_BRANCH_SLIDER, Math.round(line.width * 2) / 2)} min={1} max={MAX_BRANCH_SLIDER} step={0.5} format={(v) => `${v} px`} onPreview={(v) => A.previewStyle({ lineWidth: v }, mode)} onCommit={(v) => set({ lineWidth: v })} />
+      <div className="space-y-1">
+        <Slider label="Thickness" value={Math.min(MAX_BRANCH_SLIDER, Math.round(line.width * 2) / 2)} min={1} max={MAX_BRANCH_SLIDER} step={0.5} format={(v) => `${v} px`} onPreview={(v) => A.previewStyle({ lineWidth: v }, mode)} onCommit={(v) => set({ lineWidth: v })} />
+        <div className="flex items-center justify-between gap-2 text-xs">
+          <label className="flex items-center gap-1.5" title={mapManual ? 'The whole map has a manual thickness. Use "Reset all branches to automatic" in the Theme tab first.' : 'Automatic: as bold as the topic is big, thinner each level down'}>
+            <input
+              type="checkbox"
+              aria-label="Automatic thickness"
+              checked={line.auto}
+              disabled={mapManual}
+              onChange={(e) => set({ lineWidth: e.target.checked ? undefined : Math.round(line.width * 2) / 2 })}
+              className="h-4 w-4 accent-[rgb(var(--c-brand))]"
+            />
+            Auto
+          </label>
+          <button type="button" onClick={() => A.resetBranchesToAuto('selection')} className="text-muted hover:text-ink">
+            Reset to automatic
+          </button>
+        </div>
+      </div>
 
       <Row label="Curve">
         <select aria-label="Branch curve" value={curveValue} onChange={(e) => set(curvePatch(e.target.value as BranchCurve | 'tapered'))} className={field}>

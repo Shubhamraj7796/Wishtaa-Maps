@@ -193,6 +193,9 @@ async function convertShape(
     const connector = byId.get(attrV(path(shape, 'LevelData', 'ToSuper')) ?? '')
     const branch = parseEmmxColor(attrV(path(connector, 'ShapeFormat', 'LineFormat', 'LineFill', 'Color'))) ?? line
     if (branch) style.lineColor = branch
+    // A thickness written in the file stays manual; without one the branch is left on Automatic.
+    const thick = num(attrV(path(connector, 'ShapeFormat', 'LineFormat', 'Width')))
+    if (thick !== null && thick > 0) style.lineWidth = Math.min(28, Math.max(1, Math.round(thick * 2) / 2))
   }
   if (color) style.textColor = color
   if (fontPt) style.fontSize = Math.min(72, Math.max(8, Math.round((fontPt * 4) / 3)))

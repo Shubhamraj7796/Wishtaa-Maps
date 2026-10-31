@@ -57,7 +57,7 @@ export const topic = (o: TopicOpts) =>
   `<Text><TextBlock><Color ThemeColor="2" V="#ff454545"/><Character IX="0" Family="Tahoma" Size="${o.size ?? 12}" Color="${o.charColor ?? '#454545'}"/><Text><pp>${(o.text ?? 'Topic').split('\n').map((l) => `<tp>${l}</tp>`).join('</pp><pp>')}</pp></Text></TextBlock></Text>` +
   (o.rid ? `<Shape ID="9${o.id}" Type="Image"><Transform><Width V="${o.w ?? 300}"/><Height V="${o.h ?? 200}"/></Transform><Data Res="${o.rid}"/></Shape>` : '') +
   `<LevelData>${o.superId !== undefined ? `<Super V="${o.superId}"/>` : ''}${o.toSuper !== undefined ? `<ToSuper V="${o.toSuper}"/>` : ''}${o.sub ? `<SubLevel V="${o.sub.join(';')}"/>` : ''}</LevelData>${o.extra ?? ''}</Shape>`
-export const connector = (id: number, c: string) => `<Shape ID="${id}" Type="MMConnector"><ShapeFormat><LineFormat><LineFill Type="Solid">${color(c)}</LineFill></LineFormat></ShapeFormat></Shape>`
+export const connector = (id: number, c: string, width?: number) => `<Shape ID="${id}" Type="MMConnector"><ShapeFormat><LineFormat>${width !== undefined ? `<Width V="${width}"/>` : ''}<LineFill Type="Solid">${color(c)}</LineFill></LineFormat></ShapeFormat></Shape>`
 export const page = (name: string, shapes: string) => `<?xml version="1.0"?><Page ID="100" Type="Page" Name="${name}">${shapes}</Page>`
 export const doc = (pages: string) => `<Document><Properties><Pages V="${pages}"/></Properties></Document>`
 export const rels = (m: Record<string, string>) => `<Relationships>${Object.entries(m).map(([k, v]) => `<Relationship Id="${k}" Target="${v}"/>`).join('')}</Relationships>`

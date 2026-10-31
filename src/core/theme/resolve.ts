@@ -1,4 +1,5 @@
 import type { BranchCurve, Corner, FillKind, FillPattern, LineStyle, Shape, TextAlign, TopicStyle } from '../model/types'
+import { AUTO_BRANCH, autoThickness } from './autoBranch'
 import { mix, readableText } from './color'
 import { centralFill, centralText, type LevelKey, type NodeMode, type Theme } from './model'
 
@@ -177,6 +178,8 @@ export interface Line {
   opacity: number
   /** An arrow head at the topic end. */
   arrow: boolean
+  /** The thickness was worked out from the topic's size (Auto), not set by the topic, the map or the theme. */
+  auto: boolean
 }
 
 const clamp01 = (n: number) => (Number.isFinite(n) ? Math.min(1, Math.max(0, n)) : 1)
@@ -202,22 +205,35 @@ export function themeBranchWidth(theme: Theme, depth: number, scale = 1): number
 }
 
 /** The branch leading to a topic: colour from its branch, thickness, taper, curve and dash from topic, map or theme. */
-export function resolveLine(theme: ResolvedTheme, a: { depth: number; branch: number; style?: TopicStyle }): Line {
+export function resolveLine(
+  theme: ResolvedTheme,
+  a: {
+    depth: number
+    branch: number
+    style?: TopicStyle
+    /** The larger side of the topic the branch leads to, and of the central topic: give both to get Auto thickness. */
+    size?: number
+    centralSize?: number
+  }
+): Line {
   const level = theme.levels[levelOf(a.depth, a.depth === 0)]
   const s = inheritNulls(a.style)
   const mainBase = theme.levels.main.branch.thickness
   const scale = theme.branchThickness !== null && mainBase > 0 ? theme.branchThickness / mainBase : 1
-  const width = Math.min(MAX_LINE, Math.max(MIN_LINE, r2(s.lineWidth ?? themeBranchWidth(theme, a.depth, scale))))
-  const taper = s.taper ?? theme.taper ?? level.branch.taper
+  // Auto is the default. A thickness set on the branch or on the map (or no sizes to work from) is manual and wins.
+  const auto = s.lineWidth === undefined && theme.branchThickness === null && a.size !== undefined && a.depth > 0
+  const width = auto ? autoThickness(a.depth, a.size as number, a.centralSize ?? 0) : Math.min(MAX_LINE, Math.max(MIN_LINE, r2(s.lineWidth ?? themeBranchWidth(theme, a.depth, scale))))
+  const taper = s.taper ?? theme.taper ?? (auto ? true : level.branch.taper)
   return {
     color: s.lineColor ?? accentFor(theme, a.branch),
     width,
-    endWidth: taper ? r2(Math.max(0.8, width * TAPER_END)) : width,
+    endWidth: taper ? r2(Math.max(AUTO_BRANCH.minEnd, width * TAPER_END)) : width,
     style: s.lineStyle ?? level.branch.dash,
     taper,
     curve: s.branchCurve ?? level.branch.curve,
     opacity: clamp01(s.lineOpacity ?? 1),
     arrow: !!s.lineArrow,
+    auto,
   }
 }
 

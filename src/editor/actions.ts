@@ -427,6 +427,29 @@ export function setBranchThickness(px: number | null) {
   setThemePreview(null)
 }
 
+/**
+ * Puts branches back to automatic thickness and taper: for the selected topics' branches (and everything below them when
+ * "this branch and below" is chosen), or for the whole map including the map-wide setting. One undo step.
+ */
+export function resetBranchesToAuto(scope: 'selection' | 'map') {
+  const { topics, settings, selected } = get()
+  const patch = { lineWidth: undefined, taper: undefined }
+  const dirty = (id: string) => topics[id]?.style.lineWidth !== undefined || topics[id]?.style.taper !== undefined
+  const mapWide = scope === 'map' && (settings.branchThickness !== null || settings.taper !== null)
+  const ids = scope === 'map' ? Object.keys(topics) : selected
+  const withBranch = scope === 'selection' && get().branchScope === 'branch'
+  const reach = withBranch ? [...new Set(ids.flatMap((id) => [id, ...descendantIds(buildIndex(topics), id)]))] : ids
+  if (!mapWide && !reach.some(dirty)) return
+  mapDoc.ydoc.transact(() => {
+    setTopicStyle(mapDoc, reach.filter(dirty), patch)
+    if (mapWide) {
+      setSetting(mapDoc, 'branchThickness', null)
+      setSetting(mapDoc, 'taper', null)
+    }
+  }, LOCAL)
+  setThemePreview(null)
+}
+
 /** Shows a theme, colour scheme or thickness on the canvas without saving anything (null stops). */
 export function setThemePreview(p: ThemePreview | null) {
   if (get().themePreview === p) return

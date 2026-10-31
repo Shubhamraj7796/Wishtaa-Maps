@@ -216,14 +216,15 @@ describe('branch thickness and taper', () => {
     expect(undoSteps()).toBe(1)
   })
 
-  it('goes from 1 to 20 px and can go back to the theme’s own thickness', () => {
+  it('goes from 1 to 20 px and can go back to automatic', () => {
     render(<ThemeTab />)
     const slider = screen.getByLabelText('Branch thickness') as HTMLInputElement
     expect(slider.min).toBe('1')
     expect(slider.max).toBe('20')
     fireEvent.change(slider, { target: { value: '12' } })
     fireEvent.pointerUp(slider)
-    fireEvent.click(screen.getByRole('button', { name: /Use the theme's thickness/ }))
+    expect(settings().branchThickness).toBe(12)
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Automatic thickness' })) // back to automatic
     expect(settings().branchThickness).toBeNull()
   })
 

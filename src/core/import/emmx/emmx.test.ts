@@ -167,6 +167,19 @@ describe('colours and fonts', () => {
     expect(r.maps[0]!.root.children[1]!.style.lineColor).toBe('#010203')
   })
 
+  it('a branch thickness written in the file stays manual; branches without one are left on Automatic', async () => {
+    const shapes =
+      topic({ id: 1, type: 'MainIdea', text: 'Centre', cx: 500, sub: [2, 3] }) +
+      topic({ id: 2, type: 'MainTopic', text: 'Thick', cx: 800, superId: 1, toSuper: 20 }) +
+      topic({ id: 3, type: 'MainTopic', text: 'Plain', cx: 200, superId: 1, toSuper: 21 }) +
+      connector(20, '#ffff0000', 6.4) +
+      connector(21, '#ff00ff00')
+    const r = await parseEmmx(simple(shapes))
+    const kids = r.maps[0]!.root.children
+    expect(kids.find((c) => c.text === 'Thick')!.style.lineWidth).toBe(6.5)
+    expect(kids.find((c) => c.text === 'Plain')!.style.lineWidth).toBeUndefined()
+  })
+
   it('ignores fully transparent colours', async () => {
     const r = await parseEmmx(simple(basicShapes({ main1: { fill: '#00ff0000', line: '#00ff0000', toSuper: 777 } })))
     expect(r.maps[0]!.root.children[0]!.style).toEqual({ fontSize: 16 })
