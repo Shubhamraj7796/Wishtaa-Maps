@@ -12,7 +12,7 @@ import {
 } from '@/core/drive/placement'
 import type { FileRecord } from '@/core/files/types'
 import { getPrefs, setPrefs } from './createPrefs'
-import { setCreateHandler } from './createBus'
+import { setCreateHandler, setOpenFromDriveHandler } from './createBus'
 import { useFiles, type Dialog } from './FilesContext'
 import { Modal, buttonPrimary, buttonSecondary } from './Modal'
 import { Cloud, HardDrive, Info } from './icons'
@@ -79,10 +79,15 @@ export function useCreate() {
 /** Connects the command palette ("New mind map...") to the same flow. */
 export function CreateBridge() {
   const { start } = useCreate()
+  const drive = useDriveActions()
   useEffect(() => {
     setCreateHandler((item) => start(item, { source: 'palette' }))
     return () => setCreateHandler(null)
   }, [start])
+  useEffect(() => {
+    setOpenFromDriveHandler(() => void drive.openFromGoogleDrive())
+    return () => setOpenFromDriveHandler(null)
+  }, [drive])
   return null
 }
 

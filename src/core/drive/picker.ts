@@ -1,28 +1,38 @@
 import { DriveError } from './errors'
-import { WISHTAA_MIME } from './format'
+import { PICKER_MIME_TYPES } from './openable'
 
 export interface PickedFile {
   id: string
   name: string
 }
 
-interface PickerBuilder {
+export interface PickerBuilder {
   addView(view: unknown): PickerBuilder
   setOAuthToken(t: string): PickerBuilder
   setDeveloperKey(k: string): PickerBuilder
   setAppId(id: string): PickerBuilder
   setCallback(cb: (data: PickerResponse) => void): PickerBuilder
   setTitle(t: string): PickerBuilder
+  enableFeature(f: unknown): PickerBuilder
   build(): { setVisible(v: boolean): void }
 }
-interface PickerResponse {
+export interface PickerResponse {
   action: string
-  docs?: { id: string; name: string }[]
+  docs?: { id: string; name: string; mimeType?: string; sizeBytes?: number; lastEditedUtc?: number }[]
 }
-interface PickerApi {
+export interface DocsViewApi {
+  setMimeTypes(m: string): DocsViewApi
+  setIncludeFolders(b: boolean): DocsViewApi
+  setSelectFolderEnabled(b: boolean): DocsViewApi
+  setOwnedByMe?(b: boolean): DocsViewApi
+  setEnableDrives?(b: boolean): DocsViewApi
+  setLabel?(l: string): DocsViewApi
+}
+export interface PickerApi {
   PickerBuilder: new () => PickerBuilder
-  DocsView: new (viewId?: unknown) => { setMimeTypes(m: string): unknown; setIncludeFolders(b: boolean): unknown; setSelectFolderEnabled(b: boolean): unknown }
-  ViewId: { DOCS: unknown; FOLDERS: unknown }
+  DocsView: new (viewId?: unknown) => DocsViewApi
+  ViewId: { DOCS: unknown; FOLDERS: unknown; RECENTLY_PICKED?: unknown }
+  Feature: { MULTISELECT_ENABLED: unknown; SUPPORT_DRIVES?: unknown }
   Action: { PICKED: string; CANCEL: string }
 }
 
@@ -85,29 +95,53 @@ export async function pickDriveFolder(opts: { token: string; apiKey: string | un
   })
 }
 
+export interface OpenedDoc {
+  id: string
+  name: string
+  mimeType?: string
+  sizeBytes?: number
+}
+
+export const OPEN_PICKER_TITLE = 'Open from Google Drive: .wishtaa and .emmx files'
+
 /**
- * Lets the user choose a `.wishtaa` file from their Drive. Picking a file gives this app access to that one file
- * (the `drive.file` scope), which is how files made elsewhere can be opened without full Drive access.
+ * "Open from Google Drive": My Drive, Shared with me, Recent and shared drives, folders you can browse into, several files at
+ * once. The Picker cannot filter by file extension (only by type), so it lists the types a .wishtaa or .emmx can have and
+ * the caller checks every pick by name and content. Picking a file gives this app access to that one file (the `drive.file`
+ * scope). `api` is only for tests.
  */
-export async function pickWishtaaFile(opts: { token: string; apiKey: string | undefined; clientId: string | undefined }): Promise<PickedFile | null> {
+export async function pickOpenableFiles(opts: { token: string; apiKey: string | undefined; clientId: string | undefined }, api?: PickerApi): Promise<OpenedDoc[]> {
   if (!opts.apiKey || !opts.clientId) {
     throw new DriveError('config', 'Choosing files from Drive needs a Google API key. Add VITE_GOOGLE_API_KEY (see the setup notes).')
   }
-  const picker = await loadPicker()
+  const picker = api ?? (await loadPicker())
   return new Promise((resolve) => {
-    const view = new picker.DocsView(picker.ViewId.DOCS)
-    view.setMimeTypes(WISHTAA_MIME)
-    view.setIncludeFolders(true)
-    view.setSelectFolderEnabled(false)
-    new picker.PickerBuilder()
-      .addView(view)
+    const mimes = PICKER_MIME_TYPES.join(',')
+    // No text query: it would stop folder browsing.
+    const view = (viewId: unknown, label: string, setup?: (v: DocsViewApi) => void) => {
+      const v = new picker.DocsView(viewId)
+      v.setMimeTypes(mimes)
+      v.setIncludeFolders(true)
+      v.setSelectFolderEnabled(false)
+      v.setLabel?.(label)
+      setup?.(v)
+      return v
+    }
+    const builder = new picker.PickerBuilder()
+      .addView(view(picker.ViewId.DOCS, 'My Drive', (v) => v.setOwnedByMe?.(true)))
+      .addView(view(picker.ViewId.DOCS, 'Shared with me', (v) => v.setOwnedByMe?.(false)))
+    if (picker.ViewId.RECENTLY_PICKED) builder.addView(view(picker.ViewId.RECENTLY_PICKED, 'Recent'))
+    builder.addView(view(picker.ViewId.DOCS, 'Shared drives', (v) => v.setEnableDrives?.(true)))
+    builder.enableFeature(picker.Feature.MULTISELECT_ENABLED)
+    if (picker.Feature.SUPPORT_DRIVES) builder.enableFeature(picker.Feature.SUPPORT_DRIVES)
+    builder
       .setOAuthToken(opts.token)
       .setDeveloperKey(opts.apiKey as string)
       .setAppId(projectNumber(opts.clientId as string))
-      .setTitle('Open a Wishtaa Maps file from Google Drive')
+      .setTitle(OPEN_PICKER_TITLE)
       .setCallback((data) => {
-        if (data.action === picker.Action.PICKED) resolve(data.docs?.[0] ? { id: data.docs[0].id, name: data.docs[0].name } : null)
-        else if (data.action === picker.Action.CANCEL) resolve(null)
+        if (data.action === picker.Action.PICKED) resolve((data.docs ?? []).map((d) => ({ id: d.id, name: d.name, mimeType: d.mimeType, sizeBytes: d.sizeBytes })))
+        else if (data.action === picker.Action.CANCEL) resolve([])
       })
       .build()
       .setVisible(true)

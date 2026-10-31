@@ -44,6 +44,19 @@ export interface FileRecord {
    * in the map, and mirrored to Drive for Drive files so it follows the file to other devices.
    */
   readOnlyDefault?: boolean
+  /** For a map converted from another file (an .emmx opened from Google Drive): where it came from. */
+  source?: SourceLink | null
+}
+
+/** The original file a map was converted from. The original is never changed. */
+export interface SourceLink {
+  /** The Drive id of the original. */
+  fileId: string
+  name: string
+  /** The original's modified time when it was converted (ISO), to tell whether it changed since. */
+  modifiedTime: string
+  /** When it was converted (ISO). */
+  importedAt: string
 }
 
 export interface FileLinkRef {
@@ -120,7 +133,7 @@ export interface CreateInput {
 }
 
 export type FilePatch = Partial<
-  Pick<FileRecord, 'name' | 'starred' | 'thumbnail' | 'imageIds' | 'attachmentIds' | 'topicCount' | 'storage' | 'contentRef' | 'driveMeta' | 'readOnlyDefault'>
+  Pick<FileRecord, 'name' | 'starred' | 'thumbnail' | 'imageIds' | 'attachmentIds' | 'topicCount' | 'storage' | 'contentRef' | 'driveMeta' | 'readOnlyDefault' | 'source'>
 >
 
 export interface SaveMeta {

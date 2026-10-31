@@ -75,7 +75,7 @@ describe('Google Drive page', () => {
     mount('/drive')
     expect(await screen.findByRole('heading', { name: 'Connect Google Drive' })).toBeTruthy()
     expect(screen.getByText(/never sees the rest of your Drive/)).toBeTruthy()
-    expect(screen.queryByRole('button', { name: /Open from Drive/ })).toBeNull()
+    expect(screen.queryByRole('button', { name: /Open from Google Drive/ })).toBeNull()
   })
 
   it('connects, creates the Wishtaa Maps folder, and shows the account', async () => {
@@ -83,7 +83,7 @@ describe('Google Drive page', () => {
     fireEvent.click(await screen.findByRole('button', { name: /Connect Google Drive/ }))
     expect(await screen.findByText(/Connected as me@example.com/)).toBeTruthy()
     expect([...fake.files.values()].some((f) => f.meta.name === 'Wishtaa Maps')).toBe(true)
-    expect(screen.getByRole('button', { name: /Open from Drive/ })).toBeTruthy()
+    expect(screen.getByRole('button', { name: /Open from Google Drive/ })).toBeTruthy()
     expect(driveAuth.state.status).toBe('connected')
   })
 

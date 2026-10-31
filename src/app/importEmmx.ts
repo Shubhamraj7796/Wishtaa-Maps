@@ -5,7 +5,7 @@ import { buildMapContent } from '@/core/import/emmx/build'
 import { saveMetaFromContent } from '@/core/files/content'
 import { DriveError } from '@/core/drive/errors'
 import type { Placement } from '@/core/drive/placement'
-import type { FileRecord, FileRepository } from '@/core/files/types'
+import type { FileRecord, FileRepository, SourceLink } from '@/core/files/types'
 import type { ImageStore } from '@/core/images/store'
 
 /** What happened to one imported map. */
@@ -177,9 +177,24 @@ async function upload(outcome: ImportOutcome, targets: { summaryIndex: number; f
  * then created in Drive as a `.wishtaa` file together with its pictures, so the first autosave updates that file instead
  * of making a copy. A Drive failure is reported in `failures`; the map stays in this browser.
  */
-export async function importToPlacement(files: PickedFile[], deps: Omit<ImportDeps, 'parentId'>, placement: Placement, drive: DriveSender): Promise<ImportOutcome> {
+export async function importToPlacement(
+  files: PickedFile[],
+  deps: Omit<ImportDeps, 'parentId'>,
+  placement: Placement,
+  drive: DriveSender,
+  /** For each file, the original it came from (an .emmx opened from Drive). It is stored on every map made from it. */
+  sources: (SourceLink | undefined)[] = []
+): Promise<ImportOutcome> {
   const summaries: ImportSummary[] = []
-  for (const file of files) summaries.push(await importEmmx(file, { ...deps, parentId: placement.storage === 'local' ? placement.parentId : null }))
+  for (const [i, file] of files.entries()) {
+    const summary = await importEmmx(file, { ...deps, parentId: placement.storage === 'local' ? placement.parentId : null })
+    const source = sources[i]
+    if (source) {
+      // Recorded before the map goes to Drive, so the Drive copy carries the link too.
+      for (const [j, made] of summary.files.entries()) summary.files[j] = { ...made, record: await deps.repo.update(made.record.id, { source }) }
+    }
+    summaries.push(summary)
+  }
   const outcome: ImportOutcome = { summaries, failures: [] }
   if (placement.storage === 'local') return outcome
   const targets = summaries.flatMap((s, summaryIndex) => s.files.map((_, fileIndex) => ({ summaryIndex, fileIndex })))

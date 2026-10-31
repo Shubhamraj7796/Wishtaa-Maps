@@ -1,6 +1,6 @@
 import { LAYOUTS } from '@/core/layout/catalog'
 import { THEMES } from '@/core/theme/themes'
-import { requestCreate } from '../app/createBus'
+import { requestCreate, requestOpenFromDrive } from '../app/createBus'
 import * as A from './actions'
 import * as C from './content'
 import {
@@ -100,6 +100,7 @@ export const COMMANDS: Cmd[] = [
   { id: 'autoWidth', label: 'Automatic topic width', group: 'Format', run: () => A.commitTopicWidth(null) },
   { id: 'newMap', label: 'New mind map…', group: 'Tools', run: () => requestCreate('map') },
   { id: 'newKb', label: 'New knowledge base…', group: 'Tools', run: () => requestCreate('kb') },
+  { id: 'openFromDrive', label: 'Open from Google Drive…', group: 'Tools', run: requestOpenFromDrive },
   { id: 'newFolder', label: 'New folder…', group: 'Tools', run: () => requestCreate('folder') },
   { id: 'help', label: 'Keyboard shortcuts', group: 'Navigate', keys: ['?'], run: () => A.setHelp(true) },
   { id: 'escape', label: 'Close / deselect', group: 'Navigate', keys: ['Escape'], run: escape, palette: false },

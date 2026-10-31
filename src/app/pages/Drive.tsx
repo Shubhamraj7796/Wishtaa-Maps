@@ -95,7 +95,7 @@ function DriveBrowser({ initialFolder }: { initialFolder: { id: string; name: st
       {items === null && !error && <p role="status" className="py-8 text-center text-sm text-muted">Loading…</p>}
       {items?.length === 0 && (
         <EmptyState icon={<Folder size={26} aria-hidden="true" />} title="Nothing here yet">
-          Use Move to Google Drive on a file in All files, or Open from Drive to add one you already have.
+          Use Move to Google Drive on a file in All files, or Open from Google Drive to add one you already have.
         </EmptyState>
       )}
       {items && items.length > 0 && (
@@ -143,8 +143,8 @@ export default function Drive() {
       <PageHeader title="Google Drive" subtitle="Keep your maps in your own Google Drive.">
         {connected && (
           <div className="flex flex-wrap items-center gap-2">
-            <button type="button" className={buttonPrimary} onClick={() => void actions.pickFromDrive()}>
-              <Cloud size={16} aria-hidden="true" /> Open from Drive
+            <button type="button" className={buttonPrimary} onClick={() => void actions.openFromGoogleDrive()}>
+              <Cloud size={16} aria-hidden="true" /> Open from Google Drive
             </button>
             <button type="button" className={buttonSecondary} onClick={() => void actions.disconnect()}>Disconnect</button>
           </div>

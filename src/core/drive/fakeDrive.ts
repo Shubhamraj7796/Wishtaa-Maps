@@ -1,5 +1,6 @@
 import type { DriveApi, DriveFileMeta } from './client'
 import { DriveError } from './errors'
+import { WISHTAA_LEGACY_MIME, WISHTAA_MIME } from './format'
 
 interface Stored {
   meta: DriveFileMeta
@@ -76,7 +77,7 @@ export class FakeDrive implements DriveApi {
 
   async create({ name, parentId, body, appProperties }: { name: string; parentId: string; body: string; appProperties?: Record<string, string> }) {
     this.gate('create')
-    return this.store(name, 'application/json', [parentId], body, appProperties)
+    return this.store(name, WISHTAA_MIME, [parentId], body, appProperties)
   }
 
   async createFolder(name: string, parentId: string) {
@@ -112,6 +113,32 @@ export class FakeDrive implements DriveApi {
     f.meta.version = String(Number(f.meta.version) + 1)
     f.meta.modifiedTime = this.tick()
     return { ...f.meta }
+  }
+
+  /** Bytes the original keeps: set by `seedBytes`. */
+  private bytes = new Map<string, Uint8Array>()
+
+  async downloadBytes(id: string, onProgress?: (fraction: number) => void) {
+    this.gate(`downloadBytes ${id}`)
+    const f = this.files.get(id)
+    if (!f) throw new DriveError('notfound', 'not found', 404)
+    onProgress?.(0.5)
+    onProgress?.(1)
+    return this.bytes.get(id) ?? new TextEncoder().encode(f.body)
+  }
+
+  async findBySource(sourceFileId: string) {
+    this.gate(`findBySource ${sourceFileId}`)
+    return [...this.files.values()].filter((f) => f.meta.appProperties?.sourceFileId === sourceFileId && !f.meta.trashed).map((f) => ({ ...f.meta }))
+  }
+
+  /** Puts a binary file in Drive as if made elsewhere (an .emmx). */
+  seedBytes(name: string, bytes: Uint8Array, mimeType = 'application/octet-stream', parentId?: string): DriveFileMeta {
+    const meta = this.store(name, mimeType, parentId ? [parentId] : [], '')
+    this.bytes.set(meta.id, bytes)
+    const f = this.files.get(meta.id)
+    if (f) f.meta.size = String(bytes.byteLength)
+    return { ...f?.meta } as DriveFileMeta
   }
 
   async list(parentId: string) {
@@ -151,7 +178,7 @@ export class FakeDrive implements DriveApi {
   }
 
   /** Adds a file as if created outside the app (for open-from-Drive). */
-  seed(name: string, body: string, parentId?: string): DriveFileMeta {
-    return this.store(name, 'application/json', parentId ? [parentId] : [], body)
+  seed(name: string, body: string, parentId?: string, mimeType: string = WISHTAA_LEGACY_MIME): DriveFileMeta {
+    return this.store(name, mimeType, parentId ? [parentId] : [], body)
   }
 }

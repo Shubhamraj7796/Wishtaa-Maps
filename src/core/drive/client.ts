@@ -5,7 +5,7 @@ const API = 'https://www.googleapis.com/drive/v3'
 const UPLOAD = 'https://www.googleapis.com/upload/drive/v3'
 export const FOLDER_MIME = 'application/vnd.google-apps.folder'
 export const APP_FOLDER_NAME = 'Wishtaa Maps'
-const FILE_FIELDS = 'id,name,mimeType,modifiedTime,version,md5Checksum,headRevisionId,trashed,parents,appProperties,capabilities(canEdit)'
+const FILE_FIELDS = 'id,name,mimeType,modifiedTime,version,md5Checksum,headRevisionId,trashed,parents,appProperties,size,capabilities(canEdit)'
 
 export interface DriveFileMeta {
   id: string
@@ -18,6 +18,8 @@ export interface DriveFileMeta {
   headRevisionId?: string
   trashed?: boolean
   parents?: string[]
+  /** Size in bytes (as Drive writes it: a string). Folders and Google documents have none. */
+  size?: string
   /** Small key/value pairs only this app sets: the writer marker (see `sync.ts`). */
   appProperties?: Record<string, string>
   /** What the signed-in person may do with the file. `canEdit: false` means it can only be read. */
@@ -32,6 +34,10 @@ export interface DriveApi {
   ensureAppFolder(): Promise<string>
   meta(id: string): Promise<DriveFileMeta>
   download(id: string): Promise<string>
+  /** The file's bytes, reporting progress as they arrive (0 to 1; unknown total reports 0 until done). */
+  downloadBytes(id: string, onProgress?: (fraction: number) => void): Promise<Uint8Array>
+  /** Files this app created from the original with this Drive id (the converted copies), newest first. */
+  findBySource(sourceFileId: string): Promise<DriveFileMeta[]>
   create(input: { name: string; parentId: string; body: string; appProperties?: Record<string, string> }): Promise<DriveFileMeta>
   /** A real Drive folder inside `parentId`. */
   createFolder(name: string, parentId: string): Promise<DriveFileMeta>
@@ -145,6 +151,44 @@ export class DriveClient implements DriveApi {
 
   async download(id: string): Promise<string> {
     return (await this.request(`${API}/files/${encodeURIComponent(id)}?alt=media`)).text()
+  }
+
+  async downloadBytes(id: string, onProgress?: (fraction: number) => void): Promise<Uint8Array> {
+    const res = await this.request(`${API}/files/${encodeURIComponent(id)}?alt=media`)
+    const total = Number(res.headers.get('content-length')) || 0
+    if (!res.body) {
+      const all = new Uint8Array(await res.arrayBuffer())
+      onProgress?.(1)
+      return all
+    }
+    const reader = res.body.getReader()
+    const chunks: Uint8Array[] = []
+    let got = 0
+    try {
+      for (;;) {
+        const { done, value } = await reader.read()
+        if (done) break
+        chunks.push(value)
+        got += value.byteLength
+        if (total) onProgress?.(Math.min(1, got / total))
+      }
+    } catch {
+      throw new DriveError('offline', 'The connection dropped while the file was downloading. Try again.')
+    }
+    const out = new Uint8Array(got)
+    let at = 0
+    for (const c of chunks) {
+      out.set(c, at)
+      at += c.byteLength
+    }
+    onProgress?.(1)
+    return out
+  }
+
+  async findBySource(sourceFileId: string): Promise<DriveFileMeta[]> {
+    const q = `appProperties has { key='sourceFileId' and value='${escapeQuery(sourceFileId)}' } and trashed=false`
+    const page = await this.json<{ files: DriveFileMeta[] }>(`${API}/files?q=${encodeURIComponent(q)}&fields=files(${FILE_FIELDS})&orderBy=createdTime%20desc&pageSize=20`)
+    return page.files
   }
 
   private multipart(metadata: object, body: string) {

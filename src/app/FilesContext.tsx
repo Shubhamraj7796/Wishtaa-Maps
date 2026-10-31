@@ -1,3 +1,4 @@
+import type { OpenedDoc } from '@/core/drive/picker'
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { CreateOutcome, NewItem } from '@/core/drive/create'
@@ -20,6 +21,7 @@ export type Dialog =
   | { kind: 'emptyBin' }
   | { kind: 'storage' }
   | { kind: 'preferences' }
+  | { kind: 'driveOpen'; docs: OpenedDoc[] }
   /** Import .emmx files: asks where to save (or, with `fixed` and `files`, imports to a place already decided). */
   | { kind: 'import'; localParentId: string | null; fixed?: Placement; files?: File[]; onDone?: () => void }
   | { kind: 'importReport'; report: ImportReport }

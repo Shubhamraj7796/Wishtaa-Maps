@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Open from Google Drive (.wishtaa and .emmx)
+- One action, **Open from Google Drive**, everywhere (Home, All files, Google Drive page, New file dialog, command palette). Several files at once.
+- Every pick is checked by name and content; other files are refused with a clear message. See `docs/google-drive-setup.md` for what the Picker cannot do.
+- An **.emmx** is converted into a NEW `.wishtaa` in your Drive (the original is only read), with a link back to it; picking it again offers the
+  converted copy. Failures offer Retry and "Convert into this browser instead". A summary lists converted, opened, skipped and failed files.
+- New `.wishtaa` files in Drive have the type `application/vnd.wishtaa.map+json`; older ones (plain JSON) still open and are not rewritten.
+
 ### Settings panel: layout dropdown, context-aware sections, auto-show
 - The layout list is one compact row that opens a grouped list with thumbnails (also used for the layout of a single branch, Theme and Theme colour).
 - The panel shows what fits the selection: Canvas, Style, Picture format (size, aspect ratio, position, alt text, replace) or the style of the

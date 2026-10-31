@@ -6,6 +6,7 @@ import { driveLog } from './debug'
 import { DriveConflictError, DriveError } from './errors'
 import { driveFileName, nameFromDrive, packFile, restoreBlobs, unpackFile, type BlobStores } from './format'
 import { baseOf, classify, describeWriter, markerProps, type Marker } from './sync'
+import { sourceOf, sourceProps } from './openable'
 
 export interface DriveConflict {
   fileId: string
@@ -445,7 +446,7 @@ export class DriveRepository implements FileRepository {
     if (!content) throw new DriveError('other', 'This file has no content to save yet.')
     const parentId = parentFolderId ?? (await this.api.ensureAppFolder())
     const marker = this.nextMarker()
-    const made = await this.api.create({ name: driveFileName(f.name), parentId, body: await this.pack(f, content), appProperties: { ...markerProps(marker), ...(f.readOnlyDefault ? { [READ_ONLY_PROP]: '1' } : {}) } })
+    const made = await this.api.create({ name: driveFileName(f.name), parentId, body: await this.pack(f, content), appProperties: { ...markerProps(marker), ...(f.readOnlyDefault ? { [READ_ONLY_PROP]: '1' } : {}), ...(f.source ? sourceProps(f.source) : {}) } })
     driveLog('moved-to-drive', { file: f.name, stored: baseOf(made, marker) })
     return this.local.update(id, { storage: 'drive', contentRef: made.id, driveMeta: baseOf(made, marker) })
   }
@@ -492,7 +493,24 @@ export class DriveRepository implements FileRepository {
     await restoreBlobs(un, this.opts.blobs?.())
     const rec = await this.local.create({ type: un.type, name: un.name || nameFromDrive(remote.name), content: un.content, storage: 'drive' })
     await this.local.saveContent(rec.id, un.content, saveMetaFromContent(rec.id, un.content))
-    return this.local.update(rec.id, { contentRef: driveFileId, driveMeta: baseOf(remote), ...(remote.appProperties?.[READ_ONLY_PROP] === '1' ? { readOnlyDefault: true } : {}) })
+    return this.local.update(rec.id, { contentRef: driveFileId, driveMeta: baseOf(remote), ...(remote.appProperties?.[READ_ONLY_PROP] === '1' ? { readOnlyDefault: true } : {}), ...(sourceOf(remote.appProperties) ? { source: sourceOf(remote.appProperties) } : {}) })
+  }
+
+  /**
+   * The converted copy of an original file (an .emmx), if one exists: first in this browser, then in Drive (where another
+   * device may have made it). Null when there is none, or when Drive cannot be asked.
+   */
+  async findConverted(sourceFileId: string): Promise<{ local?: FileRecord; driveFileId?: string; link: import('../files/types').SourceLink } | null> {
+    const mine = (await this.local.list({ parentId: 'any' })).find((f) => !f.trashed && f.source?.fileId === sourceFileId)
+    if (mine?.source) return { local: mine, link: mine.source }
+    if (!this.api.available()) return null
+    try {
+      const found = (await this.api.findBySource(sourceFileId))[0]
+      const link = found ? sourceOf(found.appProperties) : null
+      return found && link ? { driveFileId: found.id, link } : null
+    } catch {
+      return null
+    }
   }
 
   /** What is in a folder of the app's Drive area (the "Wishtaa Maps" folder when none is given). */

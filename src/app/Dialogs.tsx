@@ -8,6 +8,7 @@ import { countAffected, useFiles } from './FilesContext'
 import { Modal, buttonDanger, buttonPrimary, buttonSecondary } from './Modal'
 import { BookOpen, Cloud, FilePlus2, FolderPlus, Info, LayoutTemplate, Network, Upload } from './icons'
 import { StorageSettings } from './DriveUi'
+import { DriveOpenDialog } from './DriveOpenDialog'
 import { PreferencesDialog } from './PreferencesDialog'
 import { ImportDialog, ImportReportDialog, useImportEmmx } from './importFlow'
 import { plural } from './format'
@@ -97,10 +98,10 @@ function NewDialog({ parentId, onClose }: { parentId: string | null; onClose: ()
           <Choice
             icon={<Cloud size={20} aria-hidden="true" />}
             title="Open from Google Drive"
-            hint="Choose a Wishtaa Maps file from your Drive."
+            hint="Choose .wishtaa or .emmx files from your Drive."
             onClick={() => {
               onClose()
-              void drive.pickFromDrive()
+              void drive.openFromGoogleDrive()
             }}
           />
         )}
@@ -246,6 +247,8 @@ export function Dialogs() {
       return <StorageSettings onClose={close} />
     case 'preferences':
       return <PreferencesDialog onClose={close} />
+    case 'driveOpen':
+      return <DriveOpenDialog docs={d.docs} onClose={close} />
     case 'import':
       return <ImportDialog d={d} onClose={close} />
     case 'importReport':

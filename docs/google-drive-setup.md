@@ -113,3 +113,30 @@ reached, the new file is kept in this browser and you can retry or keep it there
 | "Choosing files from Drive needs a Google API key" | `VITE_GOOGLE_API_KEY` missing |
 | Picker opens blank or errors | Picker API not enabled, or the key's website restriction does not include the site |
 | Sign-in window closes immediately | Pop-up blocker: allow pop-ups for the site |
+
+## Open from Google Drive (.wishtaa and .emmx)
+
+There is one action, **Open from Google Drive**, on Home, All files, the Google Drive page, the New file dialog and the command palette.
+It uses the Google Picker (My Drive, Shared with me, Recent, shared drives; folders can be browsed; several files can be chosen) and the
+scope stays `drive.file`: choosing a file in the Picker is what gives the app access to that one file.
+
+**The Picker cannot filter by file extension.** It filters only by type (or a text search, which would stop folder browsing, so none is
+used). So the Picker lists the types a `.wishtaa` or `.emmx` usually has in Drive: `application/vnd.wishtaa.map+json`,
+`application/json` (older `.wishtaa` files), `application/octet-stream`, `application/zip`, `application/x-zip-compressed`. This means other
+files of those types can appear in the list. Every pick is therefore checked afterwards, by **name** (`.wishtaa` or `.emmx`, any capitals)
+and by **content** (a `.wishtaa` is JSON that says it is ours and has a version; an `.emmx` is a ZIP with a `document.xml`, up to 50 MB).
+Anything else is refused with "Only .wishtaa and .emmx files can be opened". The Picker has no footer, so that hint is in its title and in the
+footer of our dialog.
+
+**New file type.** New `.wishtaa` files in Drive are created with the type `application/vnd.wishtaa.map+json`, so the Picker can show
+them precisely. Files made earlier are stored as `application/json`; they still open and save as before and are **not rewritten** just to
+change their type.
+
+**Opening an .emmx.** It is downloaded (with progress), imported with the normal importer (you see the report and the placeholder-text option),
+and saved as a NEW `.wishtaa` in `Wishtaa Maps` in your Drive (or a folder you choose with Choose folder). The original `.emmx` is only ever read:
+never modified, moved, renamed, deleted or saved to. The new file records where it came from in Drive properties and in its local record:
+`sourceFileId`, `sourceName`, `sourceModifiedTime`, `importedAt`. Choosing an `.emmx` that already has a converted copy asks whether to open
+that copy (the default) or import again, and says if the `.emmx` changed after it was converted.
+
+The new file goes in `Wishtaa Maps` by default. Creating it next to the original (in the original's folder) was **not** tried: with the
+`drive.file` scope that is likely not allowed for a folder the app did not create, so the default folder stays.

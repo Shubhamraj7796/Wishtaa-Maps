@@ -5,8 +5,9 @@ import { useImportEmmx } from '../importFlow'
 import { useFiles } from '../FilesContext'
 import { FileBrowser, FileKindIcon } from '../FileBrowser'
 import { timeAgo } from '../format'
-import { BookOpen, FileText, LayoutTemplate, Network, Star, Upload, Clock } from '../icons'
+import { BookOpen, Cloud, FileText, LayoutTemplate, Network, Star, Upload, Clock } from '../icons'
 import { ActionCard, EmptyState, Page, PageHeader } from '../ui'
+import { useDriveActions } from '../useDrive'
 
 function lastOpenId(): string | null {
   try {
@@ -23,6 +24,7 @@ export default function Home() {
   const f = useFiles()
   const create = useCreate()
   const importer = useImportEmmx()
+  const drive = useDriveActions()
   const live = useMemo(() => f.files.filter((x) => !x.trashed && x.type !== 'folder'), [f.files])
   const recent = useMemo(() => [...live].sort((a, b) => b.modifiedAt - a.modifiedAt).slice(0, 8), [live])
   const starred = useMemo(() => f.files.filter((x) => x.starred && !x.trashed), [f.files])
@@ -41,6 +43,7 @@ export default function Home() {
           <ActionCard icon={<Network size={20} aria-hidden="true" />} title="Blank mind map" hint="One central topic" onClick={() => create.start('map', { source: 'home' })} />
           <ActionCard icon={<LayoutTemplate size={20} aria-hidden="true" />} title="From template" hint="Ready-made layouts" badge="Soon" onClick={() => f.setDialog({ kind: 'templateInfo' })} />
           <ActionCard icon={<Upload size={20} aria-hidden="true" />} title="Import" hint="MindMaster or EdrawMind .emmx" onClick={() => importer.pick({ source: 'home' })} />
+          {drive.configured && <ActionCard icon={<Cloud size={20} aria-hidden="true" />} title="Open from Google Drive" hint=".wishtaa or .emmx files in your Drive" onClick={() => void drive.openFromGoogleDrive()} />}
           <ActionCard icon={<BookOpen size={20} aria-hidden="true" />} title="New knowledge base" hint="Connected notes" onClick={() => create.start('kb', { source: 'home' })} />
         </div>
       </section>

@@ -2,7 +2,7 @@ import { useMemo, useSyncExternalStore } from 'react'
 import type { DriveAuthState } from '@/core/drive/auth'
 import { DriveError } from '@/core/drive/errors'
 import type { DriveFolderRef } from '@/core/drive/placement'
-import { pickDriveFolder, pickWishtaaFile } from '@/core/drive/picker'
+import { pickDriveFolder, pickOpenableFiles } from '@/core/drive/picker'
 import type { ConflictChoice, DriveConflict } from '@/core/drive/repository'
 import type { FileRecord } from '@/core/files/types'
 import { currentFileId, reopenFile } from '@/editor/session'
@@ -17,7 +17,7 @@ const messageOf = (e: unknown) => (e instanceof Error && e.message ? e.message :
 
 /** Everything the screens can do with Google Drive. Failures are shown as a short message, never thrown at the screen. */
 export function useDriveActions() {
-  const { notify, open, files } = useFiles()
+  const { notify, open, files, setDialog } = useFiles()
   return useMemo(() => {
     const run = async <T,>(work: () => Promise<T>): Promise<T | null> => {
       try {
@@ -65,16 +65,18 @@ export function useDriveActions() {
           open(rec)
           return rec
         }),
-      /** Google Picker: choose any .wishtaa file in Drive. */
-      pickFromDrive: () =>
+      /**
+       * "Open from Google Drive": choose .wishtaa and .emmx files with the Google Picker (several at once). A .wishtaa opens
+       * and autosaves to the same Drive file; an .emmx is converted into a NEW .wishtaa copy. The dialog does the rest.
+       */
+      openFromGoogleDrive: () =>
         run(async () => {
           if (!(await ensureConnected())) return null
           const token = await driveAuth.getToken()
-          const picked = await pickWishtaaFile({ token, apiKey: driveConfig.apiKey, clientId: driveConfig.clientId })
-          if (!picked) return null
-          const rec = await driveRepository.openFromDrive(picked.id)
-          open(rec)
-          return rec
+          const docs = await pickOpenableFiles({ token, apiKey: driveConfig.apiKey, clientId: driveConfig.clientId })
+          if (!docs.length) return null
+          setDialog({ kind: 'driveOpen', docs })
+          return docs
         }),
       moveToDrive: (file: FileRecord) =>
         run(async () => {
@@ -115,5 +117,5 @@ export function useDriveActions() {
         }),
       isInDrive: (driveFileId: string) => files.some((f) => f.storage === 'drive' && f.contentRef === driveFileId && !f.trashed),
     }
-  }, [notify, open, files])
+  }, [notify, open, files, setDialog])
 }

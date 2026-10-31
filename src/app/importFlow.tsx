@@ -7,7 +7,7 @@ import { imageStore } from '@/editor/images'
 import { getPrefs } from './createPrefs'
 import { initialPickerState, placementFor, rememberChoice, SaveToPicker, type PickerState } from './createFlow'
 import { useFiles, type Dialog } from './FilesContext'
-import { importToPlacement, retryDriveUpload, type ImportOutcome, type ImportReport, type ImportSummary } from './importEmmx'
+import { importToPlacement, retryDriveUpload, type ImportedFile, type ImportOutcome, type ImportReport, type ImportSummary } from './importEmmx'
 import { Modal, buttonPrimary, buttonSecondary } from './Modal'
 import { FileKindIcon } from './FileBrowser'
 import { plural } from './format'
@@ -228,17 +228,12 @@ export function ImportDialog({ d, onClose }: { d: ImportDialogProps; onClose: ()
   )
 }
 
-/** What an import did: maps created, what was left out, and shape types to send samples of. */
-export function ImportReportDialog({ report, onClose }: { report: ImportReport; onClose: () => void }) {
-  const f = useFiles()
-  const made = report.summaries.flatMap((s) => s.files)
+/** The part of the import report that lists what was made, what was left out and what to send samples of. */
+export function ImportReportBody({ report, onOpen }: { report: ImportReport; onOpen: (record: ImportedFile['record']) => void }) {
   const unknown = report.summaries.flatMap((s) => Object.entries(s.unknownTypes))
   const unsupported = report.summaries.flatMap((s) => Object.entries(s.unsupportedElements))
-  const title = made.length ? `Imported ${plural(made.length, 'map')}` : 'Nothing was imported'
-
   return (
-    <Modal title={title} onClose={onClose} wide>
-      <div className="space-y-4 text-sm">
+    <div className="space-y-4 text-sm">
         {report.summaries.map((s) => (
           <section key={s.fileName} aria-label={s.fileName} className="space-y-2">
             {report.summaries.length > 1 && <h3 className="font-semibold">{s.fileName}</h3>}
@@ -261,10 +256,7 @@ export function ImportReportDialog({ report, onClose }: { report: ImportReport; 
                     <button
                       type="button"
                       className={buttonSecondary}
-                      onClick={() => {
-                        onClose()
-                        f.open(m.record)
-                      }}
+                      onClick={() => onOpen(m.record)}
                     >
                       Open
                     </button>
@@ -296,6 +288,24 @@ export function ImportReportDialog({ report, onClose }: { report: ImportReport; 
           </div>
         )}
       </div>
+  )
+}
+
+/** What an import did: maps created, what was left out, and shape types to send samples of. */
+export function ImportReportDialog({ report, onClose }: { report: ImportReport; onClose: () => void }) {
+  const f = useFiles()
+  const made = report.summaries.flatMap((s) => s.files)
+  const title = made.length ? `Imported ${plural(made.length, 'map')}` : 'Nothing was imported'
+
+  return (
+    <Modal title={title} onClose={onClose} wide>
+      <ImportReportBody
+        report={report}
+        onOpen={(record) => {
+          onClose()
+          f.open(record)
+        }}
+      />
       <div className="mt-4 flex justify-end">
         <button type="button" data-autofocus className={buttonPrimary} onClick={onClose}>
           Close

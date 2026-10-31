@@ -2,7 +2,10 @@ import type { ImageStore, StoredImage } from '../images/store'
 import { fromBase64, toBase64 } from '../persistence'
 import { DriveError } from './errors'
 
-export const WISHTAA_MIME = 'application/json'
+/** New files are created with this type, so the Google Picker can show them precisely. */
+export const WISHTAA_MIME = 'application/vnd.wishtaa.map+json'
+/** Files made before the type existed are plain JSON. They are still read; they are not rewritten just to change their type. */
+export const WISHTAA_LEGACY_MIME = 'application/json'
 export const WISHTAA_EXT = '.wishtaa'
 export const FORMAT_VERSION = 1
 const APP = 'wishtaa-maps'

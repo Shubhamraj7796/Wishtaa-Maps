@@ -11,3 +11,10 @@ export function setCreateHandler(fn: Handler | null) {
 export function requestCreate(item: NewItem) {
   handler?.(item)
 }
+
+let openDrive: (() => void) | null = null
+/** Lets the command palette start "Open from Google Drive". Set by the app shell. */
+export function setOpenFromDriveHandler(fn: (() => void) | null) {
+  openDrive = fn
+}
+export const requestOpenFromDrive = () => openDrive?.()
