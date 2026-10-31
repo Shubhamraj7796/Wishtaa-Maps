@@ -22,8 +22,8 @@ import {
 import { LOCAL, snapshotTopics } from '@/core/model/doc'
 import type { BranchDir } from '@/core/model/topic'
 import type { TopicStyle } from '@/core/model/types'
-import { isLayoutId } from '@/core/layout/catalog'
-import { setSetting, type MapSettings } from '@/core/settings'
+import { isLayoutId, usesBothSides } from '@/core/layout/catalog'
+import { BRANCH_DIRECTIONS, setSetting, type BranchDirection, type MapSettings } from '@/core/settings'
 import { applyColorScheme, applyTheme, type ThemePreview } from '@/core/theme/apply'
 import { clampTopicWidth, resolveLook } from '@/core/theme/resolve'
 import { DEFAULT_THEME_ID, findTheme, type Theme } from '@/core/theme/themes'
@@ -410,6 +410,16 @@ export function setLayout(id: string) {
   if (!isLayoutId(id)) return
   setSetting(mapDoc, 'layout', id)
   requestAnimationFrame(fitToScreen)
+}
+
+/** Sets how the main topics of the two-sided Mind map go round the centre. One undo step; the topics' own order is not touched. */
+export function setBranchDirection(direction: BranchDirection) {
+  if (!BRANCH_DIRECTIONS.includes(direction)) return
+  if (!usesBothSides(get().settings.layout)) {
+    showNotice('Branch direction applies to the Mind map that uses both sides. Choose Balanced (both sides) as the layout first.')
+    return
+  }
+  setSetting(mapDoc, 'branchDirection', direction)
 }
 
 export function changeSetting<K extends keyof MapSettings>(key: K, value: MapSettings[K]) {

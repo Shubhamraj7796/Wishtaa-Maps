@@ -20,3 +20,12 @@
 .note-editor pre { background: rgb(var(--c-bg)); border-radius: 8px; padding: 0.6em 0.8em; overflow-x: auto; }
 .note-editor a { color: rgb(var(--c-brand)); text-decoration: underline; }
 .note-editor p.is-editor-empty:first-child::before { content: attr(data-placeholder); color: rgb(var(--c-muted)); float: left; height: 0; pointer-events: none; }
+
+/* A change in where the main topics sit (branch direction, a topic added): the topics glide, the lines fade in. */
+[data-reflow='1'] [data-topic] { transition: left 0.3s ease, top 0.3s ease; }
+[data-reflow='1'] > svg:first-child { animation: wm-reflow-fade 0.3s ease; }
+@keyframes wm-reflow-fade { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  [data-reflow='1'] [data-topic] { transition: none; }
+  [data-reflow='1'] > svg:first-child { animation: none; }
+}

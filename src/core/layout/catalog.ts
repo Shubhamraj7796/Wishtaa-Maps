@@ -72,3 +72,6 @@ export function layoutDef(id: string | undefined): LayoutDef {
 }
 
 export const LAYOUT_GROUPS: string[] = [...new Set(LAYOUTS.map((l) => l.group))]
+
+/** The Mind map that spreads the main topics on both sides of the central topic (the only layout with a branch direction). */
+export const usesBothSides = (layout: string) => layout === 'mindmap:both'

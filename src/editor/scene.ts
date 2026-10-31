@@ -39,6 +39,7 @@ function compute(
     focusId,
     reveal: new Set(reveal),
     layout: settings.layout,
+    branchDirection: settings.branchDirection,
     connector: settings.connector,
     spacing: settings.spacing,
     overlap: settings.overlap,

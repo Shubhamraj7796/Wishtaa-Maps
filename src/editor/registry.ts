@@ -155,6 +155,12 @@ export const COMMANDS: Cmd[] = [
     group: 'Format' as const,
     run: () => A.setLayout(l.id),
   })),
+  ...(['balanced', 'clockwise', 'reverse'] as const).map((d) => ({
+    id: `direction:${d}`,
+    label: `Branch direction: ${d === 'balanced' ? 'Balanced' : d === 'clockwise' ? 'Clockwise' : 'Reverse (anticlockwise)'}`,
+    group: 'Format' as const,
+    run: () => A.setBranchDirection(d),
+  })),
   ...THEMES.map((t) => ({
     id: `theme:${t.id}`,
     label: `Theme: ${t.name}`,

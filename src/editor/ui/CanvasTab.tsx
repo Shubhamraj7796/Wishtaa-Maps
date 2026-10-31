@@ -5,6 +5,7 @@ import * as A from '../actions'
 import { useEditor } from '../store'
 import { ChoiceDropdown, type ChoiceGroup } from './ChoiceDropdown'
 import { Check, Row, Section, field } from './panelKit'
+import { BranchDirectionRow, usesBothSides } from './BranchDirection'
 import { PicturesSection } from './PicturesSection'
 import { ThemeTab } from './ThemePanel'
 
@@ -28,6 +29,7 @@ export function LayoutRow() {
 export function CanvasTab() {
   const s = useEditor((st) => st.settings)
   const topics = useEditor((st) => st.topics)
+  const readOnly = useEditor((st) => st.readOnly)
   const def = layoutDef(s.layout)
   const moved = Object.values(topics).some((t) => t.offset)
   const spacingLabel = s.spacing < 0.85 ? 'Compact' : s.spacing > 1.25 ? 'Relaxed' : 'Normal'
@@ -35,6 +37,8 @@ export function CanvasTab() {
     <>
       <Section title="Layout">
         <LayoutRow />
+        {/* Only for the Mind map that uses both sides, and only where the map can be changed. */}
+        {usesBothSides(s.layout) && !readOnly && <BranchDirectionRow />}
       </Section>
       <ThemeTab compact />
       <Section title="Spacing and lines">

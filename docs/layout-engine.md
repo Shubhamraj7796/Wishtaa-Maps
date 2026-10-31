@@ -46,6 +46,30 @@ sits inside. Because blocks are boxes, any direction can nest inside any other, 
 - **Branch free positioning**: a topic's `offset` shifts its whole branch (only applied while the option is on).
 - Floating topics are laid out as their own trees at their own positions in every layout.
 
+## Branch direction (two-sided Mind map only)
+Canvas tab, Layout, "Branch direction", or the command palette ("Branch direction: ..."). Stored with the map as `settings.branchDirection`
+(`balanced` | `clockwise` | `reverse`; missing or unknown means `balanced`). It is shown only for **Mind map, both sides**, and not in Read mode.
+n main topics are numbered 1..n in their stored order, half = ceil(n / 2):
+
+| | right side, top to bottom | left side, top to bottom |
+|---|---|---|
+| **Balanced** (default, unchanged) | the first topics, until about half the total height | the rest, in order |
+| **Clockwise** | 1 .. half | n, n-1, .. half+1 (topic half+1 is at the bottom, the last topic at the top left) |
+| **Reverse** (anticlockwise) | n, n-1, .. half+1 (the last topic is at the top right) | 1 .. half |
+
+Notes:
+- Balanced is what the app has always done. It fills the right side first, down to about half the height, then the left, both top to bottom.
+  It does **not** alternate right, left, right, left. It was kept exactly as it was, so no existing map changes.
+- Only where a main topic is drawn changes. The stored order of the topics is never touched, so going back to Balanced restores the old
+  picture exactly; branch colours still follow the stored order.
+- Sub-topics stay on the side of their main topic. Adding or removing a main topic follows the rule at once (the topics glide for 0.3 s).
+- A main topic's stored `side` (only set by importing an `.emmx`) is honoured under Balanced and ignored while Clockwise or Reverse is chosen;
+  it is not overwritten, so Balanced brings it back. There is no way to move a topic to the other side by hand yet, so there is no "Reset to automatic".
+- One undo step. Hidden for Right only, Left only, Top-down and every other layout; the choice stays stored with the map.
+- **`.emmx` files:** nothing is read for this. In the sample file (IND AS 2) the page and the central topic carry `<Layout V="8"/>`
+  and no direction flag; `<LayoutDirection V="0"/>` appears only on two nested shapes. One sample is not enough to map it reliably, so imported
+  maps open as Balanced.
+
 ## Rendering and culling
 The canvas renders only boxes and connectors that intersect the viewport (plus a margin). Connector geometry is in
 `src/editor/canvas/paths.ts` (curve, rounded elbow, straight, brace, wedge). A 2,100-topic map renders ~20 DOM nodes.

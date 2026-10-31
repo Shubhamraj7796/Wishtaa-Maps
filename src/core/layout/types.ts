@@ -72,6 +72,8 @@ export interface SceneOptions {
   reveal: ReadonlySet<string>
   /** Layout id from the catalog, e.g. "mindmap:both". */
   layout?: string
+  /** How the main topics of the two-sided Mind map are spread (default: balanced, as before). */
+  branchDirection?: 'balanced' | 'clockwise' | 'reverse'
   connector?: ConnectorChoice
   /** Spacing multiplier (0.6 compact … 1.8 relaxed). */
   spacing?: number

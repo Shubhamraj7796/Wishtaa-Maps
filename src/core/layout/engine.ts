@@ -404,7 +404,21 @@ function buildBoth(c: Ctx, t: TopicData, depth: number, m: Size, kt: TopicData[]
   const right: Block[] = []
   const left: Block[] = []
   const chosen = (k: TopicData) => (k.side === 'left' || k.side === 'right' ? k.side : null)
-  if (kt.some((k) => chosen(k))) {
+  const direction = c.opts.branchDirection ?? 'balanced'
+  if (direction !== 'balanced' && kt.length) {
+    // Around the clock. The first half (rounded up) fills one side from the top down; the rest continue round the other side from
+    // the bottom up, so the last topic ends at the top of that side. Clockwise starts on the right, reverse on the left. Only where
+    // each topic is drawn changes: the stored order of the topics is never touched, so Balanced brings back the old picture, and an
+    // imported topic's stored side is left alone (it applies again under Balanced).
+    const half = Math.ceil(kt.length / 2)
+    const order = (from: number, to: number) => Array.from({ length: to - from }, (_, i) => from + i)
+    const first = order(0, half)
+    const second = order(half, kt.length).reverse()
+    const rightIdx = direction === 'clockwise' ? first : second
+    const leftIdx = direction === 'clockwise' ? second : first
+    for (const i of rightIdx) right.push(trial[i] as Block)
+    for (const i of leftIdx) left.push(build(c, kt[i] as TopicData, depth + 1, c.childDir('left', kt[i] as TopicData, depth + 1), i))
+  } else if (kt.some((k) => chosen(k))) {
     // Some main topics have a chosen side (for example an imported map): keep them there, and put the others on
     // whichever side is shorter so far.
     let hR = 0

@@ -404,9 +404,24 @@ export function Canvas() {
   }
 
   const visible: LaidOut[] = []
+  let mainTopics = 0
   scene.boxes.forEach((b) => {
+    if (b.depth === 1) mainTopics++
     if (b.x + b.w >= vx0 && b.x <= vx1 && b.y + b.h >= vy0 && b.y <= vy1) visible.push(b)
   })
+  // When the branch direction changes, or a main topic is added or removed, the topics glide to their new places (a short fade for the
+  // lines, which cannot glide) instead of jumping.
+  const [reflow, setReflow] = useState(false)
+  const lastFlow = useRef<{ direction: string; main: number } | null>(null)
+  useEffect(() => {
+    const now = { direction: settings.branchDirection, main: mainTopics }
+    const before = lastFlow.current
+    lastFlow.current = now
+    if (!before || (before.direction === now.direction && before.main === now.main) || settings.layout !== 'mindmap:both') return
+    setReflow(true)
+    const t = setTimeout(() => setReflow(false), 450)
+    return () => clearTimeout(t)
+  }, [settings.branchDirection, settings.layout, mainTopics])
   // Read mode: the selected topic's path to the centre stays strong, the other branches soften.
   const readOnly = useEditor((s) => s.readOnly)
   const onPath = useMemo(() => {
@@ -488,6 +503,7 @@ export function Canvas() {
     >
       <div
         className="absolute left-0 top-0 origin-top-left"
+        data-reflow={reflow ? '1' : undefined}
         style={{ transform: `translate(${viewport.x}px, ${viewport.y}px) scale(${k})`, willChange: 'transform' }}
       >
         <svg className="pointer-events-none absolute left-0 top-0 overflow-visible" width="1" height="1" aria-hidden="true">

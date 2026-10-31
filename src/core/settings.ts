@@ -10,9 +10,20 @@ import { DEFAULT_THEME_ID, PATTERNS, findTheme, type Pattern, type Theme } from 
 
 export { sanitizeTheme }
 
+/**
+ * How the main topics of the two-sided Mind map are spread around the central topic.
+ *  - balanced: as always (the first topics fill the right side down to about half the height, the rest go on the left, top to bottom);
+ *  - clockwise: the first half on the right, top to bottom, then the rest up the left side, so the last topic is at the top left;
+ *  - reverse: the mirror of clockwise (anticlockwise), the last topic is at the top right.
+ */
+export type BranchDirection = 'balanced' | 'clockwise' | 'reverse'
+export const BRANCH_DIRECTIONS: readonly BranchDirection[] = ['balanced', 'clockwise', 'reverse']
+
 /** Map-wide settings, stored in the document so they save, sync and undo like everything else. */
 export interface MapSettings {
   layout: string
+  /** Only used by the two-sided Mind map. */
+  branchDirection: BranchDirection
   connector: ConnectorChoice
   spacing: number
   overlap: boolean
@@ -44,6 +55,7 @@ export const MAX_CUSTOM_THEMES = 20
 
 export const DEFAULT_SETTINGS: MapSettings = {
   layout: DEFAULT_LAYOUT,
+  branchDirection: 'balanced',
   connector: 'auto',
   spacing: 1,
   overlap: false,
@@ -90,6 +102,7 @@ export function readSettings(raw: Record<string, unknown>): MapSettings {
   const palette = Array.isArray(raw.palette) ? raw.palette.filter(isHex).slice(0, 12) : []
   return {
     layout: isLayoutId(raw.layout) ? raw.layout : d.layout,
+    branchDirection: BRANCH_DIRECTIONS.includes(raw.branchDirection as BranchDirection) ? (raw.branchDirection as BranchDirection) : d.branchDirection,
     connector: raw.connector === 'curve' || raw.connector === 'elbow' || raw.connector === 'straight' ? raw.connector : 'auto',
     spacing: typeof raw.spacing === 'number' ? Math.min(MAX_SPACING, Math.max(MIN_SPACING, raw.spacing)) : d.spacing,
     overlap: raw.overlap === true,
