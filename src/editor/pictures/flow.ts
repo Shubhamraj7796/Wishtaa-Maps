@@ -7,7 +7,8 @@ import { pictureIdOf } from '@/core/images/sha256'
 import { addChild, setImage } from '@/core/model/commands'
 import { LOCAL } from '@/core/model/doc'
 import { useSettings } from '@/stores/settings'
-import { imageStore, releaseUnusedUrls, track } from '../images'
+import { limitState } from '@/core/images/limits'
+import { ensureThumb, imageStore, mapPictureUsage, releaseUnusedUrls, track } from '../images'
 import { mapDoc } from '../mapdoc'
 import { showNotice } from '../notice'
 import { mayEdit } from '../readmode'
@@ -20,6 +21,7 @@ const set = useEditor.setState
 /** The browser's picture tools. Tests swap in a fake. */
 let activeCodec: Codec = browserCodec
 export const setPictureCodec = (c: Codec) => void (activeCodec = c)
+export const getPictureCodec = (): Codec => activeCodec
 
 /** These sources open the crop step by default (the picture is usually bigger than what is wanted). Upload crops only if asked. */
 export const CROP_BY_DEFAULT: PictureSource[] = ['camera', 'gallery', 'paste', 'capture']
@@ -73,11 +75,26 @@ function defaultAlt(source: PictureSource): string | undefined {
   return `${base} ${new Date().toLocaleString()}`
 }
 
+export const QUOTA_MESSAGE = 'This browser has no room left for more pictures. Free some space in Storage settings, use Optimize pictures to make them smaller, or save the map to Google Drive.'
+export function isQuotaError(e: unknown): boolean {
+  return !!e && typeof e === 'object' && ((e as { name?: string }).name === 'QuotaExceededError' || (e as { code?: number }).code === 22)
+}
+
 /** Stores the picture (once: the same bytes are the same picture) and returns its id. */
 export async function storePicture(c: Candidate): Promise<string> {
   const id = await pictureIdOf(c.blob)
   if (!(await imageStore.getMeta(id).catch(() => undefined))) {
-    await track(imageStore.put({ id, blob: c.blob, width: c.width, height: c.height, type: c.type, size: c.blob.size }))
+    // The limits are per map. A new picture is refused only at the hard limit; the soft limit is a notice, once.
+    const usage = await mapPictureUsage()
+    const after = limitState(usage.count + 1, usage.bytes + c.blob.size)
+    if (after.state === 'hard') throw new ImageError(after.message ?? 'This map has too many pictures.')
+    if (after.state === 'soft' && limitState(usage.count, usage.bytes).state === 'ok') showNotice(after.message ?? '')
+    try {
+      await track(imageStore.put({ id, blob: c.blob, width: c.width, height: c.height, type: c.type, size: c.blob.size }))
+    } catch (e) {
+      throw isQuotaError(e) ? new ImageError(QUOTA_MESSAGE) : e
+    }
+    void ensureThumb(id) // the small version is made right away, so zooming out is cheap
   }
   rememberRecent(id)
   return id

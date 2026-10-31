@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type DragEvent } from 'react'
 import type { FileRecord } from '@/core/files/types'
 import { useFiles } from './FilesContext'
 import { timeAgo } from './format'
-import { BookOpen, BookOpenCheck, Check, Cloud, Lock, Copy, Folder, FolderInput, HardDrive, MoreVertical, Network, Pencil, RotateCcw, Star, Trash2 } from './icons'
+import { BookOpen, BookOpenCheck, Check, Cloud, Download, Lock, Copy, Share2, Folder, FolderInput, HardDrive, MoreVertical, Network, Pencil, RotateCcw, Star, Trash2 } from './icons'
 import { useDriveActions } from './useDrive'
 
 export const DRAG_TYPE = 'application/x-wishtaa-files'
@@ -103,6 +103,8 @@ function Menu({ file, onClose }: { file: FileRecord; onClose: () => void }) {
             {item('Rename', <Pencil size={15} aria-hidden="true" />, () => f.setDialog({ kind: 'rename', file }))}
             {item('Move to…', <FolderInput size={15} aria-hidden="true" />, () => f.setDialog({ kind: 'move', ids: [file.id] }))}
             {file.type !== 'folder' && item('Duplicate', <Copy size={15} aria-hidden="true" />, () => void f.duplicate(file))}
+            {file.type !== 'folder' && item('Download as a single file', <Download size={15} aria-hidden="true" />, () => void f.downloadBundle(file))}
+            {file.type !== 'folder' && item('Share a copy', <Share2 size={15} aria-hidden="true" />, () => void f.shareCopy(file))}
             {file.type !== 'folder' && file.storage === 'local' && drive.configured && item('Move to Google Drive', <Cloud size={15} aria-hidden="true" />, () => void drive.moveToDrive(file))}
             {file.type !== 'folder' && file.storage === 'drive' && item('Move to this browser', <HardDrive size={15} aria-hidden="true" />, () => f.setDialog({ kind: 'moveLocal', file}))}
             {file.type !== 'folder' && file.storage === 'drive' && item('Stop syncing with Drive', <Cloud size={15} aria-hidden="true" />, () => void drive.keepLocal(file))}

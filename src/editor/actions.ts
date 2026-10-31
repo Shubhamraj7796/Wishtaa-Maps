@@ -30,7 +30,7 @@ import { DEFAULT_THEME_ID, findTheme, type Theme } from '@/core/theme/themes'
 import { ancestorIds, buildIndex, childrenOf, descendantIds, topLevelOnly } from '@/core/model/tree'
 import { outlineToBranches, parseOutline, toOutline } from '@/core/io/outline'
 import { revealAncestors, searchTopics } from '@/core/search'
-import { addImageReferenceSource } from './images'
+import { addImageReferenceSource, noteViewportActivity } from './images'
 import { getScene, getTheme } from './scene'
 import { mapDoc } from './mapdoc'
 import { showNotice } from './notice'
@@ -64,6 +64,7 @@ export function clearSelection() {
 // ---------- viewport ----------
 export function setViewport(v: Viewport) {
   set({ viewport: v })
+  noteViewportActivity()
 }
 export function zoomAround(factor: number, cx: number, cy: number) {
   const { viewport: v } = get()
@@ -71,6 +72,7 @@ export function zoomAround(factor: number, cx: number, cy: number) {
   const wx = (cx - v.x) / v.k
   const wy = (cy - v.y) / v.k
   set({ viewport: { k, x: cx - wx * k, y: cy - wy * k } })
+  noteViewportActivity()
 }
 export function zoomBy(factor: number) {
   const { w, h } = get().canvasSize

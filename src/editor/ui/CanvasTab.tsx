@@ -5,6 +5,7 @@ import * as A from '../actions'
 import { useEditor } from '../store'
 import { ChoiceDropdown, type ChoiceGroup } from './ChoiceDropdown'
 import { Check, Row, Section, field } from './panelKit'
+import { PicturesSection } from './PicturesSection'
 import { ThemeTab } from './ThemePanel'
 
 /** Every layout the engine has, grouped under headings (a group with nothing in it is simply not listed). */
@@ -72,6 +73,7 @@ export function CanvasTab() {
         <Check label="Align with sibling topic (same width)" checked={s.alignSiblings} onChange={(v) => A.changeSetting('alignSiblings', v)} />
         <Check label="Topic overlap (pack tightly)" checked={s.overlap} onChange={(v) => A.changeSetting('overlap', v)} />
       </Section>
+      <PicturesSection />
     </>
   )
 }

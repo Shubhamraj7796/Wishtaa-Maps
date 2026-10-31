@@ -39,6 +39,12 @@ export class PictureCache {
     this.evict()
   }
 
+  /** Marks a picture as just used (it moves to the back of the line for eviction). */
+  touch(id: string) {
+    const e = this.entries.get(id)
+    if (e) e.lastUsed = ++this.clock
+  }
+
   acquire(id: string) {
     const e = this.entries.get(id)
     if (e) {

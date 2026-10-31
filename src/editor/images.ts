@@ -1,14 +1,20 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useSyncExternalStore } from 'react'
+import { NotUploadedYet } from '@/core/drive/pictures'
+import { PictureCache } from '@/core/images/cache'
+import { browserCodec } from '@/core/images/codec.browser'
 import { ImageGc } from '@/core/images/gc'
+import { PICTURE_LIMITS } from '@/core/images/limits'
 import { ImageError, processImageFile } from '@/core/images/process'
 import { defaultDisplaySize, nudgeSize, originalSize } from '@/core/images/resize'
-import { IndexedDbImageStore, MemoryImageStore, type ImageStore } from '@/core/images/store'
+import { IndexedDbImageStore, MemoryImageStore, type ImageStore, type StoredImage } from '@/core/images/store'
+import { makeThumb } from '@/core/images/thumbs'
 import { setImage, setImageSize } from '@/core/model/commands'
 import { MAX_UNDO } from '@/core/model/doc'
 import { newId } from '@/core/model/ids'
 import { repository } from '../app/repo'
 import { mapDoc } from './mapdoc'
 import { showNotice } from './notice'
+import { isTouchFriendly } from './pictures/touch'
 import { useEditor, type ImageLive } from './store'
 
 const get = useEditor.getState
@@ -38,53 +44,218 @@ export async function imagesIdle(): Promise<void> {
   while (pending.size) await Promise.allSettled([...pending])
 }
 
+// ---- where a picture comes from when this device does not have it ----
+/** Fetches pictures from Drive. `full` stores what it fetched; either may throw "Picture is still uploading". */
+export interface PictureFallback {
+  full(id: string): Promise<StoredImage | null>
+  thumb(id: string): Promise<Blob | null>
+}
+let fallback: PictureFallback | null = null
+export const setPictureFallback = (f: PictureFallback | null) => void (fallback = f)
+
 // ---- object URLs for display ----
+// Full pictures are keyed by their id, small versions by `${id}#t`. A picture's address is made when it is first shown and
+// revoked when it falls out of the memory budget (and is not on screen) or when no topic uses it any more.
+const THUMB = '#t'
 const urls = new Map<string, string>()
 const loading = new Map<string, Promise<string | null>>()
+const baseId = (key: string) => (key.endsWith(THUMB) ? key.slice(0, -THUMB.length) : key)
 
-function loadUrl(id: string): Promise<string | null> {
-  const known = urls.get(id)
-  if (known) return Promise.resolve(known)
-  let p = loading.get(id)
+/** Decoded pictures kept within a memory budget: least recently used ones with nobody showing them go first. */
+export const pictureCache = new PictureCache(
+  () => (isTouchFriendly() ? PICTURE_LIMITS.memoryTouch : PICTURE_LIMITS.memoryDesktop),
+  (key) => releaseKey(key)
+)
+
+// So the benchmark (bench/run500.mjs) can read the app's own cache. Development only.
+if (import.meta.env.DEV && typeof window !== 'undefined') (window as unknown as { __pictureCache?: PictureCache }).__pictureCache = pictureCache
+
+/** At most a few pictures are read and decoded at the same time, so a big map never freezes the page. */
+let busy = 0
+const waiting: (() => void)[] = []
+async function slot<T>(fn: () => Promise<T>): Promise<T> {
+  while (busy >= PICTURE_LIMITS.concurrentLoads) await new Promise<void>((r) => waiting.push(r))
+  busy++
+  try {
+    return await fn()
+  } finally {
+    busy--
+    waiting.shift()?.()
+  }
+}
+
+function stored(key: string, blob: Blob, width: number, height: number): string {
+  const url = URL.createObjectURL(blob)
+  urls.set(key, url)
+  pictureCache.add(key, Math.max(1, width) * Math.max(1, height) * 4)
+  return url
+}
+
+/** The picture is not in Drive yet (another device is still sending it). */
+class Pending extends Error {}
+
+function loadKey(key: string): Promise<string | null> {
+  const known = urls.get(key)
+  if (known) {
+    pictureCache.touch(key)
+    return Promise.resolve(known)
+  }
+  let p = loading.get(key)
   if (!p) {
-    p = imageStore
-      .get(id)
-      .then((img) => {
-        if (!img) return null
-        const url = URL.createObjectURL(img.blob)
-        urls.set(id, url)
-        return url
+    const id = baseId(key)
+    const thumb = key !== id
+    p = slot(() => (thumb ? loadThumb(key, id) : loadFull(key, id)))
+      .catch((e) => {
+        if (e instanceof Pending) throw e
+        return null
       })
-      .catch(() => null)
-      .finally(() => loading.delete(id))
-    loading.set(id, p)
+      .finally(() => loading.delete(key))
+    loading.set(key, p)
   }
   return p
 }
 
-function releaseUrl(id: string) {
-  const url = urls.get(id)
+async function fromFallback<T>(fn: () => Promise<T>): Promise<T> {
+  try {
+    return await fn()
+  } catch (e) {
+    if (e instanceof NotUploadedYet) throw new Pending()
+    throw e
+  }
+}
+
+async function loadFull(key: string, id: string): Promise<string | null> {
+  let img = await imageStore.get(id)
+  if (!img && fallback) img = (await fromFallback(() => (fallback as PictureFallback).full(id))) ?? undefined
+  return img ? stored(key, img.blob, img.width, img.height) : null
+}
+
+async function loadThumb(key: string, id: string): Promise<string | null> {
+  let blob = await imageStore.getThumb(id)
+  if (!blob) {
+    const full = await imageStore.get(id)
+    if (full) blob = (await makeThumb(full.blob, browserCodec)) ?? undefined
+    else if (fallback) blob = (await fromFallback(() => (fallback as PictureFallback).thumb(id))) ?? undefined
+    if (blob) void imageStore.putThumb(id, blob).catch(() => undefined)
+  }
+  // No small version could be made: the full picture is shown instead.
+  if (!blob) return loadKey(id)
+  return stored(key, blob, PICTURE_LIMITS.thumbSide, PICTURE_LIMITS.thumbSide)
+}
+
+function releaseKey(key: string) {
+  const url = urls.get(key)
   if (url) URL.revokeObjectURL(url)
-  urls.delete(id)
+  urls.delete(key)
+  pictureCache.remove(key)
+}
+function releaseUrl(id: string) {
+  releaseKey(id)
+  releaseKey(id + THUMB)
+}
+
+/** Makes (and keeps) the small version of a picture; used right after a picture is added. */
+export async function ensureThumb(id: string): Promise<void> {
+  try {
+    if (await imageStore.getThumb(id)) return
+    const full = await imageStore.get(id)
+    const blob = full && (await makeThumb(full.blob, browserCodec))
+    if (blob) await imageStore.putThumb(id, blob)
+  } catch {
+    /* the small version is made when it is first needed */
+  }
+}
+
+// ---- is the view being moved right now? (small versions are drawn while it is) ----
+let moving = false
+let movingTimer: ReturnType<typeof setTimeout> | undefined
+const movingListeners = new Set<() => void>()
+/** Called by every pan and zoom step; "moving" ends shortly after the last one. */
+export function noteViewportActivity() {
+  if (!moving) {
+    moving = true
+    movingListeners.forEach((l) => l())
+  }
+  clearTimeout(movingTimer)
+  movingTimer = setTimeout(() => {
+    moving = false
+    movingListeners.forEach((l) => l())
+  }, 180)
+}
+/** How many pictures are drawn right now. */
+let shown = 0
+export function useShownPicture() {
+  useEffect(() => {
+    shown++
+    return () => void shown--
+  }, [])
+}
+/** Swapping every picture for its small version at the start of each pan only pays off when there are a lot of them. */
+const CROWD = 40
+
+/** True while the view is moving over a crowd of pictures (more than 40 drawn): then the small versions are used. */
+export function useViewMoving(): boolean {
+  return useSyncExternalStore(
+    (l) => {
+      movingListeners.add(l)
+      return () => void movingListeners.delete(l)
+    },
+    () => moving && shown > CROWD,
+    () => false
+  )
+}
+
+export interface ImageUrlState {
+  url: string | null
+  missing: boolean
+  /** Not in Drive yet: another device is still sending it. */
+  pending: boolean
 }
 
 /**
  * The picture's address, keyed by its id (its content hash): when the id changes (a picture was replaced or cropped again) the
  * old address is NEVER shown for the new picture, not even for a moment.
+ *
+ * `thumb` asks for the small version (zoomed far out, or while the view moves). `enabled=false` (far off screen) loads nothing
+ * and lets go of the picture's memory.
  */
-export function useImageUrl(id: string): { url: string | null; missing: boolean } {
-  const [state, setState] = useState<{ id: string; url: string | null; missing: boolean }>(() => ({ id, url: urls.get(id) ?? null, missing: false }))
+export function useImageUrl(id: string, opts: { thumb?: boolean; enabled?: boolean } = {}): ImageUrlState {
+  const enabled = opts.enabled ?? true
+  const key = opts.thumb ? id + THUMB : id
+  const [state, setState] = useState<{ key: string; url: string | null; missing: boolean; pending: boolean }>(() => ({ key, url: urls.get(key) ?? null, missing: false, pending: false }))
+  const [retry, setRetry] = useState(0)
   useEffect(() => {
+    if (!enabled) return
     let cancelled = false
-    void loadUrl(id).then((url) => {
-      if (!cancelled) setState(url ? { id, url, missing: false } : { id, url: null, missing: true })
-    })
+    let timer: ReturnType<typeof setTimeout> | undefined
+    let held: string | null = null
+    void loadKey(key).then(
+      (url) => {
+        if (cancelled) return
+        if (url) {
+          // The small version may have fallen back to the full picture: hold whichever address is really being shown.
+          held = urls.get(key) === url ? key : id
+          pictureCache.acquire(held)
+        }
+        setState(url ? { key, url, missing: false, pending: false } : { key, url: null, missing: true, pending: false })
+      },
+      () => {
+        if (cancelled) return
+        setState({ key, url: null, missing: false, pending: true })
+        timer = setTimeout(() => setRetry((n) => n + 1), 8000)
+      }
+    )
     return () => {
       cancelled = true
+      clearTimeout(timer)
+      if (held) pictureCache.release(held)
     }
-  }, [id])
-  if (state.id !== id) return { url: urls.get(id) ?? null, missing: false }
-  return { url: state.url ?? urls.get(id) ?? null, missing: state.missing }
+  }, [key, id, enabled, retry])
+  // Only addresses that are still valid are returned (one that was let go while off screen is simply made again). The full picture
+  // stands in for its small version when it is already there.
+  const live = urls.get(key) ?? urls.get(id) ?? null
+  if (state.key !== key) return { url: live, missing: false, pending: false }
+  return { url: live, missing: state.missing, pending: state.pending }
 }
 
 /**
@@ -94,7 +265,22 @@ export function useImageUrl(id: string): { url: string | null; missing: boolean 
 export function releaseUnusedUrls() {
   const used = new Set<string>()
   for (const t of Object.values(get().topics)) if (t.image) used.add(t.image.imageId)
-  for (const id of [...urls.keys()]) if (!used.has(id) && get().lightbox !== id) releaseUrl(id)
+  for (const key of [...urls.keys()]) if (!used.has(baseId(key)) && get().lightbox !== baseId(key)) releaseKey(key)
+}
+
+// ---- how many pictures this map holds, and how big ----
+export interface PictureUsage {
+  count: number
+  bytes: number
+}
+
+/** The pictures the open map uses (each distinct one once) and their total stored size. */
+export async function mapPictureUsage(): Promise<PictureUsage> {
+  const ids = new Set<string>()
+  for (const t of Object.values(get().topics)) if (t.image) ids.add(t.image.imageId)
+  let bytes = 0
+  for (const id of ids) bytes += (await imageStore.getMeta(id).catch(() => undefined))?.size ?? 0
+  return { count: ids.size, bytes }
 }
 
 // ---- cleanup of unused blobs ----

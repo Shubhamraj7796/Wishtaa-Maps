@@ -12,7 +12,8 @@ import { clampTopicWidth, resolveLook, type ResolvedTheme } from '@/core/theme/r
 import { Icon } from '@/ui/icons'
 import { cancelEdit, cmdAddChild, commitEdit, commitTopicWidth, selectOnly, setTopicWidthLive } from '../actions'
 import { followLink, openTab, toggleTaskDone } from '../content'
-import { commitImageSize, removeImage, setImageLive, useImageUrl } from '../images'
+import { PICTURE_LIMITS } from '@/core/images/limits'
+import { commitImageSize, removeImage, setImageLive, useImageUrl, useShownPicture, useViewMoving } from '../images'
 import { useEditor, type ImageLive } from '../store'
 import { Formula } from '../ui/Formula'
 import { MarkBadge } from '../ui/MarkBadge'
@@ -95,7 +96,16 @@ function TopicPicture(props: {
   behind?: boolean
 }) {
   const { topicId, image, alt, selected, live } = props
-  const { url, missing } = useImageUrl(image.imageId)
+  // Only topics on screen are drawn at all (the canvas leaves the rest out), so only their pictures are read and decoded.
+  useShownPicture()
+  // Zoomed far out, or while the view is being moved, the small version is drawn; the full one when it is looked at closely.
+  const lowZoom = useEditor((s) => s.viewport.k * image.width < PICTURE_LIMITS.thumbBelowPx)
+  const crowded = useViewMoving() // true only while moving over a lot of pictures (see useViewMoving)
+  const { url: now, missing, pending } = useImageUrl(image.imageId, { thumb: lowZoom || (crowded && !selected) })
+  // Keep showing the last picture of THIS image while the next version loads (no flicker); never another image's.
+  const last = useRef<{ id: string; url: string } | null>(null)
+  if (now) last.current = { id: image.imageId, url: now }
+  const url = now ?? (last.current?.id === image.imageId ? last.current.url : null)
   const drag = useRef<{ corner: Corner; x: number; y: number; w: number; h: number; k: number } | null>(null)
 
   const liveSize = live ?? { width: image.width, height: image.height, corner: 'se' as Corner }
@@ -147,8 +157,8 @@ function TopicPicture(props: {
         {url ? (
           <img src={url} alt={alt} draggable={false} className="block h-full w-full select-none rounded-md object-fill" />
         ) : (
-          <div role="img" aria-label={missing ? 'Image missing' : 'Loading image'} className="grid h-full w-full place-items-center rounded-md bg-black/10 text-[11px] text-current opacity-70">
-            {missing ? 'Image missing' : '…'}
+          <div role="img" aria-label={missing ? 'Image missing' : pending ? 'Picture is still uploading' : 'Loading image'} className="grid h-full w-full place-items-center rounded-md bg-black/10 px-1 text-center text-[11px] text-current opacity-70">
+            {missing ? 'Image missing' : pending ? 'Picture is still uploading' : '…'}
           </div>
         )}
         {selected && (

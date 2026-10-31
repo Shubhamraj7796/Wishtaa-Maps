@@ -67,7 +67,7 @@ afterEach(() => {
 })
 
 describe('Import entry points', () => {
-  it('Home has an Import card that is switched on, and asks only for .emmx files', async () => {
+  it('Home has an Import card that is switched on, and asks for .emmx and Wishtaa files', async () => {
     mount('/home')
     const card = (await screen.findByText('Import')).closest('button') as HTMLButtonElement
     expect(card.disabled).toBe(false)
@@ -77,7 +77,7 @@ describe('Import entry points', () => {
     expect(within(dialog).getByText('Save to')).toBeTruthy()
     expect(lastChooser()).toBeNull() // asks where to save before choosing the file
     fireEvent.click(within(dialog).getByRole('button', { name: 'Choose file…' }))
-    expect(lastChooser()?.accept).toBe('.emmx')
+    expect(lastChooser()?.accept).toBe('.emmx,.wishtaa,.zip')
   })
 
   it('All files has an Import file card', async () => {

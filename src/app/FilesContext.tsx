@@ -1,3 +1,4 @@
+import { downloadBundle, downloadSharedCopy } from './exportFile'
 import type { OpenedDoc } from '@/core/drive/picker'
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -43,6 +44,10 @@ export interface FilesApi {
   rename: (file: FileRecord, name: string) => Promise<void>
   toggleStar: (file: FileRecord) => Promise<void>
   duplicate: (file: FileRecord) => Promise<void>
+  /** One zip with the map and its pictures. */
+  downloadBundle: (file: FileRecord) => Promise<void>
+  /** One file with the pictures inside, for sending to someone. */
+  shareCopy: (file: FileRecord) => Promise<void>
   moveTo: (ids: string[], parentId: string | null) => Promise<void>
   trash: (ids: string[]) => Promise<void>
   restore: (ids: string[]) => Promise<void>
@@ -143,6 +148,16 @@ export function FilesProvider({ repo = repository, children }: { repo?: FileRepo
           notify(on ? `"${file.name}" now opens in Read mode.` : `"${file.name}" opens in Edit mode again.`)
         }, undefined),
       toggleStar: (file) => guard(async () => void (await repo.update(file.id, { starred: !file.starred })), undefined),
+      downloadBundle: (file) =>
+        guard(async () => {
+          await downloadBundle(file, repo)
+          notify(`Downloaded "${file.name}" with its pictures as one file.`)
+        }, undefined),
+      shareCopy: (file) =>
+        guard(async () => {
+          await downloadSharedCopy(file, repo)
+          notify(`Made a shared copy of "${file.name}" with its pictures inside. Send it to anyone: they open it from Import.`)
+        }, undefined),
       duplicate: (file) =>
         guard(async () => {
           await repo.duplicate(file.id)

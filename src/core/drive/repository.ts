@@ -407,7 +407,10 @@ export class DriveRepository implements FileRepository {
       })
     )
     const made = await this.api.copy(f.contentRef, { name: driveFileName(local.name), parentId: parent, appProperties: { picturesFolderId: folder.id } })
-    return this.local.update(local.id, { storage: 'drive', contentRef: made.id, driveMeta: { ...baseOf(made), format: 2, picturesFolderId: folder.id } })
+    const rec = await this.local.update(local.id, { storage: 'drive', contentRef: made.id, driveMeta: { ...baseOf(made), format: 2, picturesFolderId: folder.id, refs: f.driveMeta.refs } })
+    // A picture that had not reached the original's folder yet is sent to the copy's by this device (the ones that exist are skipped).
+    void this.opts.pictures.sync.enqueue(local.id, folder.id, f.imageIds ?? []).catch(() => undefined)
+    return rec
   }
   trash(id: string) {
     return this.local.trash(id)

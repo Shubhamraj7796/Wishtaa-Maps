@@ -1,5 +1,7 @@
 import { useSyncExternalStore } from 'react'
 import { Icon } from '@/ui/icons'
+import { pictureSync } from '@/app/repo'
+import { uploadingText } from '@/core/drive/progress'
 import { retrySave } from '../session'
 import { useEditor } from '../store'
 import { otherTabOpen, subscribeOtherTab } from '../tabwatch'
@@ -48,6 +50,7 @@ export function SaveStatus() {
   const otherTab = useSyncExternalStore(subscribeOtherTab, otherTabOpen, () => false)
 
   const readOnly = useEditor((s) => s.readOnly)
+  const up = useSyncExternalStore(pictureSync.subscribe, pictureSync.getStatus, pictureSync.getStatus)
 
   const time = savedAt ? new Date(savedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : null
   const label =
@@ -93,6 +96,11 @@ export function SaveStatus() {
       {status === 'error' && reason && (
         <span data-testid="save-details" className="mt-0.5 hidden max-w-[16rem] truncate text-[11px] text-muted sm:block">
           {reason}
+        </span>
+      )}
+      {up.pictures > 0 && (
+        <span data-testid="pictures-uploading" title="The map itself is saved. Pictures go up in the background and never hold up your editing." className="mt-0.5 hidden max-w-[16rem] truncate text-[11px] text-muted sm:block">
+          {up.paused ? `${up.pictures} picture${up.pictures === 1 ? '' : 's'} paused` : up.mode === 'manual' && up.active === 0 ? `${up.pictures} picture${up.pictures === 1 ? '' : 's'} waiting for Sync` : uploadingText(up)}
         </span>
       )}
       {otherTab && (

@@ -125,12 +125,19 @@ export interface SyncOptions {
 export interface SyncStatus {
   /** Files waiting (including those waiting to retry). */
   pending: number
+  /** Pictures (not files) that still have something to send. */
+  pictures: number
   /** Files being sent right now. */
   active: number
   /** Files sent since the page opened. */
   done: number
   /** Files that failed at least once and are waiting to retry. */
   retrying: number
+  /** Pictures (full-size files) in the current batch: how many were queued and how many are done, for "120 of 500". */
+  batchTotal: number
+  batchDone: number
+  /** Rough seconds left for the batch, once enough has been sent to tell; otherwise null. */
+  etaSeconds: number | null
   paused: boolean
   mode: SyncMode
   bytesUploaded: number
@@ -143,9 +150,10 @@ export const backoffMs = (attempts: number) => Math.min(5 * 60_000, 1000 * 2 ** 
 export class PictureSync {
   private index = new Map<string, Map<string, DriveFileMeta>>()
   private running: Promise<void> | null = null
+  private batch = { total: 0, done: 0, startedAt: 0 }
   private paused = false
   private listeners = new Set<() => void>()
-  private snap: SyncStatus = { pending: 0, active: 0, done: 0, retrying: 0, paused: false, mode: 'auto', bytesUploaded: 0, lastError: null }
+  private snap: SyncStatus = { pending: 0, pictures: 0, batchTotal: 0, batchDone: 0, etaSeconds: null, active: 0, done: 0, retrying: 0, paused: false, mode: 'auto', bytesUploaded: 0, lastError: null }
   private readonly concurrency: number
   private readonly now: () => number
   private readonly sleep: (ms: number) => Promise<void>
@@ -173,7 +181,10 @@ export class PictureSync {
   }
   private async refreshCounts(active = this.snap.active) {
     const jobs = await this.ledger.jobs()
-    this.set({ pending: jobs.length, retrying: jobs.filter((j) => j.attempts > 0).length, active })
+    const left = this.batch.total - this.batch.done
+    const elapsed = (this.now() - this.batch.startedAt) / 1000
+    const eta = this.batch.done >= 3 && left > 0 && elapsed > 0 ? Math.round((elapsed / this.batch.done) * left) : null
+    this.set({ batchTotal: this.batch.total, batchDone: Math.min(this.batch.done, this.batch.total), etaSeconds: eta, pending: jobs.length, pictures: new Set(jobs.map((j) => j.id)).size, retrying: jobs.filter((j) => j.attempts > 0).length, active })
   }
 
   // ---- what is already in Drive ----
@@ -204,16 +215,21 @@ export class PictureSync {
   async enqueue(mapId: string, folderId: string, ids: readonly string[]): Promise<number> {
     const index = await this.remoteIndex(folderId)
     const ledgerNames = await this.ledger.uploaded(folderId)
-    const existing = new Set((await this.ledger.jobs()).map((j) => j.key))
+    const queued = await this.ledger.jobs()
+    if (!queued.length) this.batch = { total: 0, done: 0, startedAt: this.now() } // nothing was waiting: a new batch
+    const existing = new Set(queued.map((j) => j.key))
     let added = 0
+    let addedFull = 0
     for (const id of new Set(ids)) {
       for (const kind of ['full', 'thumb'] as const) {
         const key = `${folderId}|${id}|${kind}`
         if (existing.has(key) || this.has(index, ledgerNames, id, kind)) continue
         await this.ledger.putJob({ key, mapId, folderId, id, kind, attempts: 0, nextAt: 0 })
         added++
+        if (kind === 'full') addedFull++
       }
     }
+    this.batch.total += addedFull
     await this.refreshCounts()
     if (added && this.autoRuns()) void this.run().catch(() => undefined)
     return added
@@ -301,6 +317,7 @@ export class PictureSync {
       index.set(name, made)
       await this.ledger.markUploaded(job.folderId, name, made.id)
       await this.ledger.deleteJob(job.key)
+      if (job.kind === 'full') this.batch.done++
       this.set({ done: this.snap.done + 1, bytesUploaded: this.snap.bytesUploaded + data.bytes.byteLength, lastError: null })
     } catch (e) {
       const err = e instanceof DriveError ? e : new DriveError('other', e instanceof Error ? e.message : 'Upload failed.')

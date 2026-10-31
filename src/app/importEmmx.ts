@@ -10,6 +10,8 @@ import type { ImageStore } from '@/core/images/store'
 import { analyze, type Codec } from '@/core/images/pipeline'
 import { decide, shouldAsk, type PicturesPref } from '@/core/images/plan'
 import { pictureIdOf } from '@/core/images/sha256'
+import { openWishtaaFile } from '@/core/files/bundle'
+import { restoreBlobs } from '@/core/drive/format'
 
 /** What happened to one imported map. */
 export interface ImportedFile {
@@ -47,6 +49,8 @@ export interface ImportDeps {
   images: ImageStore
   parentId: string | null
   options?: EmmxOptions
+  /** Where attachments of a Wishtaa file go (bundles and shared copies carry them). */
+  attachments?: ImageStore
   /** Reduces a very large picture (browser only). */
   downscale?: (blob: Blob, max: number) => Promise<{ blob: Blob; width: number; height: number }>
 }
@@ -90,6 +94,7 @@ const countImages = (t: ImportedTopic): number => {
  */
 export async function importEmmx(file: PickedFile, deps: ImportDeps): Promise<ImportSummary> {
   const summary: ImportSummary = { fileName: file.name, files: [], warnings: [], unknownTypes: {}, unsupportedElements: {} }
+  if (/\.(wishtaa|wishtaa\.zip)$/i.test(file.name)) return importWishtaa(file, deps, summary)
   try {
     if (file.size > MAX_FILE_BYTES) throw new EmmxError('That file is larger than 50 MB, which is more than we import.')
     const result = await parseEmmx(await file.arrayBuffer(), deps.options)
@@ -175,6 +180,34 @@ export async function importEmmx(file: PickedFile, deps: ImportDeps): Promise<Im
   } catch (e) {
     summary.error = e instanceof EmmxError ? e.message : 'This file could not be imported.'
     if (!(e instanceof EmmxError)) console.error('[emmx import] failed', e)
+  }
+  return summary
+}
+
+/**
+ * Opens a map that was taken out of Wishtaa Maps: a bundle (`.wishtaa.zip`, with a pictures folder) or a shared copy (`.wishtaa`,
+ * pictures inside). Pictures are stored first and by their ids, so none can go missing, and the map is made as a new file.
+ */
+async function importWishtaa(file: PickedFile, deps: ImportDeps, summary: ImportSummary): Promise<ImportSummary> {
+  try {
+    if (file.size > MAX_FILE_BYTES * 20) throw new EmmxError('That file is too large to open.')
+    const opened = openWishtaaFile(new Uint8Array(await file.arrayBuffer()))
+    let failed = 0
+    for (const img of opened.images) {
+      try {
+        if (!(await deps.images.getMeta(img.id))) await deps.images.put(img)
+      } catch {
+        failed++
+      }
+    }
+    if (deps.attachments) await restoreBlobs({ images: [], attachments: opened.attachments }, { images: deps.images, attachments: deps.attachments })
+    if (failed) summary.warnings.push(`${failed} picture${failed === 1 ? '' : 's'} could not be saved in this browser and ${failed === 1 ? 'was' : 'were'} left out`)
+    if (opened.missing) summary.warnings.push(`${opened.missing} picture${opened.missing === 1 ? ' was' : 's were'} not in the file`)
+    const record = await deps.repo.create({ type: opened.type, name: opened.name, parentId: deps.parentId, content: opened.content })
+    const saved = await deps.repo.saveContent(record.id, opened.content, saveMetaFromContent(record.id, opened.content))
+    summary.files.push({ record: saved, topics: saved.topicCount ?? 0, images: opened.images.length })
+  } catch (e) {
+    summary.error = e instanceof EmmxError ? e.message : e instanceof Error && e.message ? e.message : 'This file could not be opened.'
   }
   return summary
 }

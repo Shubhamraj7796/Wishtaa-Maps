@@ -4,6 +4,7 @@ import { useMatch } from 'react-router-dom'
 import { DriveError } from '@/core/drive/errors'
 import { decidePlacement, type CreateSource, type DriveFolderRef, type Placement } from '@/core/drive/placement'
 import { downscaleImage } from '@/core/images/process'
+import { attachmentStore } from '@/editor/attachments'
 import { imageStore } from '@/editor/images'
 import { getPrefs } from './createPrefs'
 import { initialPickerState, placementFor, rememberChoice, SaveToPicker, type PickerState } from './createFlow'
@@ -22,7 +23,7 @@ const isLinked = (status: string) => status === 'connected' || status === 'recon
 export function pickEmmxFiles(onPicked: (files: File[]) => void) {
   const input = document.createElement('input')
   input.type = 'file'
-  input.accept = '.emmx'
+  input.accept = '.emmx,.wishtaa,.zip'
   input.multiple = true
   input.onchange = () => {
     const files = [...(input.files ?? [])]
@@ -74,7 +75,7 @@ export function useImportEmmx() {
     /** Into this browser, in a folder: no question, no dialog. */
     const runLocal = async (files: File[], parentId: string | null) => {
       notify(files.length === 1 ? `Importing "${files[0]?.name}"…` : `Importing ${files.length} files…`)
-      const out = await importToPlacement(files, { repo, images: imageStore, downscale: downscaleImage, pictures: importPictures() }, { storage: 'local', parentId }, driveRepository)
+      const out = await importToPlacement(files, { repo, images: imageStore, attachments: attachmentStore, downscale: downscaleImage, pictures: importPictures() }, { storage: 'local', parentId }, driveRepository)
       presentImport(out.summaries, { open, notify, setDialog })
     }
 
@@ -133,7 +134,7 @@ export function ImportDialog({ d, onClose }: { d: ImportDialogProps; onClose: ()
   const run = async (files: File[], where: Placement) => {
     setPlacement(where)
     setPhase('working')
-    const out = await importToPlacement(files, { repo: f.repo, images: imageStore, downscale: downscaleImage, pictures: importPictures() }, where, sender)
+    const out = await importToPlacement(files, { repo: f.repo, images: imageStore, attachments: attachmentStore, downscale: downscaleImage, pictures: importPictures() }, where, sender)
     setOutcome(out)
     if (out.failures.length) setPhase('failed')
     else done(out)

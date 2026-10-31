@@ -1,3 +1,4 @@
+/* global process, console, window, document, performance, requestAnimationFrame, fetch, setTimeout */
 // Real-browser measurements of the picture pipeline.
 //   npm install --no-save playwright   (once; the browser is already installed)
 //   node bench/run.mjs
