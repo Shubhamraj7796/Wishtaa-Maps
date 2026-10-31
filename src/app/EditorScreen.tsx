@@ -10,7 +10,8 @@ import { commandById, displayKeys } from '@/editor/registry'
 import { getTheme, useScene } from '@/editor/scene'
 import { useEditor } from '@/editor/store'
 import { Lightbox, OcrDialog } from '@/editor/ui/Dialogs'
-import { FormatPanel } from '@/editor/ui/FormatPanel'
+import { PictureToolbar } from '@/editor/ui/PictureToolbar'
+import { SettingsPanel } from '@/editor/ui/SettingsPanel'
 import { InsertMenu } from '@/editor/ui/InsertMenu'
 import { ObjectBar } from '@/editor/ui/ObjectBar'
 import { OutlineView } from '@/editor/ui/OutlineView'
@@ -199,6 +200,7 @@ function Editor({ file }: { file: FileRecord }) {
           <SearchBar />
           {!readOnly && <ObjectBar />}
           {!readOnly && <QuickToolbar />}
+          {!readOnly && <PictureToolbar />}
           <CommandPalette />
           <ShortcutSheet />
           <ContextMenu />
@@ -206,9 +208,9 @@ function Editor({ file }: { file: FileRecord }) {
           <OcrDialog />
           <NoticeToast />
         </main>
-        {!readOnly && panelOpen && (
-          <ErrorBoundary inline label="The format panel">
-            <FormatPanel />
+        {!readOnly && (
+          <ErrorBoundary inline label="The settings panel">
+            <SettingsPanel />
           </ErrorBoundary>
         )}
         {readOnly && readPanelOpen && (

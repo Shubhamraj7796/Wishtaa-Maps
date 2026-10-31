@@ -1,7 +1,7 @@
 import { normalizeLink, linkedFile, linkedTopicId, isWebLink, topicLink } from '@/core/links'
 import { navigateTo, routeForFile } from '../app/navigation'
 import { repository } from '../app/repo'
-import { clearMarks, patchTask, setAllImageWidths, setImagePosition, toggleMarkOn, addTag, removeTag, setInlineNote, setLatex, setLink, setTable } from '@/core/model/content'
+import { clearMarks, patchTask, setAllImageWidths, setImageAlt, setImagePosition, toggleMarkOn, addTag, removeTag, setInlineNote, setLatex, setLink, setTable } from '@/core/model/content'
 import { addBoundary, addCallout, addRelationship, addSummary, deleteObject, updateObject } from '@/core/model/objectCommands'
 import type { BoundaryShape, ObjectKind, ObjectRef } from '@/core/model/objects'
 import type { ImagePosition } from '@/core/model/topic'
@@ -185,6 +185,7 @@ export function followLink(topicId: string) {
 export const setInline = (id: string, text: string) => setInlineNote(mapDoc, id, text)
 export const setFormula = (id: string, latex: string | null) => setLatex(mapDoc, id, latex)
 export const setTopicTable = (id: string, table: string[][] | null) => setTable(mapDoc, id, table)
+export const setPictureAlt = (id: string, alt: string) => setImageAlt(mapDoc, id, alt)
 export const setPicturePosition = (id: string, position: ImagePosition) => setImagePosition(mapDoc, id, position)
 
 /** Gives every picture the width of the selected topic's picture. */
@@ -195,7 +196,8 @@ export function applyPictureSizeToAll(id: string) {
 
 // ---------- panels and views ----------
 export function openTab(tab: PanelTab, section?: DetailsSection) {
-  set({ panelOpen: true, panelTab: tab, detailsSection: section ?? null })
+  if (get().readOnly) return
+  set({ panelOpen: true, panelTab: tab, panelTabManual: true, panelOpener: 'handle', detailsSection: section ?? null })
 }
 
 export function setView(view: ViewMode) {

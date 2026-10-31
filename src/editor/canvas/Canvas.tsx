@@ -353,6 +353,12 @@ export function Canvas() {
     }
   }
 
+  // The settings panel must not close while something is being dragged.
+  useEffect(() => {
+    useEditor.setState({ dragging: !!drag || !!box })
+    return () => useEditor.setState({ dragging: false })
+  }, [drag, box])
+
   // ---- visible set (culling) ----
   const k = viewport.k
   const vx0 = (-viewport.x - 200) / k

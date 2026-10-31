@@ -10,7 +10,8 @@ import { useTheme } from '../scene'
 import { useEditor } from '../store'
 import { themeRepository, useSavedThemes } from '../themeLibrary'
 import { Check, Color, Row, Section, field } from './panelKit'
-import { LazyThemeThumb } from './ThemeThumb'
+import { PopoverRow } from './PopoverRow'
+import { LazyThemeThumb, ThemeThumb } from './ThemeThumb'
 
 type GalleryTab = 'light' | 'dark' | 'custom'
 
@@ -299,7 +300,7 @@ function CustomTab({ apply, previewFor, activeId }: { apply: (t: Theme) => void;
 
 // ---- the tab -----------------------------------------------------------------------------------------------------
 
-export function ThemeTab() {
+export function ThemeTab({ compact = false }: { compact?: boolean } = {}) {
   const s = useEditor((st) => st.settings)
   const theme = useTheme()
   const active = s.themeId
@@ -317,12 +318,11 @@ export function ThemeTab() {
     A.setBranchThickness(drag)
     setDrag(null)
   }
-  const taperValue = s.taper === null ? 'theme' : s.taper ? 'on' : 'off'
-
-  return (
+  const themeName = (s.customThemes.find((t) => t.id === active) ?? THEMES.find((t) => t.id === active))?.name ?? 'Theme'
+  const schemeName = s.palette ? 'Custom colours' : COLOR_SCHEMES.find((c) => c.id === s.colorSchemeId)?.name ?? "Theme's own"
+  const galleryBody = (after?: () => void) => (
     <>
-      <Section title="Theme gallery">
-        <div role="tablist" aria-label="Theme groups" className="flex gap-1">
+      <div role="tablist" aria-label="Theme groups" className="flex gap-1">
           {(['light', 'dark', 'custom'] as const).map((t) => (
             <button key={t} type="button" role="tab" aria-selected={tab === t} onClick={() => setTab(t)} className={`flex-1 rounded-ui border px-2 py-1 text-sm capitalize ${tab === t ? 'border-brand bg-brand/15' : 'border-line hover:bg-bg'}`}>
               {t}
@@ -332,7 +332,7 @@ export function ThemeTab() {
         {tab !== 'custom' ? (
           <div role="tabpanel" aria-label={`${tab} themes`} className="grid grid-cols-2 gap-2">
             {list.map((t) => (
-              <ThemeCard key={t.id} theme={t} active={active === t.id} onApply={() => apply(t)} preview={preview(() => ({ theme: t }))} />
+              <ThemeCard key={t.id} theme={t} active={active === t.id} onApply={() => { apply(t); after?.() }} preview={preview(() => ({ theme: t }))} />
             ))}
           </div>
         ) : (
@@ -342,17 +342,65 @@ export function ThemeTab() {
         )}
         <Check label="Also reset the style overrides I set on topics" checked={resetOverrides} onChange={setResetOverrides} hint="Applying a theme normally keeps the colours, shapes and fonts you set on individual topics" />
         <p className="text-xs text-muted">Applying a theme is one undo step. It also clears map-wide colour, background and branch tweaks.</p>
-      </Section>
-
-      <Section title="Colour scheme">
-        <div className="grid grid-cols-2 gap-1.5">
-          <SchemeButton name="Theme's own" colors={theme.schemeId || s.palette ? findOwn(s.themeId, s) : theme.palette} active={!s.colorSchemeId && !s.palette} onApply={() => A.setColorScheme(null)} preview={preview(() => ({ schemeId: null }))} />
+    </>
+  )
+  const schemeBody = (after?: () => void) => (
+    <>
+      <div className="grid grid-cols-2 gap-1.5">
+          <SchemeButton name="Theme's own" colors={theme.schemeId || s.palette ? findOwn(s.themeId, s) : theme.palette} active={!s.colorSchemeId && !s.palette} onApply={() => { A.setColorScheme(null); after?.() }} preview={preview(() => ({ schemeId: null }))} />
           {COLOR_SCHEMES.map((c) => (
-            <SchemeButton key={c.id} name={c.name} colors={c.colors} active={s.colorSchemeId === c.id} onApply={() => A.setColorScheme(c.id)} preview={preview(() => ({ schemeId: c.id }))} />
+            <SchemeButton key={c.id} name={c.name} colors={c.colors} active={s.colorSchemeId === c.id} onApply={() => { A.setColorScheme(c.id); after?.() }} preview={preview(() => ({ schemeId: c.id }))} />
           ))}
         </div>
         <p className="text-xs text-muted">Main branches take these colours in order; sub-branches keep their parent's colour. Shapes don't change.</p>
-      </Section>
+    </>
+  )
+
+  const taperValue = s.taper === null ? 'theme' : s.taper ? 'on' : 'off'
+
+  return (
+    <>
+      {compact ? (
+        <Section title="Theme">
+          <PopoverRow
+            label="Theme"
+            testId="theme-row"
+            wide
+            thumb={
+              <span className="block w-16 overflow-hidden rounded border border-line">
+                <ThemeThumb theme={theme} label="Current theme" />
+              </span>
+            }
+            value={themeName}
+          >
+            {(close) => <div className="space-y-2">{galleryBody(close)}</div>}
+          </PopoverRow>
+          <PopoverRow
+            label="Theme colour"
+            testId="theme-colour-row"
+            thumb={
+              <span className="flex gap-0.5" aria-hidden="true">
+                {theme.palette.slice(0, 5).map((c, i) => (
+                  <span key={i} className="h-3 w-3 rounded-full border border-black/10" style={{ background: c }} />
+                ))}
+              </span>
+            }
+            value={schemeName}
+          >
+            {(close) => <div className="space-y-2">{schemeBody(close)}</div>}
+          </PopoverRow>
+        </Section>
+      ) : (
+        <>
+          <Section title="Theme gallery">
+            {galleryBody()}
+          </Section>
+
+          <Section title="Colour scheme">
+            {schemeBody()}
+          </Section>
+        </>
+      )}
 
       <Section title="Branches">
         <Check

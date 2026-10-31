@@ -576,9 +576,12 @@ export function nudgeTopicWidth(delta: number) {
   commitTopicWidth(base + delta)
 }
 
+/** Gives every selected branch (not the central topic) its own direction, or back to the map's. One undo step. */
 export function setSelectedBranchDir(dir: BranchDir | null) {
-  const id = primary()
-  if (id) setBranchDir(mapDoc, id, dir)
+  const root = get().rootId
+  const ids = get().selected.filter((id) => id !== root)
+  if (!ids.length) return
+  mapDoc.ydoc.transact(() => ids.forEach((id) => setBranchDir(mapDoc, id, dir)), LOCAL)
 }
 
 export function copyFormat() {
@@ -649,6 +652,35 @@ export function toggleMinimap() {
 export function togglePanel(tab?: PanelTab) {
   if (get().readOnly) return set({ readPanelOpen: !get().readPanelOpen })
   const { panelOpen, panelTab } = get()
-  if (tab) set({ panelOpen: !panelOpen || panelTab !== tab, panelTab: tab })
-  else set({ panelOpen: !panelOpen })
+  if (tab) set({ panelOpen: !panelOpen || panelTab !== tab, panelTab: tab, panelTabManual: true, panelOpener: 'handle' })
+  else set({ panelOpen: !panelOpen, panelOpener: 'handle' })
+}
+
+/** Opens the settings panel on a section and keeps it there until it is closed (opened by hand). */
+export function openPanel(tab?: PanelTab) {
+  if (get().readOnly) return
+  set({ panelOpen: true, panelOpener: 'handle', ...(tab ? { panelTab: tab, panelTabManual: true } : {}) })
+}
+
+/** Closes the settings panel, and (when asked) puts keyboard focus back on the canvas. */
+export function closePanel(focusCanvas = false) {
+  set({ panelOpen: false, panelOpener: null })
+  if (focusCanvas) document.querySelector<HTMLElement>('[role=tree][aria-label="Mind map canvas"]')?.focus()
+}
+
+let panning = 0
+/** Pans the canvas smoothly by (dx, 0) screen px, over about 220 ms (used to keep a selected topic clear of the panel). */
+export function panViewportBy(dx: number, ms = 220) {
+  if (!dx) return
+  cancelAnimationFrame(panning)
+  const from = get().viewport
+  const start = performance.now()
+  const step = () => {
+    const t = Math.min(1, (performance.now() - start) / ms)
+    const eased = 1 - Math.pow(1 - t, 3)
+    const v = get().viewport
+    set({ viewport: { k: v.k, y: v.y, x: from.x + dx * eased } })
+    panning = t < 1 ? requestAnimationFrame(step) : 0
+  }
+  panning = requestAnimationFrame(step)
 }

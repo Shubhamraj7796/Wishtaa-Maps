@@ -14,6 +14,8 @@ export interface TopicImage {
   height: number
   /** Where the picture sits relative to the text (default: above). */
   position?: ImagePosition
+  /** Text read out to people who cannot see the picture. Unset = the topic's text. */
+  alt?: string
 }
 
 /** A file attached to a topic; the bytes live in the attachment store. */

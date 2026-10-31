@@ -249,6 +249,24 @@ export async function replaceImage(topicId: string) {
   if (file) await addImageToTopic(file, topicId)
 }
 
+/** Puts a picture on the clipboard, where the browser allows it. */
+export async function copyImage(imageId: string): Promise<boolean> {
+  const stored = await imageStore.get(imageId).catch(() => undefined)
+  const Item = (globalThis as { ClipboardItem?: typeof ClipboardItem }).ClipboardItem
+  if (!stored || !Item || !navigator.clipboard?.write) {
+    showNotice('This browser cannot copy a picture. Use Download instead.')
+    return false
+  }
+  try {
+    await navigator.clipboard.write([new Item({ [stored.type]: stored.blob })])
+    showNotice('Picture copied.')
+    return true
+  } catch {
+    showNotice('Could not copy the picture.')
+    return false
+  }
+}
+
 export async function loadImageBlob(imageId: string): Promise<Blob | null> {
   return (await imageStore.get(imageId).catch(() => undefined))?.blob ?? null
 }

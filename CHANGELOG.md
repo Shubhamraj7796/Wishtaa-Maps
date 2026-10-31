@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Settings panel: layout dropdown, context-aware sections, auto-show
+- The layout list is one compact row that opens a grouped list with thumbnails (also used for the layout of a single branch, Theme and Theme colour).
+- The panel shows what fits the selection: Canvas, Style, Picture format (size, aspect ratio, position, alt text, replace) or the style of the
+  selected line, callout, boundary or summary. Tabs have text labels. A small toolbar floats above a selected picture.
+- It tucks away to a thin handle, opens on hover over the right edge or when something is selected, can be pinned, and has Auto / Always open /
+  Manual in Preferences. See `docs/settings-panel.md`.
+
 ### Navigation, automatic branch thickness, Read mode
 - **Navigation**: two-finger scroll moves the map; Ctrl + wheel and trackpad pinch zoom around the pointer; Shift + wheel moves
   sideways; a mouse wheel follows Preferences (Move the map, or Zoom); zoom 2% to 400% with a typeable percentage; touch glide.

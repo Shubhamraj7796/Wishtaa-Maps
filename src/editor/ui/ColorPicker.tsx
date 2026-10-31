@@ -2,6 +2,7 @@ import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { contrastReport, isHex, normalizeHex } from '@/core/theme/color'
 import { recentColours, rememberColour } from '@/core/theme/recent'
+import { useBusyWhile } from '../panel/busy'
 import { useTheme } from '../scene'
 import { Slider } from './Slider'
 
@@ -91,6 +92,7 @@ export function ColorPicker(p: ColorPickerProps) {
 }
 
 function Popover(p: ColorPickerProps & { anchor: React.RefObject<HTMLElement>; onClose: () => void }) {
+  useBusyWhile(true) // the settings panel stays put while a colour is being picked
   const theme = useTheme()
   const box = useRef<HTMLDivElement>(null)
   const [pos, setPos] = useState<{ left: number; top: number } | null>(null)

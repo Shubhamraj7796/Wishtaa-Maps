@@ -5,6 +5,8 @@ import { Modal, buttonSecondary } from './Modal'
 export function PreferencesDialog({ onClose }: { onClose: () => void }) {
   const wheel = useSettings((s) => s.mouseWheel)
   const setWheel = useSettings((s) => s.setMouseWheel)
+  const panelMode = useSettings((s) => s.panelMode)
+  const setPanelMode = useSettings((s) => s.setPanelMode)
   const allRead = useSettings((s) => s.openAllReadOnly)
   const setAllRead = useSettings((s) => s.setOpenAllReadOnly)
   return (
@@ -23,6 +25,26 @@ export function PreferencesDialog({ onClose }: { onClose: () => void }) {
               <input type="radio" name="mouse-wheel" checked={wheel === id} onChange={() => setWheel(id)} className="h-4 w-4 accent-[rgb(var(--c-brand))]" />
               {label}
               {id === 'move' && <span className="text-xs text-muted">(default)</span>}
+            </label>
+          ))}
+        </fieldset>
+        <fieldset className="rounded-ui border border-line p-3">
+          <legend className="px-1 font-semibold">Settings panel</legend>
+          <p className="mb-2 text-xs text-muted">The panel with layout, theme, style and picture settings.</p>
+          {(
+            [
+              ['auto', 'Auto', 'Opens when you select something or point at the right edge, and tucks away again.'],
+              ['always', 'Always open', 'Stays open beside the map.'],
+              ['manual', 'Manual', 'Opens only from its handle on the right edge (or F4).'],
+            ] as const
+          ).map(([id, label, hint]) => (
+            <label key={id} className="flex items-start gap-2 py-0.5">
+              <input type="radio" name="panel-mode" checked={panelMode === id} onChange={() => setPanelMode(id)} className="mt-0.5 h-4 w-4 accent-[rgb(var(--c-brand))]" />
+              <span>
+                {label}
+                {id === 'auto' && <span className="text-xs text-muted"> (default)</span>}
+                <span className="block text-xs text-muted">{hint}</span>
+              </span>
             </label>
           ))}
         </fieldset>

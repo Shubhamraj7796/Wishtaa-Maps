@@ -34,7 +34,13 @@ export interface ImageLive {
   corner: Corner
 }
 
-export type PanelTab = 'layout' | 'theme' | 'style' | 'mark' | 'clipart' | 'details' | 'notes'
+export type PanelTab = 'canvas' | 'style' | 'picture' | 'object' | 'mark' | 'clipart' | 'details' | 'notes'
+
+/** What is selected, which decides which section of the settings panel is shown. */
+export type SelectionKind = 'none' | 'topic' | 'topics' | 'picture' | 'object'
+
+/** Why the settings panel is open: it closes itself only when it opened by itself. */
+export type PanelOpener = 'selection' | 'hover' | 'handle' | null
 export type ViewMode = 'map' | 'outline'
 export type DetailsSection = 'picture' | 'tags' | 'task' | 'link' | 'attachments' | 'inline' | 'latex' | 'table'
 
@@ -87,6 +93,15 @@ export interface EditorState {
   panelOpen: boolean
   minimap: boolean
   panelTab: PanelTab
+  /** The person picked a tab by hand: kept until the kind of selection changes. */
+  panelTabManual: boolean
+  /** Things inside the panel (a dropdown, a colour picker) that are open right now. */
+  panelBusy: number
+  panelOpener: PanelOpener
+  /** A topic or box selection is being dragged. */
+  dragging: boolean
+  /** Said aloud when the panel opens a section by itself. */
+  panelAnnouncement: string
   /** Apply style changes to the whole branch, not just the selected topics. */
   /** Copied topic format; while set, clicking a topic paints it (format painter). */
   painter: TopicStyle | null
@@ -156,7 +171,12 @@ export const useEditor = create<EditorState>(() => ({
   settings: DEFAULT_SETTINGS,
   panelOpen: false,
   minimap: true,
-  panelTab: 'layout',
+  panelTab: 'canvas',
+  panelTabManual: false,
+  panelBusy: 0,
+  panelOpener: null,
+  dragging: false,
+  panelAnnouncement: '',
   painter: null,
   themePreview: null,
   copiedFormat: null,

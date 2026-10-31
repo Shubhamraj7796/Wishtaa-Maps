@@ -339,7 +339,7 @@ export const TopicView = memo(function TopicView(p: TopicViewProps) {
   )
 
   const picture = image && (
-    <TopicPicture topicId={box.id} image={image} alt={topic.text.trim() || 'Image'} selected={p.imageSelected} live={p.live} />
+    <TopicPicture topicId={box.id} image={image} alt={image.alt?.trim() || topic.text.trim() || 'Image'} selected={p.imageSelected} live={p.live} />
   )
   const sideBySide = pos === 'left' || pos === 'right'
 

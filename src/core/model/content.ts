@@ -134,6 +134,17 @@ export function setImagePosition(doc: MapDoc, id: string, position: ImagePositio
   }
 }
 
+/** The text that stands in for the picture for screen readers (empty clears it). One undo step. */
+export function setImageAlt(doc: MapDoc, id: string, alt: string) {
+  const t = doc.topics.get(id)
+  const next = alt.trim().slice(0, 300)
+  if (!t?.image || (t.image.alt ?? '') === next) return
+  const image = { ...t.image }
+  if (next) image.alt = next
+  else delete image.alt
+  tx(doc, () => doc.topics.set(id, { ...t, image }))
+}
+
 /** Gives every picture the same width (heights follow each picture's own shape). One undo step. */
 export function setAllImageWidths(doc: MapDoc, width: number, onlyWithin?: ReadonlySet<string>) {
   tx(doc, () => {
