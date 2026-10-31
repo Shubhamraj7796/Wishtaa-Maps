@@ -488,7 +488,7 @@ export function Canvas() {
     >
       <div
         className="absolute left-0 top-0 origin-top-left"
-        style={{ transform: `translate(${viewport.x}px, ${viewport.y}px) scale(${k})` }}
+        style={{ transform: `translate(${viewport.x}px, ${viewport.y}px) scale(${k})`, willChange: 'transform' }}
       >
         <svg className="pointer-events-none absolute left-0 top-0 overflow-visible" width="1" height="1" aria-hidden="true">
           {theme.handDrawn && (

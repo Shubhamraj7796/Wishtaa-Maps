@@ -3,6 +3,8 @@ import { NotUploadedYet } from '@/core/drive/pictures'
 import { PictureCache } from '@/core/images/cache'
 import { browserCodec } from '@/core/images/codec.browser'
 import { ImageGc } from '@/core/images/gc'
+import { averageColor } from '@/core/images/color'
+import { LOD } from '@/core/images/lod'
 import { PICTURE_LIMITS } from '@/core/images/limits'
 import { ImageError, processImageFile } from '@/core/images/process'
 import { defaultDisplaySize, nudgeSize, originalSize } from '@/core/images/resize'
@@ -136,7 +138,10 @@ async function loadThumb(key: string, id: string): Promise<string | null> {
     const full = await imageStore.get(id)
     if (full) blob = (await makeThumb(full.blob, browserCodec)) ?? undefined
     else if (fallback) blob = (await fromFallback(() => (fallback as PictureFallback).thumb(id))) ?? undefined
-    if (blob) void imageStore.putThumb(id, blob).catch(() => undefined)
+    if (blob) {
+      const kept = blob
+      void averageColor(kept, browserCodec).then((c) => imageStore.putThumb(id, kept, c ?? undefined)).catch(() => undefined)
+    }
   }
   // No small version could be made: the full picture is shown instead.
   if (!blob) return loadKey(id)
@@ -154,53 +159,133 @@ function releaseUrl(id: string) {
   releaseKey(id + THUMB)
 }
 
-/** Makes (and keeps) the small version of a picture; used right after a picture is added. */
+/** Makes (and keeps) the small version of a picture and its average colour; used right after a picture is added. */
 export async function ensureThumb(id: string): Promise<void> {
   try {
     if (await imageStore.getThumb(id)) return
     const full = await imageStore.get(id)
     const blob = full && (await makeThumb(full.blob, browserCodec))
-    if (blob) await imageStore.putThumb(id, blob)
+    if (blob) await imageStore.putThumb(id, blob, (await averageColor(blob, browserCodec)) ?? undefined)
   } catch {
     /* the small version is made when it is first needed */
   }
 }
 
+// ---- the flat colour drawn for a picture that is tiny on screen ----
+const colors = new Map<string, string>()
+const colorLoading = new Map<string, Promise<string | null>>()
+
+async function loadColor(id: string): Promise<string | null> {
+  const known = colors.get(id)
+  if (known) return known
+  let p = colorLoading.get(id)
+  if (!p) {
+    p = (async () => {
+      let c = (await imageStore.getThumbColor(id).catch(() => undefined)) ?? null
+      if (!c) {
+        // A small version made before colours were kept (or fetched from Drive): read the colour from it once, and keep it.
+        const thumb = await imageStore.getThumb(id).catch(() => undefined)
+        c = thumb ? await averageColor(thumb, browserCodec) : null
+        if (c) void imageStore.setThumbColor(id, c).catch(() => undefined)
+      }
+      if (c) colors.set(id, c)
+      return c
+    })().finally(() => colorLoading.delete(id))
+    colorLoading.set(id, p)
+  }
+  return p
+}
+
+/** The picture's average colour (null until known); `enabled=false` looks nothing up. */
+export function usePictureColor(id: string, enabled: boolean): string | null {
+  const [, tick] = useState(0)
+  useEffect(() => {
+    if (!enabled || colors.has(id)) return
+    let cancelled = false
+    void loadColor(id).then((c) => {
+      if (c && !cancelled) tick((n) => n + 1)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [id, enabled])
+  return colors.get(id) ?? null
+}
+
 // ---- is the view being moved right now? (small versions are drawn while it is) ----
 let moving = false
+/** Counts gestures: a picture upgraded to full size after one is cheap again when the next begins. */
+let epoch = 0
 let movingTimer: ReturnType<typeof setTimeout> | undefined
 const movingListeners = new Set<() => void>()
-/** Called by every pan and zoom step; "moving" ends shortly after the last one. */
+/** Called by every pan and zoom step; "moving" ends 150 ms after the last one. */
 export function noteViewportActivity() {
   if (!moving) {
     moving = true
+    epoch++
+    upgrades.length = 0
     movingListeners.forEach((l) => l())
   }
   clearTimeout(movingTimer)
   movingTimer = setTimeout(() => {
     moving = false
     movingListeners.forEach((l) => l())
-  }, 180)
+  }, LOD.idleMs)
 }
-/** How many pictures are drawn right now. */
-let shown = 0
-export function useShownPicture() {
-  useEffect(() => {
-    shown++
-    return () => void shown--
-  }, [])
-}
-/** Swapping every picture for its small version at the start of each pan only pays off when there are a lot of them. */
-const CROWD = 40
 
-/** True while the view is moving over a crowd of pictures (more than 40 drawn): then the small versions are used. */
+// Pictures that want their full-size version after a gesture get it a few per frame, so it never holds up a frame.
+const upgrades: (() => void)[] = []
+let pumping = false
+function pump() {
+  if (pumping || typeof requestAnimationFrame === 'undefined') return
+  pumping = true
+  const step = () => {
+    for (let i = 0; i < LOD.upgradesPerFrame; i++) upgrades.shift()?.()
+    pumping = false
+    if (upgrades.length) pump()
+  }
+  requestAnimationFrame(step)
+}
+
+/**
+ * True once this picture may show its full version: not while the view is moving, and after the gesture ends only in turn (a few
+ * pictures per frame). `wants=false` (it is not at full detail) asks for nothing.
+ */
+export function useUpgrade(wants: boolean): boolean {
+  const gesture = useSyncExternalStore(
+    (l) => {
+      movingListeners.add(l)
+      return () => void movingListeners.delete(l)
+    },
+    () => (moving ? -epoch : epoch),
+    () => 0
+  )
+  const [granted, setGranted] = useState(-1)
+  useEffect(() => {
+    if (!wants || gesture < 0 || granted === gesture) return
+    let live = true
+    const go = () => live && setGranted(gesture)
+    if (typeof requestAnimationFrame === 'undefined') go()
+    else {
+      upgrades.push(go)
+      pump()
+    }
+    return () => {
+      live = false
+      const i = upgrades.indexOf(go)
+      if (i >= 0) upgrades.splice(i, 1)
+    }
+  }, [wants, gesture, granted])
+  return wants && gesture >= 0 && granted === gesture
+}
+/** True while the view is being moved (and for 150 ms after). */
 export function useViewMoving(): boolean {
   return useSyncExternalStore(
     (l) => {
       movingListeners.add(l)
       return () => void movingListeners.delete(l)
     },
-    () => moving && shown > CROWD,
+    () => moving,
     () => false
   )
 }

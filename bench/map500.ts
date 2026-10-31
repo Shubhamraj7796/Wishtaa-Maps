@@ -34,13 +34,16 @@ async function picture(n: number): Promise<{ blob: Blob; width: number; height: 
   return { blob, width, height }
 }
 
-;(window as unknown as { seed: (withPictures?: boolean, count?: number) => Promise<{ id: string; bytes: number; pictures: number }> }).seed = async (withPictures = true, count = COUNT) => {
+;(window as unknown as { seed: (withPictures?: boolean, count?: number, shape?: 'column' | 'branches') => Promise<{ id: string; bytes: number; pictures: number }> }).seed = async (withPictures = true, count = COUNT, shape: 'column' | 'branches' = 'column') => {
   const doc = createMapDoc()
   const root = ensureRoot(doc, '500 pictures')
   const ids: string[] = []
+  const branches = shape === 'branches' ? Array.from({ length: 10 }, (_, b) => addChild(doc, root, `Branch ${b + 1}`)) : []
   let bytes = 0
   for (let i = 0; i < count; i++) {
-    const topic = addChild(doc, root, `Topic ${i}`)
+    // 'branches': ten branches of fifty pictures each (a realistic map); 'column': all under the centre (one very tall column)
+    const parent = shape === 'branches' ? (branches[Math.floor(i / (count / 10))] as string) : root
+    const topic = addChild(doc, parent, `Topic ${i}`)
     if (!withPictures) continue // the same map without pictures, to tell what the pictures cost
     const p = await picture(i)
     const id = await pictureIdOf(p.blob)

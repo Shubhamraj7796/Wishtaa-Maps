@@ -11,14 +11,14 @@ const server = spawn(process.platform === 'win32' ? 'npx.cmd' : 'npx', ['vite', 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms))
 const base = `http://localhost:${PORT}`
 
-async function measure(browser, label, contextOptions, cpuSlowdown, withPictures = true) {
+async function measure(browser, label, contextOptions, cpuSlowdown, withPictures = true, shape = 'column') {
   const context = await browser.newContext(contextOptions)
   const page = await context.newPage()
   page.on('pageerror', (e) => console.error('PAGE ERROR', e.message))
   await page.goto(`${base}/bench/map500.html`)
   await page.waitForFunction(() => document.title === 'ready', null, { timeout: 120000 })
   const t0 = Date.now()
-  const seeded = await page.evaluate(([w, n]) => window.seed(w, n), [withPictures, Number(process.env.PICTURES || 500)])
+  const seeded = await page.evaluate(([w, n, sh]) => window.seed(w, n, sh), [withPictures, Number(process.env.PICTURES || 500), shape])
   const seedMs = Date.now() - t0
 
   const client = await context.newCDPSession(page)
@@ -28,7 +28,7 @@ async function measure(browser, label, contextOptions, cpuSlowdown, withPictures
   await page.goto(`${base}/map/${seeded.id}`)
   await page.waitForSelector('[data-topic]', { timeout: 120000 })
   const firstTopicMs = Date.now() - opened
-  if (withPictures) await page.waitForFunction(() => document.querySelector('img[src^="blob:"]'), null, { timeout: 120000 })
+  if (withPictures) await page.waitForFunction(() => document.querySelector('[data-image]'), null, { timeout: 120000 })
   const firstPictureMs = Date.now() - opened
   await wait(1500)
 
@@ -65,7 +65,7 @@ async function measure(browser, label, contextOptions, cpuSlowdown, withPictures
     })
 
   // The whole map in view, then a readable zoom at the top of it.
-  const setup = await page.evaluate(async () => {
+  const setup = await page.evaluate(async (frac) => {
     const A = await import('/src/editor/actions.ts')
     const { useEditor } = await import('/src/editor/store.ts')
     const { getScene } = await import('/src/editor/scene.ts')
@@ -73,9 +73,9 @@ async function measure(browser, label, contextOptions, cpuSlowdown, withPictures
     const fit = useEditor.getState().viewport.k
     const b = getScene().bounds
     const size = useEditor.getState().canvasSize
-    A.setViewport({ k: 0.7, x: size.w / 2 - (b.x + b.w / 2) * 0.7, y: size.h / 2 - (b.y + b.h * 0.25) * 0.7 }) // a quarter of the way down the column
+    A.setViewport({ k: 0.7, x: size.w / 2 - (b.x + b.w / 2) * 0.7, y: size.h / 2 - (b.y + b.h * frac) * 0.7 })
     return { fitZoom: Math.round(fit * 1000) / 1000, bounds: { w: Math.round(b.w), h: Math.round(b.h) } }
-  })
+  }, shape === 'branches' ? 0.5 : 0.25)
   await wait(1500)
   const cx = (contextOptions.viewport.width / 2) | 0
   const cy = (contextOptions.viewport.height / 2) | 0
@@ -114,15 +114,17 @@ try {
   if (!up) throw new Error('dev server did not start')
   const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined, headless: true, args: ['--enable-precise-memory-info'] })
   const rows = []
-  rows.push(await measure(browser, 'desktop 1280x800', { viewport: { width: 1280, height: 800 } }, 1))
-  if (process.env.ONLY === 'desktop') {
-    console.log(JSON.stringify(rows, null, 2))
-    await browser.close()
-    process.exit(0)
+  const desktop = { viewport: { width: 1280, height: 800 } }
+  const tablet = { viewport: { width: 1024, height: 768 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2 }
+  // ROWS="desktop:column,tablet:branches,desktop-base:branches": which runs to make (default: all six)
+  const wanted = (process.env.ROWS || 'desktop:column,tablet:column,desktop:branches,tablet:branches,desktop-base:branches,tablet-base:branches').split(',')
+  for (const row of wanted) {
+    const [who, shape] = row.split(':')
+    const base = who.endsWith('-base')
+    const dev = who.startsWith('tablet') ? tablet : desktop
+    const label = `${who.startsWith('tablet') ? 'tablet 1024x768, touch, 4x slower CPU' : 'desktop 1280x800'}${base ? ' WITHOUT pictures' : ''}, ${shape === 'branches' ? '10 branches of 50' : 'one tall column'}`
+    rows.push(await measure(browser, label, dev, who.startsWith('tablet') ? 4 : 1, !base, shape))
   }
-  rows.push(await measure(browser, 'tablet 1024x768, touch, 4x slower CPU', { viewport: { width: 1024, height: 768 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2 }, 4))
-  rows.push(await measure(browser, 'desktop, same map WITHOUT pictures (baseline)', { viewport: { width: 1280, height: 800 } }, 1, false))
-  rows.push(await measure(browser, 'tablet, same map WITHOUT pictures (baseline)', { viewport: { width: 1024, height: 768 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2 }, 4, false))
   console.log(JSON.stringify(rows, null, 2))
   await browser.close()
 } finally {

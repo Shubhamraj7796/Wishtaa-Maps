@@ -21,8 +21,11 @@ export interface ImageStore {
   delete(id: string): Promise<void>
   keys(): Promise<string[]>
   /** A small picture (about 256 px) drawn instead of the full one when zoomed out or moving. */
-  putThumb(id: string, blob: Blob): Promise<void>
+  putThumb(id: string, blob: Blob, color?: string): Promise<void>
   getThumb(id: string): Promise<Blob | undefined>
+  /** The average colour of the picture (kept with its small version), for drawing a flat placeholder when it is tiny on screen. */
+  getThumbColor(id: string): Promise<string | undefined>
+  setThumbColor(id: string, color: string): Promise<void>
 }
 
 const meta = ({ id, width, height, type, size }: ImageMeta): ImageMeta => ({ id, width, height, type, size })
@@ -30,11 +33,19 @@ const meta = ({ id, width, height, type, size }: ImageMeta): ImageMeta => ({ id,
 export class MemoryImageStore implements ImageStore {
   private items = new Map<string, StoredImage>()
   private thumbs = new Map<string, Blob>()
+  private colors = new Map<string, string>()
   async put(image: StoredImage) {
     this.items.set(image.id, image)
   }
-  async putThumb(id: string, blob: Blob) {
+  async putThumb(id: string, blob: Blob, color?: string) {
     this.thumbs.set(id, blob)
+    if (color) this.colors.set(id, color)
+  }
+  async getThumbColor(id: string) {
+    return this.colors.get(id)
+  }
+  async setThumbColor(id: string, color: string) {
+    this.colors.set(id, color)
   }
   async getThumb(id: string) {
     return this.thumbs.get(id)
@@ -49,6 +60,7 @@ export class MemoryImageStore implements ImageStore {
   async delete(id: string) {
     this.items.delete(id)
     this.thumbs.delete(id)
+    this.colors.delete(id)
   }
   async keys() {
     return [...this.items.keys()]
@@ -130,15 +142,28 @@ export class IndexedDbImageStore implements ImageStore {
     return meta(row)
   }
 
-  async putThumb(id: string, blob: Blob) {
+  async putThumb(id: string, blob: Blob, color?: string) {
     const db = await this.db()
-    await wrap(db.transaction(THUMBS, 'readwrite').objectStore(THUMBS).put({ id, type: blob.type, data: await blob.arrayBuffer() }))
+    await wrap(db.transaction(THUMBS, 'readwrite').objectStore(THUMBS).put({ id, type: blob.type, data: await blob.arrayBuffer(), ...(color ? { color } : {}) }))
   }
 
   async getThumb(id: string) {
     const db = await this.db()
     const row = (await wrap(db.transaction(THUMBS, 'readonly').objectStore(THUMBS).get(id))) as { type: string; data: ArrayBuffer } | undefined
     return row && new Blob([row.data], { type: row.type })
+  }
+
+  async getThumbColor(id: string) {
+    const db = await this.db()
+    const row = (await wrap(db.transaction(THUMBS, 'readonly').objectStore(THUMBS).get(id))) as { color?: string } | undefined
+    return row?.color
+  }
+
+  async setThumbColor(id: string, color: string) {
+    const db = await this.db()
+    const store = db.transaction(THUMBS, 'readwrite').objectStore(THUMBS)
+    const row = (await wrap(store.get(id))) as Record<string, unknown> | undefined
+    if (row) await wrap(store.put({ ...row, color }))
   }
 
   async delete(id: string) {
