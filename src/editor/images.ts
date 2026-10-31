@@ -28,7 +28,7 @@ export const imageStore: ImageStore = createStore()
 
 // ---- pending writes (the autosaver waits for these before writing the map) ----
 const pending = new Set<Promise<unknown>>()
-function track<T>(p: Promise<T>): Promise<T> {
+export function track<T>(p: Promise<T>): Promise<T> {
   pending.add(p)
   const done = () => void pending.delete(p)
   p.then(done, done)
@@ -140,11 +140,17 @@ export function selectImage(topicId: string) {
 }
 export const clearImageSelection = () => set({ imageSelected: null })
 
-export async function addImageToTopic(file: Blob, topicId: string): Promise<void> {
+export async function addImageToTopic(file: Blob, topicId: string, source: 'paste' | 'drop' = 'drop'): Promise<void> {
   if (!get().topics[topicId]) {
     showNotice('Select a topic first, then add the image.')
     return
   }
+  const { addPictures } = await import('./pictures/flow')
+  await addPictures([file], source, { kind: 'topic', id: topicId })
+}
+
+/** The old way: store at the fixed size without asking. Kept for code that still needs a plain add. */
+export async function addImagePlain(file: Blob, topicId: string): Promise<void> {
   try {
     const p = await processImageFile(file)
     const id = newId()
@@ -202,13 +208,10 @@ export function pickImageFile(): Promise<File | null> {
   })
 }
 
+/** Opens the Add picture menu for a topic (or, with none selected, for a new child of the focused topic). */
 export async function cmdAddImage(topicId: string | null = currentTopicId()) {
-  if (!topicId) {
-    showNotice('Select a topic first, then add the image.')
-    return
-  }
-  const file = await pickImageFile()
-  if (file) await addImageToTopic(file, topicId)
+  const { openAddPicture } = await import('./pictures/flow')
+  openAddPicture(topicId ? { kind: 'topic', id: topicId } : undefined)
 }
 
 /** First image in a clipboard or drag payload. */
@@ -245,8 +248,8 @@ export async function downloadImage(imageId: string, name: string) {
 
 /** Replaces a topic's picture with a new file (the old one is cleaned up later). */
 export async function replaceImage(topicId: string) {
-  const file = await pickImageFile()
-  if (file) await addImageToTopic(file, topicId)
+  const { openAddPicture } = await import('./pictures/flow')
+  openAddPicture({ kind: 'replace', id: topicId })
 }
 
 /** Puts a picture on the clipboard, where the browser allows it. */

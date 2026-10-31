@@ -1,3 +1,4 @@
+import { importPictures } from './importPictures'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { DriveError } from '@/core/drive/errors'
 import { OPEN_HINT } from '@/core/drive/openable'
@@ -103,7 +104,7 @@ export function DriveOpenDialog({ docs, onClose }: { docs: OpenedDoc[]; onClose:
     const link = linkFor(item)
     let out: ImportOutcome
     try {
-      out = await importToPlacement([file], { repo: f.repo, images: imageStore, downscale: downscaleImage, options: { clearPlaceholderText: clearPlaceholder } }, placement, sender, [link])
+      out = await importToPlacement([file], { repo: f.repo, images: imageStore, downscale: downscaleImage, options: { clearPlaceholderText: clearPlaceholder }, pictures: importPictures() }, placement, sender, [link])
     } catch (e) {
       return fail(e, async () => void (await redo(item)))
     }

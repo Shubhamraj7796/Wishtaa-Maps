@@ -24,11 +24,19 @@ export type MouseWheelMode = 'move' | 'zoom'
 /** When the settings panel appears: by itself (Auto), always, or only from its handle (Manual). */
 export type PanelMode = 'auto' | 'always' | 'manual'
 
+/** What to do when a picture could be made smaller: ask each time, always compress, or always keep the original. */
+export type PicturesPref = 'ask' | 'compress' | 'original'
+
+/** Big, touch-sized controls: decided by the device (Auto), or forced on or off. */
+export type TouchControls = 'auto' | 'on' | 'off'
+
 interface Saved {
   theme?: unknown
   mouseWheel?: unknown
   openAllReadOnly?: unknown
   panelMode?: unknown
+  picturesPref?: unknown
+  touchControls?: unknown
   panelPinned?: unknown
   wheelHintSeen?: unknown
 }
@@ -53,6 +61,10 @@ interface SettingsState {
   setOpenAllReadOnly: (on: boolean) => void
   panelMode: PanelMode
   setPanelMode: (m: PanelMode) => void
+  picturesPref: PicturesPref
+  setPicturesPref: (p: PicturesPref) => void
+  touchControls: TouchControls
+  setTouchControls: (t: TouchControls) => void
   /** The settings panel stays docked open (large screens). */
   panelPinned: boolean
   setPanelPinned: (on: boolean) => void
@@ -67,9 +79,9 @@ const initial = readSavedTheme(storage)
 
 export const useSettings = create<SettingsState>((set, get) => {
   const persist = () => {
-    const { theme, mouseWheel, openAllReadOnly, wheelHintSeen, panelMode, panelPinned } = get()
+    const { theme, mouseWheel, openAllReadOnly, wheelHintSeen, panelMode, panelPinned, picturesPref, touchControls } = get()
     try {
-      localStorage.setItem(KEY, JSON.stringify({ theme, mouseWheel, openAllReadOnly, wheelHintSeen, panelMode, panelPinned }))
+      localStorage.setItem(KEY, JSON.stringify({ theme, mouseWheel, openAllReadOnly, wheelHintSeen, panelMode, panelPinned, picturesPref, touchControls }))
     } catch {
       /* ignore */
     }
@@ -91,6 +103,16 @@ export const useSettings = create<SettingsState>((set, get) => {
       persist()
     },
     panelMode: saved.panelMode === 'always' || saved.panelMode === 'manual' ? saved.panelMode : 'auto',
+    picturesPref: saved.picturesPref === 'compress' || saved.picturesPref === 'original' ? saved.picturesPref : 'ask',
+    setPicturesPref: (picturesPref) => {
+      set({ picturesPref })
+      persist()
+    },
+    touchControls: saved.touchControls === 'on' || saved.touchControls === 'off' ? saved.touchControls : 'auto',
+    setTouchControls: (touchControls) => {
+      set({ touchControls })
+      persist()
+    },
     setPanelMode: (panelMode) => {
       set({ panelMode })
       persist()

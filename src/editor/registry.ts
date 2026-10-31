@@ -14,6 +14,7 @@ import {
   selectedImageTopic,
 } from './images'
 import { blockedInReadMode, toggleReadMode } from './readmode'
+import { resolveTarget, startSource } from './pictures/flow'
 import { useEditor } from './store'
 
 export interface Cmd {
@@ -30,6 +31,9 @@ export interface Cmd {
 }
 
 const st = useEditor.getState
+
+/** Ctrl+Shift+S: one screen capture into the selected topic (or a new child of the focused one). */
+const captureToPicture = () => startSource('capture', resolveTarget())
 
 export const COMMANDS: Cmd[] = [
   { id: 'child', label: 'Add child topic', group: 'Edit', keys: ['Tab'], run: A.cmdAddChild },
@@ -58,6 +62,7 @@ export const COMMANDS: Cmd[] = [
   { id: 'paste', label: 'Paste', group: 'Edit', hint: 'Ctrl+V', run: () => {}, palette: false },
   { id: 'pasteImage', label: 'Paste an image into the selected topic', group: 'Edit', hint: 'Ctrl+V', run: () => {}, palette: false },
   { id: 'addImage', label: 'Add picture to topic…', group: 'Insert', keys: ['Ctrl+Alt+I'], run: () => void cmdAddImage() },
+  { id: 'captureScreen', label: 'Capture screen as a picture', group: 'Insert', keys: ['Ctrl+Shift+S'], run: () => void captureToPicture() },
   { id: 'removeImage', label: 'Remove image from topic', group: 'Edit', run: () => removeImage() },
   {
     id: 'selectImage',

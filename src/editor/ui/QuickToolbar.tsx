@@ -5,6 +5,7 @@ import { isLargeText } from '@/core/theme/color'
 import { resolveLine, resolveLook } from '@/core/theme/resolve'
 import { FONT_OPTIONS } from '@/core/theme/themes'
 import { Icon } from '@/ui/icons'
+import { cmdAddImage } from '../images'
 import * as A from '../actions'
 import { placeToolbar, unionRect, type Placement } from '../quickToolbarPlace'
 import { useScene, useTheme } from '../scene'
@@ -247,6 +248,7 @@ export function QuickToolbar() {
                 ['Copy format', () => A.copyFormat(), false],
                 ['Paste format', () => A.pasteFormat(), !copied],
                 ['Reset style', () => A.resetStyleSelected(), false],
+                ['Add picture…', () => void cmdAddImage(primary), false],
                 ['Open the Style panel', () => A.togglePanel('style'), false],
               ] as [string, () => void, boolean][]
             ).map(([label, run, disabled]) => (

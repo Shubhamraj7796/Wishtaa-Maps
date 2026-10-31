@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, type FormEvent, type Re
 import { NavLink, Outlet, useLocation, useMatch, useNavigate, useSearchParams } from 'react-router-dom'
 import { useSettings } from '@/stores/settings'
 import { Dialogs } from './Dialogs'
+import { PictureChoiceDialog } from '@/editor/ui/PictureChoiceDialog'
 import { CreateBridge } from './createFlow'
 import { ConflictPrompt, DriveBanner } from './DriveUi'
 import { useFiles } from './FilesContext'
@@ -229,6 +230,7 @@ export function Shell(): ReactNode {
       </div>
       <Dialogs />
       <CreateBridge />
+      <PictureChoiceDialog />
       <Toast />
     </ShellCtx.Provider>
   )

@@ -49,7 +49,7 @@ export function installKeyboard(): () => void {
     if (image) {
       e.preventDefault()
       const target = currentTopicId()
-      if (target) void addImageToTopic(image, target)
+      if (target) void addImageToTopic(image, target, 'paste')
       else showNotice('Select a topic first, then paste the image.')
       return
     }

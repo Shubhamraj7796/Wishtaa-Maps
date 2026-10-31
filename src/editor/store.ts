@@ -20,6 +20,25 @@ export interface SearchState {
   index: number
 }
 
+/** Where a new picture goes: onto a topic, as a new child topic, or in place of the topic's picture. */
+export type PictureTarget = { kind: 'topic'; id: string } | { kind: 'child'; parentId: string } | { kind: 'replace'; id: string }
+export type PictureSource = 'upload' | 'camera' | 'gallery' | 'paste' | 'capture' | 'drop'
+
+export interface PictureDraft {
+  blob: Blob
+  source: PictureSource
+  target: PictureTarget
+  /** Takes the picture again (camera, screen capture). */
+  retake?: () => Promise<Blob | null>
+}
+
+export interface PictureChoiceRequest {
+  items: { name: string; original: number; compressed: number }[]
+  /** A picture to preview, original then compressed (single pictures). */
+  preview?: { original: Blob; compressed: Blob }
+  resolve: (answer: { choice: 'compressed' | 'original'; remember: boolean } | null) => void
+}
+
 export type ReadReason = 'user' | 'file' | 'preference' | 'drive' | 'link'
 
 export interface Notice {
@@ -102,6 +121,12 @@ export interface EditorState {
   dragging: boolean
   /** Said aloud when the panel opens a section by itself. */
   panelAnnouncement: string
+  /** The Add picture menu is open for this target. */
+  pictureMenu: PictureTarget | null
+  /** A picture being cropped before it is added. */
+  pictureDraft: PictureDraft | null
+  /** The choice between Compressed and Original is waiting for an answer. */
+  pictureChoice: PictureChoiceRequest | null
   /** Apply style changes to the whole branch, not just the selected topics. */
   /** Copied topic format; while set, clicking a topic paints it (format painter). */
   painter: TopicStyle | null
@@ -177,6 +202,9 @@ export const useEditor = create<EditorState>(() => ({
   panelOpener: null,
   dragging: false,
   panelAnnouncement: '',
+  pictureMenu: null,
+  pictureDraft: null,
+  pictureChoice: null,
   painter: null,
   themePreview: null,
   copiedFormat: null,

@@ -118,3 +118,30 @@ describe('Preferences', () => {
     expect(useSettings.getState().mouseWheel).toBe('zoom')
   })
 })
+
+describe('Preferences: pictures and touch', () => {
+  it('Pictures: ask each time (default), always compress, always keep original; remembered, and can be reset', () => {
+    useSettings.setState({ picturesPref: 'ask' })
+    render(<PreferencesDialog onClose={() => undefined} />)
+    const group = screen.getByRole('group', { name: 'Pictures' })
+    expect((within(group).getByRole('radio', { name: /Ask each time/ }) as HTMLInputElement).checked).toBe(true)
+    fireEvent.click(within(group).getByRole('radio', { name: /Always compress/ }))
+    expect(useSettings.getState().picturesPref).toBe('compress')
+    expect(JSON.parse(localStorage.getItem('wishtaamaps:settings') ?? '{}').picturesPref).toBe('compress')
+    fireEvent.click(within(group).getByRole('radio', { name: /Always keep original/ }))
+    expect(useSettings.getState().picturesPref).toBe('original')
+    fireEvent.click(within(group).getByRole('radio', { name: /Ask each time/ }))
+    expect(useSettings.getState().picturesPref).toBe('ask')
+  })
+
+  it('Touch-friendly controls: Auto (default) / Always on / Off', () => {
+    useSettings.setState({ touchControls: 'auto' })
+    render(<PreferencesDialog onClose={() => undefined} />)
+    const group = screen.getByRole('group', { name: 'Touch-friendly controls' })
+    expect((within(group).getByRole('radio', { name: /Auto/ }) as HTMLInputElement).checked).toBe(true)
+    fireEvent.click(within(group).getByRole('radio', { name: 'Always on' }))
+    expect(useSettings.getState().touchControls).toBe('on')
+    fireEvent.click(within(group).getByRole('radio', { name: 'Off' }))
+    expect(useSettings.getState().touchControls).toBe('off')
+  })
+})

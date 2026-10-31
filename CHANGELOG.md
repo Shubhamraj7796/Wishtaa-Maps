@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Add picture: one menu, crop, readable compression, touch
+- **Add picture** menu with Upload, Upload and crop, Take photo, Choose from Photos, Paste from clipboard, Capture screen (Ctrl+Shift+S), drag and
+  drop, and Insert from my pictures. Bottom sheet on touch devices (decided by the device, not the window width).
+- **Crop step** for camera, photos, paste and capture: large touch handles, pinch and pan, rotate, Retake, live size, keyboard control.
+- **Readable, not high resolution**: Compressed (about 1280 px, WebP/JPEG/PNG whichever is smallest, never enlarged, EXIF removed) or Original;
+  asked only when it would save at least 25% and 30 KB; "don't ask again" in Preferences; the same choice once for a whole .emmx import.
+- Pictures get content-hash ids, so the same picture is stored once. See `docs/pictures.md`.
+
 ### Open from Google Drive (.wishtaa and .emmx)
 - One action, **Open from Google Drive**, everywhere (Home, All files, Google Drive page, New file dialog, command palette). Several files at once.
 - Every pick is checked by name and content; other files are refused with a clear message. See `docs/google-drive-setup.md` for what the Picker cannot do.

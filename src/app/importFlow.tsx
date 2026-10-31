@@ -1,3 +1,4 @@
+import { importPictures } from './importPictures'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useMatch } from 'react-router-dom'
 import { DriveError } from '@/core/drive/errors'
@@ -73,7 +74,7 @@ export function useImportEmmx() {
     /** Into this browser, in a folder: no question, no dialog. */
     const runLocal = async (files: File[], parentId: string | null) => {
       notify(files.length === 1 ? `Importing "${files[0]?.name}"…` : `Importing ${files.length} files…`)
-      const out = await importToPlacement(files, { repo, images: imageStore, downscale: downscaleImage }, { storage: 'local', parentId }, driveRepository)
+      const out = await importToPlacement(files, { repo, images: imageStore, downscale: downscaleImage, pictures: importPictures() }, { storage: 'local', parentId }, driveRepository)
       presentImport(out.summaries, { open, notify, setDialog })
     }
 
@@ -132,7 +133,7 @@ export function ImportDialog({ d, onClose }: { d: ImportDialogProps; onClose: ()
   const run = async (files: File[], where: Placement) => {
     setPlacement(where)
     setPhase('working')
-    const out = await importToPlacement(files, { repo: f.repo, images: imageStore, downscale: downscaleImage }, where, sender)
+    const out = await importToPlacement(files, { repo: f.repo, images: imageStore, downscale: downscaleImage, pictures: importPictures() }, where, sender)
     setOutcome(out)
     if (out.failures.length) setPhase('failed')
     else done(out)

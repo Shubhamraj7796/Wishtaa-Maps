@@ -10,6 +10,8 @@ import { commandById, displayKeys } from '@/editor/registry'
 import { getTheme, useScene } from '@/editor/scene'
 import { useEditor } from '@/editor/store'
 import { Lightbox, OcrDialog } from '@/editor/ui/Dialogs'
+import { AddPictureMenu } from '@/editor/ui/AddPictureMenu'
+import { CropOverlay } from '@/editor/ui/CropOverlay'
 import { PictureToolbar } from '@/editor/ui/PictureToolbar'
 import { SettingsPanel } from '@/editor/ui/SettingsPanel'
 import { InsertMenu } from '@/editor/ui/InsertMenu'
@@ -201,6 +203,8 @@ function Editor({ file }: { file: FileRecord }) {
           {!readOnly && <ObjectBar />}
           {!readOnly && <QuickToolbar />}
           {!readOnly && <PictureToolbar />}
+          {!readOnly && <AddPictureMenu />}
+          {!readOnly && <CropOverlay />}
           <CommandPalette />
           <ShortcutSheet />
           <ContextMenu />

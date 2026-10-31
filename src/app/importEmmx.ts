@@ -7,6 +7,9 @@ import { DriveError } from '@/core/drive/errors'
 import type { Placement } from '@/core/drive/placement'
 import type { FileRecord, FileRepository, SourceLink } from '@/core/files/types'
 import type { ImageStore } from '@/core/images/store'
+import { analyze, type Codec } from '@/core/images/pipeline'
+import { decide, shouldAsk, type PicturesPref } from '@/core/images/plan'
+import { pictureIdOf } from '@/core/images/sha256'
 
 /** What happened to one imported map. */
 export interface ImportedFile {
@@ -30,7 +33,16 @@ export interface ImportReport {
   summaries: ImportSummary[]
 }
 
+/** How imported pictures are sized: the same pipeline as every other picture. Left out = keep the original bytes (older behaviour). */
+export interface ImportPictures {
+  pref: PicturesPref
+  codec: Codec
+  /** Asked once for the whole file, only when compressing would save a good amount. */
+  choose(info: { count: number; original: number; compressed: number }): Promise<'compressed' | 'original' | null>
+}
+
 export interface ImportDeps {
+  pictures?: ImportPictures
   repo: FileRepository
   images: ImageStore
   parentId: string | null
@@ -85,13 +97,45 @@ export async function importEmmx(file: PickedFile, deps: ImportDeps): Promise<Im
     summary.unknownTypes = { ...result.stats.unknownTypes }
     summary.unsupportedElements = { ...result.stats.unsupportedElements }
 
+    // Pictures only need to be readable: once for the whole file, compress the ones where it helps, unless told not to.
+    const smaller = new Map<string, { blob: Blob; width: number; height: number; type: string }>()
+    if (deps.pictures && result.images.size) {
+      const p = deps.pictures
+      let originalTotal = 0
+      let compressedTotal = 0
+      for (const img of result.images.values()) {
+        originalTotal += img.bytes.byteLength
+        let size = img.bytes.byteLength
+        try {
+          const a = await analyze(new Blob([img.bytes as BlobPart], { type: img.type }), {}, p.codec)
+          if (shouldAsk(img.bytes.byteLength, a.compressed.blob.size)) {
+            smaller.set(img.hash, a.compressed)
+            size = a.compressed.blob.size // pictures that cannot be compressed meaningfully stay as they are
+          }
+        } catch {
+          /* kept as it is */
+        }
+        compressedTotal += size
+      }
+      const d = decide(p.pref, originalTotal, smaller.size ? compressedTotal : null)
+      let use: 'compressed' | 'original' | null = d.use
+      if (d.ask) use = await p.choose({ count: result.images.size, original: originalTotal, compressed: compressedTotal })
+      if (use !== 'compressed') smaller.clear()
+    }
+
     // Pictures first, so a map never refers to one that isn't stored.
     const ids = new Map<string, string>()
     let failed = 0
     for (const img of result.images.values()) {
-      const id = importedImageId(img.hash)
+      const squeezed = smaller.get(img.hash)
+      const id = squeezed ? await pictureIdOf(squeezed.blob) : importedImageId(img.hash)
       try {
         if (await deps.images.getMeta(id)) {
+          ids.set(img.hash, id)
+          continue
+        }
+        if (squeezed) {
+          await deps.images.put({ id, width: squeezed.width, height: squeezed.height, type: squeezed.type, size: squeezed.blob.size, blob: squeezed.blob })
           ids.set(img.hash, id)
           continue
         }

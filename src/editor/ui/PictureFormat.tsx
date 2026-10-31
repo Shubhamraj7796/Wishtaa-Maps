@@ -3,6 +3,7 @@ import { IMAGE_POSITIONS, type ImagePosition } from '@/core/model/topic'
 import { Icon, PositionIcon } from '@/ui/icons'
 import { applyPictureSizeToAll, setPictureAlt, setPicturePosition, showPreview } from '../content'
 import { commitImageSize, copyImage, downloadImage, removeImage, replaceImage, resetImageSize } from '../images'
+import { originalFor } from '../pictures/flow'
 import { useEditor } from '../store'
 import { Section, field } from './panelKit'
 
@@ -155,6 +156,11 @@ export function PictureFormat() {
           <button type="button" aria-label="Replace the picture" title="Replace the picture" onClick={() => void replaceImage(id)} className={`${field} flex items-center gap-1.5 hover:bg-bg`}>
             <Icon name="replace" size={15} /> Replace
           </button>
+          {originalFor(image.imageId) && (
+            <button type="button" aria-label="Crop again" title="Crop again (until you close this tab)" onClick={() => useEditor.setState({ pictureDraft: { blob: originalFor(image.imageId) as Blob, source: 'upload', target: { kind: 'replace', id } } })} className={`${field} flex items-center gap-1.5 hover:bg-bg`}>
+              <Icon name="image" size={15} /> Crop again
+            </button>
+          )}
           <button type="button" aria-label="Preview the picture" title="Preview" onClick={() => showPreview(image.imageId)} className={iconBtn}>
             <Icon name="preview" size={16} />
           </button>
