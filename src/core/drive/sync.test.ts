@@ -30,8 +30,8 @@ describe('isExternalChange (does a different version in Drive mean someone else 
   it('ignores Drive bumping its own version number (the content is identical)', () => {
     expect(isExternalChange(base, same)).toBe(false)
   })
-  it('is a change when the content checksum differs', () => {
-    expect(isExternalChange(base, { ...same, md5Checksum: 'bbb' })).toBe(true)
+  it('is a change when the revision and the checksum both differ and the marker is not ours', () => {
+    expect(isExternalChange(base, { ...same, md5Checksum: 'bbb', headRevisionId: 'r2' })).toBe(true)
   })
   it('uses the checksum over the time: a newer time with identical content is not a change', () => {
     expect(isExternalChange(base, { ...same, modifiedTime: '2026-11-01T00:00:00.000Z' })).toBe(false)
@@ -78,7 +78,8 @@ describe('saving a Drive map over and over', () => {
   it('records the base from Drive, content identity included', async () => {
     const f = await driveFile()
     const remote = drive.files.get(f.contentRef!)!.meta
-    expect(f.driveMeta).toEqual({ version: remote.version, modifiedTime: remote.modifiedTime, md5: remote.md5Checksum, revisionId: remote.headRevisionId })
+    expect(f.driveMeta).toMatchObject({ version: remote.version, modifiedTime: remote.modifiedTime, md5: remote.md5Checksum, revisionId: remote.headRevisionId, counter: 1 })
+    expect(f.driveMeta?.session).toBe(repo.session)
   })
 
   it('five edits in a row save every time, with no conflict (the reported bug)', async () => {

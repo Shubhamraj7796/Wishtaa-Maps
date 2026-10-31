@@ -5,7 +5,7 @@ import type { DriveApi, DriveFileMeta } from './client'
 import { driveLog } from './debug'
 import { DriveConflictError, DriveError } from './errors'
 import { driveFileName, nameFromDrive, packFile, restoreBlobs, unpackFile, type BlobStores } from './format'
-import { baseOf, isExternalChange } from './sync'
+import { baseOf, classify, describeWriter, markerProps, type Marker } from './sync'
 
 export interface DriveConflict {
   fileId: string
@@ -20,9 +20,19 @@ export interface DriveRepositoryOptions {
   blobs?: () => BlobStores | undefined
   /** Remembers which files have changes not yet sent to Drive (survives a reload). */
   storage?: Pick<Storage, 'getItem' | 'setItem'>
+  /** This tab's writer identity (made fresh per page load). Tests set it to act as different tabs. */
+  sessionId?: string
+  /** The address the app runs at (shown to the person when another address wrote the file). */
+  writerOrigin?: string
 }
 
 const DIRTY_KEY = 'wishtaamaps:drive-unsynced'
+
+/**
+ * The per-file queue of remote work, shared by every repository in this page (a second instance can exist after a hot
+ * reload), so no two of them can interleave "check Drive, upload, store the new base" for the same file.
+ */
+const chains = new Map<string, Promise<unknown>>()
 
 /**
  * Wraps the local file repository. Files stored in Google Drive keep a local copy (so editing is instant and works
@@ -35,8 +45,11 @@ export class DriveRepository implements FileRepository {
   private conflictMap = new Map<string, DriveConflict>()
   private conflictList: DriveConflict[] = []
   private syncListeners = new Set<() => void>()
-  private chains = new Map<string, Promise<unknown>>()
   private unsynced: Set<string>
+  /** Who this tab is, as a writer: stamped on every file it writes so its own writes are recognised by identity. */
+  readonly session: string
+  readonly origin: string | undefined
+  private counter = 0
 
   constructor(
     private local: FileRepository,
@@ -44,6 +57,13 @@ export class DriveRepository implements FileRepository {
     private opts: DriveRepositoryOptions = {}
   ) {
     this.unsynced = new Set(this.readUnsynced())
+    this.session = opts.sessionId ?? newSessionId()
+    this.origin = opts.writerOrigin ?? (typeof location !== 'undefined' ? location.host : undefined)
+  }
+
+  /** The marker for the next write: this tab's session and a counter that only goes up. */
+  private nextMarker(): Marker {
+    return { session: this.session, counter: ++this.counter, ...(this.origin ? { origin: this.origin } : {}) }
   }
 
   // ---- unsynced bookkeeping ------------------------------------------------------------------------------
@@ -107,14 +127,36 @@ export class DriveRepository implements FileRepository {
 
   /** Runs remote work for one file one at a time, so a rename and a save never trip over each other. */
   private lock<T>(id: string, work: () => Promise<T>): Promise<T> {
-    const prev = this.chains.get(id) ?? Promise.resolve()
-    const run = prev.then(work, work)
+    const prev = chains.get(id) ?? Promise.resolve()
+    const guarded = () => this.acrossTabs(id, work)
+    const run: Promise<T> = prev.then(guarded, guarded)
     const tail = run.catch(() => undefined)
-    this.chains.set(id, tail)
+    chains.set(id, tail)
     void tail.then(() => {
-      if (this.chains.get(id) === tail) this.chains.delete(id)
+      if (chains.get(id) === tail) chains.delete(id)
     })
     return run
+  }
+
+  /**
+   * Also takes a browser-wide lock for the file (Web Locks), so two tabs of this browser can't interleave "check Drive,
+   * upload, store the new base": whichever comes second checks against the base the first one just stored.
+   */
+  private acrossTabs<T>(id: string, work: () => Promise<T>): Promise<T> {
+    const locks = typeof navigator !== 'undefined' ? ((navigator as unknown as { locks?: WebLocks }).locks ?? undefined) : undefined
+    return locks ? locks.request<T>(`wishtaamaps-drive-${id}`, work) : work()
+  }
+
+  /** True when what Drive holds is byte-for-byte what we hold, so there is nothing to choose between. */
+  private async sameContent(f: FileRecord & { contentRef: string }): Promise<boolean> {
+    try {
+      const mine = await this.local.loadContent(f.id)
+      if (!mine) return false
+      const theirs = unpackFile(await this.api.download(f.contentRef)).content
+      return mine.length === theirs.length && mine.every((b, i) => b === theirs[i])
+    } catch {
+      return false
+    }
   }
 
   private isDrive(f: FileRecord | null | undefined): f is FileRecord & { contentRef: string } {
@@ -165,26 +207,37 @@ export class DriveRepository implements FileRepository {
       throw e
     }
     if (remote.trashed) throw new DriveError('notfound', 'This file was moved to the Google Drive bin. Restore it there, or keep it in this browser.')
-    const external = isExternalChange(f.driveMeta, remote)
+    const state = classify(f.driveMeta, remote)
+    const external = state === 'external'
     driveLog('check', {
       file: f.name,
       base: f.driveMeta ?? null,
       fresh: { version: remote.version, modifiedTime: remote.modifiedTime, md5: remote.md5Checksum, rev: remote.headRevisionId },
+      writer: remote.appProperties ?? null,
       versionDiffers: !!f.driveMeta && f.driveMeta.version !== remote.version,
-      externalChange: external,
+      state,
     })
     if (external) {
+      if (await this.sameContent(f)) {
+        // Another writer, but the content is identical to ours: nothing to choose, adopt Drive's revision.
+        await this.local.update(id, { driveMeta: baseOf(remote) })
+        driveLog('adopted-identical', { file: f.name, stored: baseOf(remote) })
+        this.markUnsynced(id, false)
+        this.clearConflict(id)
+        return
+      }
       this.setConflict(id, remote)
-      throw new DriveConflictError()
+      throw new DriveConflictError(`This file was changed in Google Drive. ${describeWriter(remote, { session: this.session, origin: this.origin })} Choose which version to keep.`)
     }
     // Not a real change (our own write, or Drive's housekeeping): a conflict raised earlier from a stale check is void.
     this.clearConflict(id)
     const content = await this.local.loadContent(id)
     if (!content) return
-    const out = await this.api.update(f.contentRef, { name: driveFileName(f.name), body: await this.pack(f, content) })
-    // The new base is stored before this save counts as finished, so the next one compares against it.
-    await this.local.update(id, { driveMeta: baseOf(out) })
-    driveLog('saved', { file: f.name, stored: baseOf(out) })
+    const marker = this.nextMarker()
+    const out = await this.api.update(f.contentRef, { name: driveFileName(f.name), body: await this.pack(f, content), appProperties: markerProps(marker) })
+    // The new base (revision and our marker) is stored before this save counts as finished, so the next one compares against it.
+    await this.local.update(id, { driveMeta: baseOf(out, marker) })
+    driveLog('saved', { file: f.name, stored: baseOf(out, marker) })
     this.markUnsynced(id, false)
   }
 
@@ -255,8 +308,16 @@ export class DriveRepository implements FileRepository {
     try {
       return await this.lock(id, async () => {
         const remote = await this.api.meta(f.contentRef)
-        if (remote.trashed || !isExternalChange(f.driveMeta, remote)) return this.local.loadContent(id)
+        if (remote.trashed) return this.local.loadContent(id)
+        const state = classify(f.driveMeta, remote)
+        if (state !== 'external') return this.local.loadContent(id)
         if (this.unsynced.has(id)) {
+          if (await this.sameContent(f)) {
+            await this.local.update(id, { driveMeta: baseOf(remote) }) // identical: nothing to choose, adopt silently
+            this.markUnsynced(id, false)
+            this.clearConflict(id)
+            return this.local.loadContent(id)
+          }
           this.setConflict(id, remote)
           return this.local.loadContent(id)
         }
@@ -333,9 +394,10 @@ export class DriveRepository implements FileRepository {
     const content = await this.local.loadContent(id)
     if (!content) throw new DriveError('other', 'This file has no content to save yet.')
     const parentId = parentFolderId ?? (await this.api.ensureAppFolder())
-    const made = await this.api.create({ name: driveFileName(f.name), parentId, body: await this.pack(f, content) })
-    driveLog('moved-to-drive', { file: f.name, stored: baseOf(made) })
-    return this.local.update(id, { storage: 'drive', contentRef: made.id, driveMeta: baseOf(made) })
+    const marker = this.nextMarker()
+    const made = await this.api.create({ name: driveFileName(f.name), parentId, body: await this.pack(f, content), appProperties: markerProps(marker) })
+    driveLog('moved-to-drive', { file: f.name, stored: baseOf(made, marker) })
+    return this.local.update(id, { storage: 'drive', contentRef: made.id, driveMeta: baseOf(made, marker) })
   }
 
   /**
@@ -415,9 +477,10 @@ export class DriveRepository implements FileRepository {
       if (choice === 'mine') {
         const content = await this.local.loadContent(id)
         if (content) {
-          const out = await this.api.update(f.contentRef, { name: driveFileName(f.name), body: await this.pack(f, content) })
-          await this.local.update(id, { driveMeta: baseOf(out) })
-          driveLog('kept-mine', { file: f.name, stored: baseOf(out) })
+          const marker = this.nextMarker()
+          const out = await this.api.update(f.contentRef, { name: driveFileName(f.name), body: await this.pack(f, content), appProperties: markerProps(marker) })
+          await this.local.update(id, { driveMeta: baseOf(out, marker) })
+          driveLog('kept-mine', { file: f.name, stored: baseOf(out, marker) })
         }
         this.markUnsynced(id, false)
       } else {
@@ -435,4 +498,16 @@ export class DriveRepository implements FileRepository {
       return this.local.get(id)
     })
   }
+}
+
+function newSessionId(): string {
+  try {
+    return globalThis.crypto.randomUUID()
+  } catch {
+    return `s${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`
+  }
+}
+
+interface WebLocks {
+  request<R>(name: string, callback: () => Promise<R>): Promise<R>
 }

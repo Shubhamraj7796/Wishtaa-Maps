@@ -22,6 +22,7 @@ import type { FileRecord } from '@/core/files/types'
 import { Icon } from '@/ui/icons'
 import { IconButton } from '@/ui/IconButton'
 import { ErrorBoundary } from './ErrorBoundary'
+import { SaveLocation } from './SaveLocation'
 import { useFiles } from './FilesContext'
 import { EditorMenuButton, Wordmark } from './Shell'
 import { ArrowLeft, Search as SearchIcon } from './icons'
@@ -124,6 +125,7 @@ function Editor({ file }: { file: FileRecord }) {
           className="w-28 shrink-0 rounded-ui border border-transparent bg-transparent px-2 py-1 text-sm font-medium hover:border-line focus:border-brand sm:w-44"
         />
         <SaveStatus />
+        <SaveLocation />
         <div className="ml-auto flex shrink-0 items-center gap-0.5">
           <IconButton icon="hand" label="Hand tool: drag to pan" keys="H" active={tool === 'pan'} onClick={() => A.setTool('pan')} />
           <IconButton icon="select" label="Select tool: drag to box-select" keys="V" active={tool === 'select'} onClick={() => A.setTool('select')} />

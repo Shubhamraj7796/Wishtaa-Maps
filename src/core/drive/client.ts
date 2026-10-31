@@ -5,7 +5,7 @@ const API = 'https://www.googleapis.com/drive/v3'
 const UPLOAD = 'https://www.googleapis.com/upload/drive/v3'
 export const FOLDER_MIME = 'application/vnd.google-apps.folder'
 export const APP_FOLDER_NAME = 'Wishtaa Maps'
-const FILE_FIELDS = 'id,name,mimeType,modifiedTime,version,md5Checksum,headRevisionId,trashed,parents'
+const FILE_FIELDS = 'id,name,mimeType,modifiedTime,version,md5Checksum,headRevisionId,trashed,parents,appProperties'
 
 export interface DriveFileMeta {
   id: string
@@ -18,6 +18,8 @@ export interface DriveFileMeta {
   headRevisionId?: string
   trashed?: boolean
   parents?: string[]
+  /** Small key/value pairs only this app sets: the writer marker (see `sync.ts`). */
+  appProperties?: Record<string, string>
 }
 
 /** What the rest of the app needs from Google Drive. The real one is `DriveClient`; tests use an in-memory fake. */
@@ -28,10 +30,10 @@ export interface DriveApi {
   ensureAppFolder(): Promise<string>
   meta(id: string): Promise<DriveFileMeta>
   download(id: string): Promise<string>
-  create(input: { name: string; parentId: string; body: string }): Promise<DriveFileMeta>
+  create(input: { name: string; parentId: string; body: string; appProperties?: Record<string, string> }): Promise<DriveFileMeta>
   /** A real Drive folder inside `parentId`. */
   createFolder(name: string, parentId: string): Promise<DriveFileMeta>
-  update(id: string, input: { name?: string; body: string }): Promise<DriveFileMeta>
+  update(id: string, input: { name?: string; body: string; appProperties?: Record<string, string> }): Promise<DriveFileMeta>
   list(parentId: string): Promise<DriveFileMeta[]>
   trash(id: string): Promise<void>
 }
@@ -149,8 +151,8 @@ export class DriveClient implements DriveApi {
     return { headers: { 'Content-Type': `multipart/related; boundary=${boundary}` }, body: text }
   }
 
-  create({ name, parentId, body }: { name: string; parentId: string; body: string }): Promise<DriveFileMeta> {
-    const m = this.multipart({ name, parents: [parentId], mimeType: WISHTAA_MIME }, body)
+  create({ name, parentId, body, appProperties }: { name: string; parentId: string; body: string; appProperties?: Record<string, string> }): Promise<DriveFileMeta> {
+    const m = this.multipart({ name, parents: [parentId], mimeType: WISHTAA_MIME, ...(appProperties ? { appProperties } : {}) }, body)
     return this.json<DriveFileMeta>(`${UPLOAD}/files?uploadType=multipart&fields=${FILE_FIELDS}`, { method: 'POST', ...m })
   }
 
@@ -162,8 +164,8 @@ export class DriveClient implements DriveApi {
     })
   }
 
-  update(id: string, { name, body }: { name?: string; body: string }): Promise<DriveFileMeta> {
-    const m = this.multipart(name ? { name } : {}, body)
+  update(id: string, { name, body, appProperties }: { name?: string; body: string; appProperties?: Record<string, string> }): Promise<DriveFileMeta> {
+    const m = this.multipart({ ...(name ? { name } : {}), ...(appProperties ? { appProperties } : {}) }, body)
     return this.json<DriveFileMeta>(`${UPLOAD}/files/${encodeURIComponent(id)}?uploadType=multipart&fields=${FILE_FIELDS}`, { method: 'PATCH', ...m })
   }
 

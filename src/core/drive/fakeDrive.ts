@@ -22,6 +22,8 @@ export class FakeDrive implements DriveApi {
   isOnline = true
   isConnected = true
   failNextWith: DriveError | null = null
+  /** The next write reaches Drive but its reply is lost (the connection drops after the upload). */
+  loseNextReply = false
   calls: string[] = []
   private n = 0
   private clock = Date.UTC(2026, 0, 1)
@@ -45,9 +47,9 @@ export class FakeDrive implements DriveApi {
     return this.isConnected
   }
 
-  private store(name: string, mimeType: string, parents: string[], body: string): DriveFileMeta {
+  private store(name: string, mimeType: string, parents: string[], body: string, appProperties?: Record<string, string>): DriveFileMeta {
     const id = `drive-${++this.n}`
-    const meta: DriveFileMeta = { id, name, mimeType, modifiedTime: this.tick(), version: '1', parents, md5Checksum: checksum(body), headRevisionId: `rev-${id}-1` }
+    const meta: DriveFileMeta = { id, name, mimeType, modifiedTime: this.tick(), version: '1', parents, md5Checksum: checksum(body), headRevisionId: `rev-${id}-1`, ...(appProperties ? { appProperties: { ...appProperties } } : {}) }
     this.files.set(id, { meta, body })
     return { ...meta }
   }
@@ -72,9 +74,9 @@ export class FakeDrive implements DriveApi {
     return f.body
   }
 
-  async create({ name, parentId, body }: { name: string; parentId: string; body: string }) {
+  async create({ name, parentId, body, appProperties }: { name: string; parentId: string; body: string; appProperties?: Record<string, string> }) {
     this.gate('create')
-    return this.store(name, 'application/json', [parentId], body)
+    return this.store(name, 'application/json', [parentId], body, appProperties)
   }
 
   async createFolder(name: string, parentId: string) {
@@ -82,12 +84,17 @@ export class FakeDrive implements DriveApi {
     return this.store(name, 'application/vnd.google-apps.folder', [parentId], '')
   }
 
-  async update(id: string, { name, body }: { name?: string; body: string }) {
+  async update(id: string, { name, body, appProperties }: { name?: string; body: string; appProperties?: Record<string, string> }) {
     this.gate(`update ${id}`)
     const f = this.files.get(id)
     if (!f) throw new DriveError('notfound', 'not found', 404)
     if (name) f.meta.name = name
+    if (appProperties) f.meta.appProperties = { ...f.meta.appProperties, ...appProperties }
     this.changeContent(f, body)
+    if (this.loseNextReply) {
+      this.loseNextReply = false
+      throw new DriveError('offline', 'The connection dropped before Drive answered.')
+    }
     return { ...f.meta }
   }
 
@@ -103,10 +110,13 @@ export class FakeDrive implements DriveApi {
   }
 
   /** Simulates another device saving the file. */
-  editElsewhere(id: string, body: string) {
+  editElsewhere(id: string, body: string, appProperties?: Record<string, string>) {
     const f = this.files.get(id)
     if (!f) throw new Error('no such file')
     this.changeContent(f, body)
+    // A writer that sets its own marker, or (no marker given) one that sets none, like editing in Drive itself.
+    if (appProperties) f.meta.appProperties = { ...appProperties }
+    else delete f.meta.appProperties
   }
 
   private changeContent(f: Stored, body: string) {

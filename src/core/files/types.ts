@@ -10,6 +10,9 @@ export interface DriveMeta {
   md5?: string
   /** The Drive revision of that content. */
   revisionId?: string
+  /** Who wrote that revision: the editing tab's session and its write counter (see `drive/sync.ts`). */
+  session?: string
+  counter?: number
 }
 
 /** One folder, mind map or knowledge base. */

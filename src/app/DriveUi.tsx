@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
+import { describeWriter } from '@/core/drive/sync'
 import { driveAuth } from './drive'
+import { driveRepository } from './repo'
 import { choiceLabel } from '@/core/drive/placement'
 import { setPrefs, useCreatePrefs } from './createPrefs'
 import { useFiles } from './FilesContext'
@@ -52,6 +54,7 @@ export function ConflictPrompt() {
       <p className="mb-1 text-sm">
         <strong>{file.name}</strong> was changed in Google Drive ({timeAgo(Date.parse(c.remote.modifiedTime))}) and also here ({timeAgo(file.modifiedAt)}). Choose which one to keep.
       </p>
+      <p className="mb-1 text-xs text-muted">{describeWriter(c.remote, { session: driveRepository.session, origin: driveRepository.origin })}</p>
       <p className="mb-3 text-xs text-muted">Nothing has been overwritten yet.</p>
       <div className="space-y-2">
         {option('Keep mine', 'Replace the version in Google Drive with the one here.', 'mine')}

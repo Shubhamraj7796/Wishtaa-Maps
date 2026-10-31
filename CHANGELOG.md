@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Drive: recognise our own writes by a writer marker, not by clocks or versions
+- Every write sets `appProperties` on the Drive file (`editorSessionId`, `writeCounter`, `writerOrigin`) and stores the same
+  values plus the returned `headRevisionId` locally. A check is: same revision or checksum = unchanged; newer revision with our
+  marker = our own write; otherwise another editor. Client and Drive clocks are never compared.
+- Another writer whose content is byte-identical is adopted silently. The conflict dialog now says who wrote it (another
+  address such as maps.wishtaa.com, another tab, or outside the app).
+- Saves of one file are queued across every repository in the page and under a browser-wide Web Lock, so two tabs can't
+  interleave "check, upload, store the new base".
+- Editor header shows where the file saves: "Google Drive · account" or "This browser".
+
 ### Colour and line controls, quick toolbar (Phase 3 of 3)
 - **Quick toolbar** next to the selected topic(s): font, size, bold / italic / underline / strikethrough, text colour,
   highlight, alignment, fill, line colour, shape, Branch, Connector style, format painter and More. Flips below when there is
