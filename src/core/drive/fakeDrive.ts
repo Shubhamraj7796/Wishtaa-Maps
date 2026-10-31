@@ -98,6 +98,22 @@ export class FakeDrive implements DriveApi {
     return { ...f.meta }
   }
 
+  async setAppProperties(id: string, props: Record<string, string | null>) {
+    this.gate(`setAppProperties ${id}`)
+    const f = this.files.get(id)
+    if (!f) throw new DriveError('notfound', 'not found', 404)
+    const next = { ...f.meta.appProperties }
+    for (const [k, v] of Object.entries(props)) {
+      if (v === null) delete next[k]
+      else next[k] = v
+    }
+    f.meta.appProperties = next
+    // Drive counts a metadata change as a change of the file (version, modified time) but makes no new content revision.
+    f.meta.version = String(Number(f.meta.version) + 1)
+    f.meta.modifiedTime = this.tick()
+    return { ...f.meta }
+  }
+
   async list(parentId: string) {
     this.gate('list')
     return [...this.files.values()].filter((f) => f.meta.parents?.includes(parentId) && !f.meta.trashed).map((f) => ({ ...f.meta }))

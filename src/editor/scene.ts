@@ -9,6 +9,18 @@ import { useEditor } from './store'
 
 let last: { key: unknown[]; scene: Scene } | null = null
 
+/** What the reader sees: the map's topics with the folding they chose in Read mode laid over it (nothing is changed or saved). */
+function withFolding(topics: TopicMap, over: Record<string, boolean>): TopicMap {
+  const ids = Object.keys(over)
+  if (!ids.length) return topics
+  const out: TopicMap = { ...topics }
+  for (const id of ids) {
+    const t = topics[id]
+    if (t && !!t.collapsed !== over[id]) out[id] = { ...t, collapsed: !!over[id] }
+  }
+  return out
+}
+
 function compute(
   topics: TopicMap,
   rootId: string,
@@ -50,7 +62,7 @@ export function getTheme(settings: MapSettings): ResolvedTheme {
 /** Current scene (memoised on the inputs). Safe to call outside React. */
 export function getScene(): Scene {
   const s = useEditor.getState()
-  return compute(s.topics, s.rootId, s.levels, s.focusId, s.reveal, s.settings, getTheme(s.settings))
+  return compute(viewTopics(s.topics, s.readOnly, s.viewCollapsed), s.rootId, s.levels, s.focusId, s.reveal, s.settings, getTheme(s.settings))
 }
 
 export function useTheme(): ResolvedTheme {
@@ -59,8 +71,21 @@ export function useTheme(): ResolvedTheme {
   return useMemo(() => getTheme(preview ? previewSettings(settings, preview) : settings), [settings, preview])
 }
 
+let foldCache: { topics: TopicMap; over: Record<string, boolean>; out: TopicMap } | null = null
+/** The map's topics as displayed: in Read mode with the reader's own folding, else exactly the map's. */
+export function viewTopics(topics: TopicMap, readOnly: boolean, over: Record<string, boolean>): TopicMap {
+  if (!readOnly) return topics
+  if (foldCache && foldCache.topics === topics && foldCache.over === over) return foldCache.out
+  const out = withFolding(topics, over)
+  foldCache = { topics, over, out }
+  return out
+}
+
 export function useScene(): Scene {
-  const topics = useEditor((s) => s.topics)
+  const saved = useEditor((s) => s.topics)
+  const readOnly = useEditor((s) => s.readOnly)
+  const folding = useEditor((s) => s.viewCollapsed)
+  const topics = useMemo(() => viewTopics(saved, readOnly, folding), [saved, readOnly, folding])
   const rootId = useEditor((s) => s.rootId)
   const levels = useEditor((s) => s.levels)
   const focusId = useEditor((s) => s.focusId)

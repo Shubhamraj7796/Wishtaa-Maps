@@ -27,6 +27,8 @@ export interface DriveRepositoryOptions {
 }
 
 const DIRTY_KEY = 'wishtaamaps:drive-unsynced'
+/** The Drive property that carries a file's "open in Read mode by default" protection. */
+export const READ_ONLY_PROP = 'wishtaaReadOnly'
 
 /**
  * The per-file queue of remote work, shared by every repository in this page (a second instance can exist after a hot
@@ -93,6 +95,43 @@ export class DriveRepository implements FileRepository {
     this.writeUnsynced()
   }
 
+  /**
+   * True when Drive says the signed-in person may not edit this file (it was shared with them to view). Asked of Drive; false
+   * when Drive can't be reached, so a file never gets locked out by a bad connection.
+   */
+  async isViewOnly(id: string): Promise<boolean> {
+    const f = await this.local.get(id)
+    if (!this.isDrive(f) || !this.api.available()) return false
+    try {
+      return (await this.api.meta(f.contentRef)).capabilities?.canEdit === false
+    } catch {
+      return false
+    }
+  }
+
+  /**
+   * Read mode's way of picking up what changed in Drive: quiet and safe. If Drive holds newer content and nothing here is
+   * waiting to be sent, the local copy is replaced; nothing is ever written to Drive and no conflict is raised.
+   * Resolves 'updated' (the caller should reload the open map), 'same', or 'skipped' (unsynced edits here, or Drive can't be reached).
+   */
+  async refresh(id: string): Promise<'updated' | 'same' | 'skipped'> {
+    const f = await this.local.get(id)
+    if (!this.isDrive(f) || !this.api.available()) return 'skipped'
+    try {
+      return await this.lock(id, async () => {
+        const remote = await this.api.meta(f.contentRef)
+        if (remote.trashed) return 'skipped'
+        await this.adoptProtection(f, remote)
+        if (classify(f.driveMeta, remote) !== 'external') return 'same'
+        if (this.unsynced.has(id)) return 'skipped' // edits made here are not sent yet: leave them for Edit mode to sort out
+        await this.pull(f, remote)
+        return 'updated'
+      })
+    } catch {
+      return 'skipped'
+    }
+  }
+
   /** True while the file has changes that have not reached Drive. */
   hasUnsynced(id: string) {
     return this.unsynced.has(id)
@@ -145,6 +184,11 @@ export class DriveRepository implements FileRepository {
   private acrossTabs<T>(id: string, work: () => Promise<T>): Promise<T> {
     const locks = typeof navigator !== 'undefined' ? ((navigator as unknown as { locks?: WebLocks }).locks ?? undefined) : undefined
     return locks ? locks.request<T>(`wishtaamaps-drive-${id}`, work) : work()
+  }
+
+  /** A file protected in Drive (on another device) is protected here too. Turning protection off is always a deliberate act. */
+  private async adoptProtection(f: FileRecord, remote: DriveFileMeta) {
+    if (remote.appProperties?.[READ_ONLY_PROP] === '1' && !f.readOnlyDefault) await this.local.update(f.id, { readOnlyDefault: true })
   }
 
   /** True when what Drive holds is byte-for-byte what we hold, so there is nothing to choose between. */
@@ -289,6 +333,11 @@ export class DriveRepository implements FileRepository {
     const cur = await this.local.get(id)
     if (!this.isDrive(cur)) return this.local.update(id, patch)
     // Writing the record while a save is storing its new base could overwrite that base with an older one.
+    if (patch.readOnlyDefault !== undefined) {
+      // The protection follows the file in Drive, so Drive must be reachable to change it.
+      if (!this.api.available()) throw new DriveError('auth', 'Reconnect Google Drive to change this setting for a file stored there.')
+      await this.api.setAppProperties(cur.contentRef, { [READ_ONLY_PROP]: patch.readOnlyDefault ? '1' : null })
+    }
     const rec = await this.lock(id, () => this.local.update(id, patch))
     if (patch.name !== undefined) {
       // The new name goes to Drive with the next save (and now, if possible).
@@ -309,6 +358,7 @@ export class DriveRepository implements FileRepository {
       return await this.lock(id, async () => {
         const remote = await this.api.meta(f.contentRef)
         if (remote.trashed) return this.local.loadContent(id)
+        await this.adoptProtection(f, remote)
         const state = classify(f.driveMeta, remote)
         if (state !== 'external') return this.local.loadContent(id)
         if (this.unsynced.has(id)) {
@@ -395,7 +445,7 @@ export class DriveRepository implements FileRepository {
     if (!content) throw new DriveError('other', 'This file has no content to save yet.')
     const parentId = parentFolderId ?? (await this.api.ensureAppFolder())
     const marker = this.nextMarker()
-    const made = await this.api.create({ name: driveFileName(f.name), parentId, body: await this.pack(f, content), appProperties: markerProps(marker) })
+    const made = await this.api.create({ name: driveFileName(f.name), parentId, body: await this.pack(f, content), appProperties: { ...markerProps(marker), ...(f.readOnlyDefault ? { [READ_ONLY_PROP]: '1' } : {}) } })
     driveLog('moved-to-drive', { file: f.name, stored: baseOf(made, marker) })
     return this.local.update(id, { storage: 'drive', contentRef: made.id, driveMeta: baseOf(made, marker) })
   }
@@ -442,7 +492,7 @@ export class DriveRepository implements FileRepository {
     await restoreBlobs(un, this.opts.blobs?.())
     const rec = await this.local.create({ type: un.type, name: un.name || nameFromDrive(remote.name), content: un.content, storage: 'drive' })
     await this.local.saveContent(rec.id, un.content, saveMetaFromContent(rec.id, un.content))
-    return this.local.update(rec.id, { contentRef: driveFileId, driveMeta: baseOf(remote) })
+    return this.local.update(rec.id, { contentRef: driveFileId, driveMeta: baseOf(remote), ...(remote.appProperties?.[READ_ONLY_PROP] === '1' ? { readOnlyDefault: true } : {}) })
   }
 
   /** What is in a folder of the app's Drive area (the "Wishtaa Maps" folder when none is given). */

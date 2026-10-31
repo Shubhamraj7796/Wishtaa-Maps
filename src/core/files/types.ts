@@ -39,6 +39,11 @@ export interface FileRecord {
   topicCount?: number
   /** For files stored in Google Drive (`storage: 'drive'`, `contentRef` = the Drive file id). */
   driveMeta?: DriveMeta | null
+  /**
+   * Protection: the file opens in Read mode (view only) unless the person chooses Edit. Kept in the file's own metadata, not
+   * in the map, and mirrored to Drive for Drive files so it follows the file to other devices.
+   */
+  readOnlyDefault?: boolean
 }
 
 export interface FileLinkRef {
@@ -115,7 +120,7 @@ export interface CreateInput {
 }
 
 export type FilePatch = Partial<
-  Pick<FileRecord, 'name' | 'starred' | 'thumbnail' | 'imageIds' | 'attachmentIds' | 'topicCount' | 'storage' | 'contentRef' | 'driveMeta'>
+  Pick<FileRecord, 'name' | 'starred' | 'thumbnail' | 'imageIds' | 'attachmentIds' | 'topicCount' | 'storage' | 'contentRef' | 'driveMeta' | 'readOnlyDefault'>
 >
 
 export interface SaveMeta {

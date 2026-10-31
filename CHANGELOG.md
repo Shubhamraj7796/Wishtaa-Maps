@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Navigation, automatic branch thickness, Read mode
+- **Navigation**: two-finger scroll moves the map; Ctrl + wheel and trackpad pinch zoom around the pointer; Shift + wheel moves
+  sideways; a mouse wheel follows Preferences (Move the map, or Zoom); zoom 2% to 400% with a typeable percentage; touch glide.
+- **Automatic branch thickness** is the default: bold near the centre, thinner each level, tapered, sized from the topic and the
+  central topic, never under 1.5 px on screen. Manual thickness still wins; Auto and Reset to automatic added.
+- **Read mode** (Edit | Read, Ctrl+Shift+R): nothing can be changed or saved, view state only for folding and highlighting, a
+  read-only details panel, picture viewer with zoom and next/previous, Refresh from Drive, view-only Drive files open read-only,
+  per-file "Open in read mode by default" (mirrored to Drive) and an "Open all files in Read mode" preference. See
+  `docs/navigation-thickness-read-mode.md`.
+
 ### Drive: recognise our own writes by a writer marker, not by clocks or versions
 - Every write sets `appProperties` on the Drive file (`editorSessionId`, `writeCounter`, `writerOrigin`) and stores the same
   values plus the returned `headRevisionId` locally. A check is: same revision or checksum = unchanged; newer revision with our

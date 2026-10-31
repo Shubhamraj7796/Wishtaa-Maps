@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type DragEvent } from 'react'
 import type { FileRecord } from '@/core/files/types'
 import { useFiles } from './FilesContext'
 import { timeAgo } from './format'
-import { BookOpen, Cloud, Copy, Folder, FolderInput, HardDrive, MoreVertical, Network, Pencil, RotateCcw, Star, Trash2 } from './icons'
+import { BookOpen, BookOpenCheck, Check, Cloud, Lock, Copy, Folder, FolderInput, HardDrive, MoreVertical, Network, Pencil, RotateCcw, Star, Trash2 } from './icons'
 import { useDriveActions } from './useDrive'
 
 export const DRAG_TYPE = 'application/x-wishtaa-files'
@@ -42,6 +42,11 @@ function DriveBadge({ file }: { file: FileRecord }) {
   )
 }
 
+function ReadBadge({ file }: { file: FileRecord }) {
+  if (!file.readOnlyDefault) return null
+  return <Lock size={13} aria-label="Opens in Read mode by default" className="shrink-0 text-muted" />
+}
+
 function Menu({ file, onClose }: { file: FileRecord; onClose: () => void }) {
   const f = useFiles()
   const drive = useDriveActions()
@@ -78,6 +83,23 @@ function Menu({ file, onClose }: { file: FileRecord; onClose: () => void }) {
           </>
         ) : (
           <>
+            {file.type !== 'folder' && item('Open in read mode', <BookOpenCheck size={15} aria-hidden="true" />, () => f.open(file, undefined, true))}
+            {file.type !== 'folder' && (
+              <button
+                type="button"
+                role="menuitemcheckbox"
+                aria-checked={!!file.readOnlyDefault}
+                onClick={() => {
+                  onClose()
+                  void f.setReadDefault(file, !file.readOnlyDefault)
+                }}
+                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-brand/15"
+              >
+                <Lock size={15} aria-hidden="true" />
+                <span className="flex-1">Open in read mode by default</span>
+                {file.readOnlyDefault && <Check size={14} aria-hidden="true" />}
+              </button>
+            )}
             {item('Rename', <Pencil size={15} aria-hidden="true" />, () => f.setDialog({ kind: 'rename', file }))}
             {item('Move to…', <FolderInput size={15} aria-hidden="true" />, () => f.setDialog({ kind: 'move', ids: [file.id] }))}
             {file.type !== 'folder' && item('Duplicate', <Copy size={15} aria-hidden="true" />, () => void f.duplicate(file))}
@@ -175,7 +197,7 @@ function Item({ file, view, selected, anySelected, onSelect, dragIds }: ItemProp
         <button type="button" onClick={open} className="flex min-w-0 flex-1 items-center gap-3 text-left">
           <span className="h-9 w-14 shrink-0 overflow-hidden rounded border border-line"><Thumb file={file} /></span>
           <span className="min-w-0">
-            <span className="flex items-center gap-1.5 text-sm font-medium"><FileKindIcon type={file.type} size={15} className="shrink-0 text-muted" /><span className="truncate">{file.name}</span>{star}<DriveBadge file={file} /></span>
+            <span className="flex items-center gap-1.5 text-sm font-medium"><FileKindIcon type={file.type} size={15} className="shrink-0 text-muted" /><span className="truncate">{file.name}</span>{star}<ReadBadge file={file} /><DriveBadge file={file} /></span>
             <span className="block truncate text-xs text-muted">{kindLabel(file.type)} · {timeAgo(file.modifiedAt)}</span>
           </span>
         </button>
@@ -197,7 +219,7 @@ function Item({ file, view, selected, anySelected, onSelect, dragIds }: ItemProp
       <button type="button" onClick={open} className="block w-full text-left" aria-label={`Open ${file.name}`}>
         <span className="block aspect-[8/5] overflow-hidden border-b border-line"><Thumb file={file} /></span>
         <span className="block px-3 py-2 pr-11">
-          <span className="flex items-center gap-1.5 text-sm font-medium"><FileKindIcon type={file.type} size={15} className="shrink-0 text-muted" /><span className="truncate">{file.name}</span>{star}<DriveBadge file={file} /></span>
+          <span className="flex items-center gap-1.5 text-sm font-medium"><FileKindIcon type={file.type} size={15} className="shrink-0 text-muted" /><span className="truncate">{file.name}</span>{star}<ReadBadge file={file} /><DriveBadge file={file} /></span>
           <span className="block text-xs text-muted">{kindLabel(file.type)} · {timeAgo(file.modifiedAt)}</span>
         </span>
       </button>

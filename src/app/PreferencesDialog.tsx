@@ -5,6 +5,8 @@ import { Modal, buttonSecondary } from './Modal'
 export function PreferencesDialog({ onClose }: { onClose: () => void }) {
   const wheel = useSettings((s) => s.mouseWheel)
   const setWheel = useSettings((s) => s.setMouseWheel)
+  const allRead = useSettings((s) => s.openAllReadOnly)
+  const setAllRead = useSettings((s) => s.setOpenAllReadOnly)
   return (
     <Modal title="Preferences" onClose={onClose}>
       <div className="space-y-3 text-sm">
@@ -24,6 +26,13 @@ export function PreferencesDialog({ onClose }: { onClose: () => void }) {
             </label>
           ))}
         </fieldset>
+        <label className="flex items-start gap-2 rounded-ui border border-line p-3">
+          <input type="checkbox" checked={allRead} onChange={(e) => setAllRead(e.target.checked)} className="mt-0.5 h-4 w-4 accent-[rgb(var(--c-brand))]" />
+          <span>
+            <span className="font-semibold">Open all files in Read mode</span>
+            <span className="block text-xs text-muted">Maps and knowledge bases start view-only. Switch to Edit in the editor when you want to change something.</span>
+          </span>
+        </label>
       </div>
       <div className="mt-4 flex justify-end">
         <button type="button" className={buttonSecondary} onClick={onClose}>

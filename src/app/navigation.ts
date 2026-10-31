@@ -13,8 +13,9 @@ export function navigateTo(to: string) {
 }
 
 /** The page that opens a file: maps at /map/:id, knowledge bases at /kb/:id, folders at /files/:id. */
-export function routeForFile(file: Pick<FileRecord, 'id' | 'type'>, topicId?: string): string {
+export function routeForFile(file: Pick<FileRecord, 'id' | 'type'>, topicId?: string, read = false): string {
   if (file.type === 'folder') return `/files/${file.id}`
   const base = `/${file.type === 'kb' ? 'kb' : 'map'}/${file.id}`
-  return topicId ? `${base}?topic=${encodeURIComponent(topicId)}` : base
+  const q = [topicId ? `topic=${encodeURIComponent(topicId)}` : '', read ? 'read=1' : ''].filter(Boolean).join('&')
+  return q ? `${base}?${q}` : base
 }

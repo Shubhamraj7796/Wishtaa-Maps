@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { LaidOut } from '@/core/layout/types'
 import { accentFor, DASH, resolveLine, resolveShape } from '@/core/theme/resolve'
-import { buildIndex, descendantIds, topLevelOnly } from '@/core/model/tree'
+import { ancestorIds, buildIndex, descendantIds, topLevelOnly } from '@/core/model/tree'
 import {
   applyPainter,
   beginEdit,
@@ -26,7 +26,8 @@ import { spaceDown } from '../keyboard'
 import { showNotice } from '../notice'
 import { useScene, useTheme } from '../scene'
 import { useEditor } from '../store'
-import { finishLinkPick, finishRelationship } from '../content'
+import { finishLinkPick, finishRelationship, showPreview } from '../content'
+import { blockedInReadMode } from '../readmode'
 import { Minimap } from './Minimap'
 import { ObjectsLayer } from './ObjectsLayer'
 import { onScreenWidths } from '@/core/theme/autoBranch'
@@ -228,7 +229,7 @@ export function Canvas() {
         finishRelationship(st.relationFrom, id) // second end of a relationship line
         return
       }
-      if (st.painter) {
+      if (st.painter && !st.readOnly) {
         applyPainter(id, e.shiftKey) // format painter: paint this topic
         return
       }
@@ -236,6 +237,7 @@ export function Canvas() {
       const now = performance.now()
       if (lastDown.current.id === id && now - lastDown.current.t < 350) {
         lastDown.current = { id: null, t: 0 }
+        if (st.readOnly) return // Read mode: a double click or double tap opens nothing for editing
         if (onImage) {
           selectImage(id)
           void resetImageSize(id) // double-click an image: back to its original size
@@ -246,7 +248,10 @@ export function Canvas() {
       if (additive) toggleSelect(id)
       else if (!st.selected.includes(id)) selectOnly(id)
       // Clicking the picture selects it (resize handles); clicking the text selects just the topic.
-      useEditor.setState({ imageSelected: onImage && !additive && st.topics[id]?.image ? id : null })
+      // In Read mode it opens the picture full screen instead: there is nothing to resize.
+      const picture = st.topics[id]?.image
+      if (st.readOnly && onImage && picture) showPreview(picture.imageId)
+      useEditor.setState({ imageSelected: !st.readOnly && onImage && !additive && picture ? id : null })
       const ids = topLevelOnly(st.topics, useEditor.getState().selected.filter((x) => x !== st.rootId))
       const idx = buildIndex(st.topics)
       const exclude = new Set(ids)
@@ -301,6 +306,7 @@ export function Canvas() {
       selectIds([...new Set([...gs.base, ...hit])])
     } else if (gs.kind === 'node') {
       if (!gs.started) {
+        if (useEditor.getState().readOnly) return // topics are not moved while reading
         if (Math.hypot(e.clientX - gs.sx, e.clientY - gs.sy) < DRAG_THRESHOLD || !gs.ids.length) return
         gs.started = true
         host.current?.setPointerCapture(e.pointerId)
@@ -376,6 +382,7 @@ export function Canvas() {
   const onDrop = (e: React.DragEvent) => {
     if (!hasFiles(e.dataTransfer)) return
     e.preventDefault()
+    if (useEditor.getState().readOnly) return blockedInReadMode('Adding a picture')
     const file = firstImageFile(e.dataTransfer)
     if (!file) {
       showNotice('Only image files can be dropped onto a topic.')
@@ -394,6 +401,17 @@ export function Canvas() {
   scene.boxes.forEach((b) => {
     if (b.x + b.w >= vx0 && b.x <= vx1 && b.y + b.h >= vy0 && b.y <= vy1) visible.push(b)
   })
+  // Read mode: the selected topic's path to the centre stays strong, the other branches soften.
+  const readOnly = useEditor((s) => s.readOnly)
+  const onPath = useMemo(() => {
+    if (!readOnly || !selected.length) return null
+    const set = new Set<string>()
+    for (const id of selected) {
+      set.add(id)
+      ancestorIds(topics, id).forEach((a) => set.add(a))
+    }
+    return set
+  }, [readOnly, selected, topics])
   const rootBox = scene.boxes.get(scene.rootId)
   const centralSize = rootBox ? Math.max(rootBox.w, rootBox.h) : 0
   const paths: { key: string; d: string; color: string; width: number; dash: string | undefined; taper: boolean; opacity: number; arrow: string | null }[] = []
@@ -433,7 +451,7 @@ export function Canvas() {
       const before = pts[pts.length - 2]
       if (tip && before) arrow = arrowHeadPath(tip, Math.atan2(tip.y - before.y, tip.x - before.x), Math.max(11, (taper ? shown.width : shown.endWidth) * 3.2))
     }
-    paths.push({ key: e.to, d: taper ? taperedBranchPath(d, shown.width, shown.endWidth) : d, color: line.color, width: shown.width, dash: DASH[line.style], taper, opacity: line.opacity, arrow })
+    paths.push({ key: e.to, d: taper ? taperedBranchPath(d, shown.width, shown.endWidth) : d, color: line.color, width: shown.width, dash: DASH[line.style], taper, opacity: onPath && !onPath.has(e.to) ? line.opacity * 0.35 : line.opacity, arrow })
   }
 
   const dragTargetBox = drag?.target ? scene.boxes.get(drag.target.id) : undefined

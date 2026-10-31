@@ -20,6 +20,8 @@ export interface SearchState {
   index: number
 }
 
+export type ReadReason = 'user' | 'file' | 'preference' | 'drive' | 'link'
+
 export interface Notice {
   id: number
   text: string
@@ -61,6 +63,20 @@ export interface EditorState {
   widthLive: { id: string; width: number } | null
   /** A style change shown on the canvas while a slider is dragged (nothing is saved until release). */
   styleLive: { ids: string[]; patch: Partial<TopicStyle> } | null
+  /** Read mode: nothing can be changed (see `readmode.ts`). */
+  readOnly: boolean
+  /** False when the file can only be read (no permission in Drive): the Edit button is hidden. */
+  canEdit: boolean
+  /** Why the file is being read, for the badge and the explanation. */
+  readReason: ReadReason | null
+  /** The file opens in Read mode by default (so switching to Edit shows a brief tip). */
+  readFileDefault: boolean
+  /** Read mode only: collapse state the reader changed. View state, never saved. */
+  viewCollapsed: Record<string, boolean>
+  /** Read mode: the notes and tags panel is open. */
+  readPanelOpen: boolean
+  /** Said aloud to screen readers when the mode changes. */
+  modeAnnouncement: string
   /** Whether branch controls change this topic's branch only, or also every branch below it. */
   branchScope: 'this' | 'branch'
   /** What "apply" reaches in the Style panel: the selected topics, all topics at their level, or their whole branch. */
@@ -126,6 +142,13 @@ export const useEditor = create<EditorState>(() => ({
   imageLive: null,
   widthLive: null,
   styleLive: null,
+  readOnly: false,
+  canEdit: true,
+  readReason: null,
+  readFileDefault: false,
+  viewCollapsed: {},
+  readPanelOpen: false,
+  modeAnnouncement: '',
   branchScope: 'this',
   styleScope: 'selection',
   notice: null,

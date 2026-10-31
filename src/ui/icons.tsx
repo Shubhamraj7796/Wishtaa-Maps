@@ -30,7 +30,7 @@ export const ICONS = {
   exitFullscreen: Minimize, bold: Bold, italic: Italic, underline: Underline, strike: Strikethrough, h1: Heading1, h2: Heading2,
   bulletList: List, orderedList: ListOrdered, quote: Quote, code: Code, ocr: ScanText, download: Download, preview: Eye,
   replace: RefreshCw, reset: RotateCcw, eraser: Eraser, panel: PanelRight, notebook: Notebook, type: Type, pin: Pin,
-  info: InfoIcon, warning: AlertTriangle, cancel: XCircle, hash: Hash,
+  info: InfoIcon, warning: AlertTriangle, cancel: XCircle, hash: Hash, lock: Lock, unlock: Unlock, refresh: RefreshCw,
 } as const
 
 export type IconName = keyof typeof ICONS

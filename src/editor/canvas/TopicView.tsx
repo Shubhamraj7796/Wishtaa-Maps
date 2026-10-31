@@ -213,6 +213,7 @@ const JUSTIFY = { left: 'flex-start', center: 'center', right: 'flex-end' } as c
 
 export const TopicView = memo(function TopicView(p: TopicViewProps) {
   const { box, topic, isRoot } = p
+  const readOnly = useEditor((s) => s.readOnly)
   const image = topic.image
   const look = resolveLook(p.theme, { depth: box.depth, branch: box.branch, isRoot, style: topic.style, layoutShape: p.layoutShape })
   const marks = topic.marks ?? []
@@ -399,7 +400,7 @@ export const TopicView = memo(function TopicView(p: TopicViewProps) {
           {p.hidden}
         </button>
       )}
-      {p.selected && p.soleSelected && !p.editing && <WidthHandle id={box.id} width={W} />}
+      {p.selected && p.soleSelected && !p.editing && !readOnly && <WidthHandle id={box.id} width={W} />}
     </div>
   )
 })

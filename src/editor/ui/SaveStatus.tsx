@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react'
+import { Icon } from '@/ui/icons'
 import { retrySave } from '../session'
 import { useEditor } from '../store'
 import { otherTabOpen, subscribeOtherTab } from '../tabwatch'
@@ -46,6 +47,8 @@ export function SaveStatus() {
   const reason = useEditor((s) => s.save.error)
   const otherTab = useSyncExternalStore(subscribeOtherTab, otherTabOpen, () => false)
 
+  const readOnly = useEditor((s) => s.readOnly)
+
   const time = savedAt ? new Date(savedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : null
   const label =
     status === 'saving' ? 'Saving...' : status === 'saved' ? 'Saved' : status === 'error' ? 'Not saved - retry' : 'Offline - will sync'
@@ -60,6 +63,15 @@ export function SaveStatus() {
       <span className="sr-only sm:hidden">{label}</span>
     </>
   )
+
+  if (readOnly) {
+    return (
+      <div role="status" aria-live="polite" title="Read mode: nothing is saved or changed" className="flex shrink-0 items-center gap-1.5 px-1 text-xs text-ink">
+        <Icon name="lock" size={14} />
+        <span>Read only</span>
+      </div>
+    )
+  }
 
   return (
     <div role="status" aria-live="polite" title={tip} className="flex min-w-0 shrink-0 flex-col items-start text-xs text-ink">

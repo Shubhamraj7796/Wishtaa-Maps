@@ -13,6 +13,7 @@ import {
   selectImage,
   selectedImageTopic,
 } from './images'
+import { blockedInReadMode, toggleReadMode } from './readmode'
 import { useEditor } from './store'
 
 export interface Cmd {
@@ -155,9 +156,29 @@ export const COMMANDS: Cmd[] = [
     run: () => A.selectTheme(t.id),
   })),
 
+  { id: 'readMode', label: 'Read mode (view only) on / off', group: 'View', keys: ['Ctrl+Shift+R'], run: toggleReadMode },
   { id: 'toolPan', label: 'Hand tool (drag to pan)', group: 'Tools', keys: ['H'], run: () => A.setTool('pan') },
   { id: 'toolSelect', label: 'Select tool (drag to box-select)', group: 'Tools', keys: ['V'], run: () => A.setTool('select') },
 ]
+
+/**
+ * Commands that only change what is shown, never the map. Everything else is blocked in Read mode: this list is the only way
+ * a command works there, so a new editing command is blocked by default.
+ */
+export const READ_SAFE = new Set([
+  'collapse', 'copy', 'selectAll', 'nav-left', 'nav-right', 'nav-up', 'nav-down', 'search', 'palette', 'help', 'escape',
+  'fit', 'zoom100', 'zoomIn', 'zoomOut', 'focus', 'lvl1', 'lvl2', 'lvl3', 'lvlAll', 'fullscreen', 'viewMap', 'viewOutline',
+  'clearTagFilter', 'toolPan', 'toolSelect', 'readMode', 'panel',
+])
+
+for (const c of COMMANDS) {
+  if (READ_SAFE.has(c.id)) continue
+  const run = c.run
+  c.run = () => {
+    if (st().readOnly) return blockedInReadMode(c.label)
+    run()
+  }
+}
 
 function escape() {
   const s = st()

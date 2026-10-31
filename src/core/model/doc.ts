@@ -1,3 +1,4 @@
+import { installLock } from './lock'
 import * as Y from 'yjs'
 import { newId } from './ids'
 import { makeTopic, type TopicData } from './topic'
@@ -31,6 +32,7 @@ export interface MapDoc {
 
 export function createMapDoc(): MapDoc {
   const ydoc = new Y.Doc()
+  installLock(ydoc)
   const topics = ydoc.getMap<TopicData>('topics')
   const meta = ydoc.getMap<string>('meta')
   const settings = ydoc.getMap<unknown>('settings')

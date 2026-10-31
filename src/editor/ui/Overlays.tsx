@@ -6,6 +6,8 @@ import {
   cmdAddChild,
   cmdAddSibling,
   cmdDelete,
+  cmdToggleCollapse,
+  toggleFocus,
   selectOnly,
   setHelp,
   setPalette,
@@ -13,9 +15,9 @@ import {
   stepMatch,
 } from '../actions'
 import { Icon, type IconName } from '@/ui/icons'
-import { addBoundaryToSelected, addCalloutToSelected, openTab, startRelationship } from '../content'
+import { addBoundaryToSelected, addCalloutToSelected, followLink, openTab, showPreview, startRelationship } from '../content'
 import { cmdAddImage, removeImage, resetImageSize } from '../images'
-import { COMMANDS, displayKeys, type Cmd } from '../registry'
+import { COMMANDS, READ_SAFE, displayKeys, type Cmd } from '../registry'
 import { useEditor } from '../store'
 
 function Kbd({ children }: { children: string }) {
@@ -84,7 +86,8 @@ export function CommandPalette() {
 
   const list = useMemo(() => {
     const words = q.toLowerCase().split(/\s+/).filter(Boolean)
-    return COMMANDS.filter((c) => c.palette !== false && words.every((w) => c.label.toLowerCase().includes(w)))
+    const readOnly = useEditor.getState().readOnly
+    return COMMANDS.filter((c) => c.palette !== false && (!readOnly || READ_SAFE.has(c.id)) && words.every((w) => c.label.toLowerCase().includes(w)))
   }, [q])
 
   if (!open) return null
@@ -213,7 +216,16 @@ export function ContextMenu() {
     if (!keepSelection) selectOnly(menu.topicId)
     requestAnimationFrame(fn)
   }
-  const items: { label: string; icon: IconName; run: () => void }[] = [
+  const readOnly = useEditor.getState().readOnly
+  const readItems: { label: string; icon: IconName; run: () => void }[] = [
+    ...(topic.image ? [{ label: 'View picture', icon: 'preview' as IconName, run: act(() => showPreview(topic.image?.imageId ?? null), true) }] : []),
+    { label: 'Details (notes, tags)', icon: 'details', run: act(() => useEditor.setState({ readPanelOpen: true })) },
+    { label: 'Fold or unfold', icon: 'chevronRight', run: act(cmdToggleCollapse) },
+    { label: 'Focus on this branch', icon: 'focus', run: act(toggleFocus) },
+    { label: 'Copy text', icon: 'copy', run: act(() => void navigator.clipboard?.writeText(topic.text), true) },
+    ...(topic.link ? [{ label: 'Open the link', icon: 'link' as IconName, run: act(() => followLink(menu.topicId), true) }] : []),
+  ]
+  const items: { label: string; icon: IconName; run: () => void }[] = readOnly ? readItems : [
     { label: 'Add picture…', icon: 'imageAdd', run: act(() => void cmdAddImage(menu.topicId)) },
     ...(topic.image
       ? [

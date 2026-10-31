@@ -14,7 +14,8 @@ import { noteAttachmentStep, scanAttachments } from './attachments'
 import { imagesIdle, noteUndoStep, scheduleImageGc } from './images'
 import { mapDoc, resetMapDoc } from './mapdoc'
 import { getTheme } from './scene'
-import { useEditor } from './store'
+import { lockDoc } from '@/core/model/lock'
+import { useEditor, type ReadReason } from './store'
 import { unwatchFile, watchFile } from './tabwatch'
 
 export { mapDoc }
@@ -52,6 +53,8 @@ export class RepoMapStorage implements MapStorage {
   }
 
   async save(data: string) {
+    // Read mode never writes: nothing is marked dirty then, and this is the second lock on the same door.
+    if (useEditor.getState().readOnly) return
     await this.repo.saveContent(this.fileId, fromBase64(data), this.meta())
     try {
       localStorage.removeItem(pendingKey(this.fileId))
@@ -74,6 +77,18 @@ let open: Open | null = null
 let listenersInstalled = false
 
 export const currentFileId = () => open?.fileId ?? null
+
+/** Writes any pending change now. True when everything is saved (so Read mode can start safely). */
+export async function flushOpenFile(): Promise<boolean> {
+  const o = open
+  if (!o) return true
+  try {
+    await o.autosaver.flush()
+  } catch {
+    /* the status shows the reason */
+  }
+  return !o.autosaver.hasUnsaved
+}
 
 /** Retries a failed save right away (the "Not saved - retry" button). */
 export function retrySave() {
@@ -139,9 +154,18 @@ export function closeFile(): Promise<void> {
  * Opens a file in the editor: loads its content (or a copy recovered after a crash), shows it, and starts
  * autosaving back to the same file. Returns null if it doesn't exist or is in the bin.
  */
-export function openFile(fileId: string, repo: FileRepository = repository): Promise<FileRecord | null> {
+export interface OpenOptions {
+  /** Open in Read mode (nothing can be changed), and why. */
+  readOnly?: ReadReason
+  /** The file can only be read (no permission to edit it). */
+  viewOnly?: boolean
+  /** The file is set to open in Read mode by default. */
+  fileDefault?: boolean
+}
+
+export function openFile(fileId: string, repo: FileRepository = repository, opts: OpenOptions = {}): Promise<FileRecord | null> {
   wanted = fileId
-  return enqueue(() => doOpen(fileId, repo))
+  return enqueue(() => doOpen(fileId, repo, opts))
 }
 
 /**
@@ -157,11 +181,13 @@ export function reopenFile(fileId: string, repo: FileRepository = repository): P
     } catch {
       /* ignore */
     }
-    return doOpen(fileId, repo)
+    // Reloading keeps the mode it is in (a Read mode refresh stays Read mode).
+    const s = useEditor.getState()
+    return doOpen(fileId, repo, { readOnly: s.readOnly ? (s.readReason ?? 'user') : undefined, viewOnly: !s.canEdit, fileDefault: s.readFileDefault })
   })
 }
 
-async function doOpen(fileId: string, repo: FileRepository): Promise<FileRecord | null> {
+async function doOpen(fileId: string, repo: FileRepository, opts: OpenOptions = {}): Promise<FileRecord | null> {
   if (open?.fileId === fileId) return repo.get(fileId)
   await closeCurrent()
   const file = await repo.get(fileId)
@@ -210,6 +236,13 @@ async function doOpen(fileId: string, repo: FileRepository): Promise<FileRecord 
     reveal: [],
     search: { open: false, query: '', matches: [], index: 0 },
     save: { status: 'saved', savedAt: null, error: null },
+    readOnly: !!opts.readOnly,
+    readReason: opts.readOnly ?? null,
+    canEdit: !opts.viewOnly,
+    readFileDefault: !!opts.fileDefault,
+    viewCollapsed: {},
+    readPanelOpen: false,
+    modeAnnouncement: '',
     canUndo: false,
     canRedo: false,
     painter: null,
@@ -282,7 +315,7 @@ async function doOpen(fileId: string, repo: FileRepository): Promise<FileRecord 
   })
   // Every change to the document (edits, undo/redo, images, settings) is saved; loading is not.
   const onUpdate = (_u: Uint8Array, origin: unknown) => {
-    if (origin !== 'load') saver.markDirty()
+    if (origin !== 'load' && !useEditor.getState().readOnly) saver.markDirty()
   }
   mapDoc.ydoc.on('update', onUpdate)
   disposers.push(() => {
@@ -299,14 +332,15 @@ async function doOpen(fileId: string, repo: FileRepository): Promise<FileRecord 
   } catch {
     /* ignore */
   }
-  if (recovered) saver.markDirty() // put the recovered copy into the file
+  lockDoc(mapDoc.ydoc, !!opts.readOnly)
+  if (recovered && !opts.readOnly) saver.markDirty() // put the recovered copy into the file
   return file
 }
 
 /** Renames the open file (the name shown in the header). */
 export async function renameOpenFile(name: string, repo: FileRepository = repository) {
   const id = open?.fileId
-  if (!id) return
+  if (!id || useEditor.getState().readOnly) return
   const updated = await repo.update(id, { name })
   useEditor.setState({ title: updated.name })
 }

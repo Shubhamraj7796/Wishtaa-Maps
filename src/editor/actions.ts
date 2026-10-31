@@ -34,6 +34,7 @@ import { addImageReferenceSource } from './images'
 import { getScene, getTheme } from './scene'
 import { mapDoc } from './mapdoc'
 import { showNotice } from './notice'
+import { mayEdit } from './readmode'
 import { MAX_ZOOM, MIN_ZOOM } from './navigation'
 import { useEditor, type PanelTab, type Viewport } from './store'
 
@@ -120,6 +121,7 @@ export function viewportCenterWorld() {
 
 // ---------- editing ----------
 export function beginEdit(id: string | null = primary()) {
+  if (!mayEdit('Renaming')) return
   if (id) set({ editingId: id, selected: [id] })
 }
 export function commitEdit(id: string, text: string) {
@@ -178,18 +180,36 @@ export function cmdDelete() {
   set({ selected: next ? [next] : [], editingId: null })
 }
 
+/** Whether a topic is collapsed as the reader sees it: in Read mode their own folding, else what the map says. */
+export function isCollapsed(id: string): boolean {
+  const { readOnly, viewCollapsed, topics } = get()
+  return readOnly && id in viewCollapsed ? !!viewCollapsed[id] : !!topics[id]?.collapsed
+}
+
+/** Folds or unfolds. In Read mode this is view state only: it is never written to the map, the file or Drive. */
+function foldTopics(ids: string[], collapsed: boolean) {
+  if (!get().readOnly) return setCollapsed(mapDoc, ids, collapsed)
+  const next = { ...get().viewCollapsed }
+  for (const id of ids) next[id] = collapsed
+  set({ viewCollapsed: next })
+}
+
+/** Folds or unfolds one topic (in Read mode as view state only). */
+export function toggleFold(id: string) {
+  foldTopics([id], !isCollapsed(id))
+}
+
 export function cmdToggleCollapse() {
   const { selected, topics } = get()
   const idx = buildIndex(topics)
   const withKids = selected.filter((id) => childrenOf(idx, id).length)
   if (!withKids.length) return
-  const allCollapsed = withKids.every((id) => topics[id]?.collapsed)
-  setCollapsed(mapDoc, withKids, !allCollapsed)
+  const allCollapsed = withKids.every((id) => isCollapsed(id))
+  foldTopics(withKids, !allCollapsed)
 }
 
 export function expandBadge(id: string) {
-  const t = get().topics[id]
-  if (t?.collapsed) setCollapsed(mapDoc, [id], false)
+  if (isCollapsed(id)) foldTopics([id], false)
   else if (get().levels !== null) set({ levels: null })
 }
 
@@ -204,8 +224,8 @@ export function cmdDetach() {
   if (id && box && detachTopic(mapDoc, id, { x: box.x + box.w / 2 + 40, y: box.y + box.h / 2 + 60 })) selectOnly(id)
 }
 
-export const cmdUndo = () => mapDoc.undo.undo()
-export const cmdRedo = () => mapDoc.undo.redo()
+export const cmdUndo = () => void (mayEdit('Undo') && mapDoc.undo.undo())
+export const cmdRedo = () => void (mayEdit('Redo') && mapDoc.undo.redo())
 
 // ---------- drag & drop ----------
 export type DropMode = 'child' | 'before' | 'after'
@@ -272,6 +292,7 @@ export function cmdCut() {
 }
 
 export function cmdPasteText(text: string) {
+  if (!mayEdit('Pasting')) return
   let branches: Branch[] | null = null
   if (clip && (!text.trim() || text === clip.text)) branches = clip.branches
   else if (text.trim()) branches = outlineToBranches(parseOutline(text))
@@ -579,6 +600,7 @@ export function pasteFormat() {
 
 /** Format painter: copy the selected topic's format, then click topics to paint them. */
 export function togglePainter() {
+  if (!mayEdit('The format painter')) return
   if (get().painter) {
     set({ painter: null })
     return
@@ -625,6 +647,7 @@ export function toggleMinimap() {
 }
 
 export function togglePanel(tab?: PanelTab) {
+  if (get().readOnly) return set({ readPanelOpen: !get().readPanelOpen })
   const { panelOpen, panelTab } = get()
   if (tab) set({ panelOpen: !panelOpen || panelTab !== tab, panelTab: tab })
   else set({ panelOpen: !panelOpen })

@@ -5,7 +5,7 @@ const API = 'https://www.googleapis.com/drive/v3'
 const UPLOAD = 'https://www.googleapis.com/upload/drive/v3'
 export const FOLDER_MIME = 'application/vnd.google-apps.folder'
 export const APP_FOLDER_NAME = 'Wishtaa Maps'
-const FILE_FIELDS = 'id,name,mimeType,modifiedTime,version,md5Checksum,headRevisionId,trashed,parents,appProperties'
+const FILE_FIELDS = 'id,name,mimeType,modifiedTime,version,md5Checksum,headRevisionId,trashed,parents,appProperties,capabilities(canEdit)'
 
 export interface DriveFileMeta {
   id: string
@@ -20,6 +20,8 @@ export interface DriveFileMeta {
   parents?: string[]
   /** Small key/value pairs only this app sets: the writer marker (see `sync.ts`). */
   appProperties?: Record<string, string>
+  /** What the signed-in person may do with the file. `canEdit: false` means it can only be read. */
+  capabilities?: { canEdit?: boolean }
 }
 
 /** What the rest of the app needs from Google Drive. The real one is `DriveClient`; tests use an in-memory fake. */
@@ -34,6 +36,8 @@ export interface DriveApi {
   /** A real Drive folder inside `parentId`. */
   createFolder(name: string, parentId: string): Promise<DriveFileMeta>
   update(id: string, input: { name?: string; body: string; appProperties?: Record<string, string> }): Promise<DriveFileMeta>
+  /** Changes only this app's small properties on a file (a value of null removes one). The content is not touched. */
+  setAppProperties(id: string, props: Record<string, string | null>): Promise<DriveFileMeta>
   list(parentId: string): Promise<DriveFileMeta[]>
   trash(id: string): Promise<void>
 }
@@ -167,6 +171,14 @@ export class DriveClient implements DriveApi {
   update(id: string, { name, body, appProperties }: { name?: string; body: string; appProperties?: Record<string, string> }): Promise<DriveFileMeta> {
     const m = this.multipart({ ...(name ? { name } : {}), ...(appProperties ? { appProperties } : {}) }, body)
     return this.json<DriveFileMeta>(`${UPLOAD}/files/${encodeURIComponent(id)}?uploadType=multipart&fields=${FILE_FIELDS}`, { method: 'PATCH', ...m })
+  }
+
+  setAppProperties(id: string, props: Record<string, string | null>): Promise<DriveFileMeta> {
+    return this.json<DriveFileMeta>(`${API}/files/${encodeURIComponent(id)}?fields=${FILE_FIELDS}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ appProperties: props }),
+    })
   }
 
   async list(parentId: string): Promise<DriveFileMeta[]> {

@@ -34,7 +34,9 @@ export interface FilesApi {
   setDialog: (d: Dialog | null) => void
   message: string | null
   notify: (text: string) => void
-  open: (file: FileRecord, topicId?: string) => void
+  open: (file: FileRecord, topicId?: string, read?: boolean) => void
+  /** Turns "open in Read mode by default" (the lock) on or off for a file. */
+  setReadDefault: (file: FileRecord, on: boolean) => Promise<void>
   openSampleKb: () => Promise<void>
   rename: (file: FileRecord, name: string) => Promise<void>
   toggleStar: (file: FileRecord) => Promise<void>
@@ -114,7 +116,7 @@ export function FilesProvider({ repo = repository, children }: { repo?: FileRepo
   )
 
   const api = useMemo<FilesApi>(() => {
-    const open = (file: FileRecord, topicId?: string) => navigate(routeForFile(file, topicId))
+    const open = (file: FileRecord, topicId?: string, read = false) => navigate(routeForFile(file, topicId, read))
     return {
       repo,
       files,
@@ -133,6 +135,11 @@ export function FilesProvider({ repo = repository, children }: { repo?: FileRepo
         }, undefined)
       },
       rename: (file, name) => guard(async () => void (await repo.update(file.id, { name })), undefined),
+      setReadDefault: (file, on) =>
+        guard(async () => {
+          await repo.update(file.id, { readOnlyDefault: on })
+          notify(on ? `"${file.name}" now opens in Read mode.` : `"${file.name}" opens in Edit mode again.`)
+        }, undefined),
       toggleStar: (file) => guard(async () => void (await repo.update(file.id, { starred: !file.starred })), undefined),
       duplicate: (file) =>
         guard(async () => {

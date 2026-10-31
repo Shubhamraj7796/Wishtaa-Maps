@@ -9,32 +9,79 @@ import { loadImageBlob, useImageUrl } from '../images'
 import { mapDoc } from '../mapdoc'
 import { showNotice } from '../notice'
 import { OCR_LANGUAGES, ocrLines, recognizeText } from '../ocr'
+import { useScene } from '../scene'
 import { useEditor } from '../store'
 
-/** A picture shown full size. */
+/** A picture shown full size, with zoom and next / previous through the pictures of the map. */
 export function Lightbox() {
   const imageId = useEditor((s) => s.lightbox)
   if (!imageId) return null
   return <LightboxInner imageId={imageId} />
 }
 
+/** The pictures of the map in reading order (the order of the topics), each once. */
+export function mapImageIds(topics: Record<string, { image?: { imageId: string } | null | undefined }>, order: string[]): string[] {
+  const out: string[] = []
+  for (const id of order) {
+    const img = topics[id]?.image?.imageId
+    if (img && !out.includes(img)) out.push(img)
+  }
+  return out
+}
+
+const ZOOMS = [0.5, 0.75, 1, 1.5, 2, 3, 4]
+
 function LightboxInner({ imageId }: { imageId: string }) {
+  const topics = useEditor((s) => s.topics)
+  const order = useScene().order
+  const ids = mapImageIds(topics, order)
+  const at = Math.max(0, ids.indexOf(imageId))
+  const [zoom, setZoom] = useState(1)
   const { url, missing } = useImageUrl(imageId)
   const close = useRef<HTMLButtonElement>(null)
   useEffect(() => close.current?.focus(), [])
+  useEffect(() => setZoom(1), [imageId])
+
+  const step = (dir: 1 | -1) => {
+    if (ids.length < 2) return
+    showPreview(ids[(at + dir + ids.length) % ids.length] as string)
+  }
+  const zoomBy = (dir: 1 | -1) => setZoom((z) => ZOOMS[Math.min(ZOOMS.length - 1, Math.max(0, ZOOMS.findIndex((v) => v >= z - 1e-6) + dir))] ?? z)
+  const btn = 'grid h-10 w-10 place-items-center rounded-full bg-surface text-ink shadow disabled:opacity-40'
+
   return (
     <div
       role="dialog"
       aria-modal="true"
       aria-label="Picture preview"
-      className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+      className="absolute inset-0 z-50 flex items-center justify-center overflow-auto bg-black/80 p-4"
       onPointerDown={() => showPreview(null)}
-      onKeyDown={(e) => e.key === 'Escape' && showPreview(null)}
+      onKeyDown={(e) => {
+        if (e.key === 'Escape') showPreview(null)
+        else if (e.key === 'ArrowRight') step(1)
+        else if (e.key === 'ArrowLeft') step(-1)
+        else if (e.key === '+' || e.key === '=') zoomBy(1)
+        else if (e.key === '-') zoomBy(-1)
+        else if (e.key === '0') setZoom(1)
+      }}
     >
-      <button ref={close} type="button" aria-label="Close preview" title="Close (Esc)" onClick={() => showPreview(null)} className="absolute right-4 top-4 grid h-10 w-10 place-items-center rounded-full bg-surface text-ink shadow">
+      <button ref={close} type="button" aria-label="Close preview" title="Close (Esc)" onClick={() => showPreview(null)} className={`absolute right-4 top-4 ${btn}`}>
         <Icon name="close" size={20} />
       </button>
-      {url ? <img src={url} alt="Full-size picture" className="max-h-full max-w-full rounded-md bg-white object-contain" onPointerDown={(e) => e.stopPropagation()} /> : <p className="text-white">{missing ? 'This picture is no longer stored.' : 'Loading…'}</p>}
+      <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full bg-surface/90 px-2 py-1 text-sm shadow" onPointerDown={(e) => e.stopPropagation()}>
+        <button type="button" aria-label="Previous picture" title="Previous (Left arrow)" disabled={ids.length < 2} onClick={() => step(-1)} className={btn}>‹</button>
+        <span aria-live="polite" className="min-w-16 text-center tabular-nums">{ids.length > 1 ? `${at + 1} of ${ids.length}` : '1 picture'}</span>
+        <button type="button" aria-label="Next picture" title="Next (Right arrow)" disabled={ids.length < 2} onClick={() => step(1)} className={btn}>›</button>
+        <span className="mx-1 h-6 w-px bg-line" aria-hidden="true" />
+        <button type="button" aria-label="Zoom out" title="Zoom out (-)" onClick={() => zoomBy(-1)} className={btn}>−</button>
+        <button type="button" aria-label="Actual size" title="Reset (0)" onClick={() => setZoom(1)} className="min-w-12 text-center tabular-nums">{Math.round(zoom * 100)}%</button>
+        <button type="button" aria-label="Zoom in" title="Zoom in (+)" onClick={() => zoomBy(1)} className={btn}>+</button>
+      </div>
+      {url ? (
+        <img src={url} alt="Full-size picture" style={{ maxWidth: zoom === 1 ? '100%' : 'none', maxHeight: zoom === 1 ? '100%' : 'none', width: zoom === 1 ? undefined : `${zoom * 100}%` }} className="rounded-md bg-white object-contain" onPointerDown={(e) => e.stopPropagation()} />
+      ) : (
+        <p className="text-white">{missing ? 'This picture is no longer stored.' : 'Loading…'}</p>
+      )}
     </div>
   )
 }

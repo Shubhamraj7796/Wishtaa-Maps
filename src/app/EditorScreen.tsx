@@ -16,6 +16,8 @@ import { ObjectBar } from '@/editor/ui/ObjectBar'
 import { OutlineView } from '@/editor/ui/OutlineView'
 import { CommandPalette, ContextMenu, NoticeToast, SearchBar, ShortcutSheet } from '@/editor/ui/Overlays'
 import { QuickToolbar } from '@/editor/ui/QuickToolbar'
+import { ReadModeSwitch } from '@/editor/ui/ReadModeSwitch'
+import { ReadPanel } from '@/editor/ui/ReadPanel'
 import { ZoomBox } from '@/editor/ui/ZoomBox'
 import { SaveStatus } from '@/editor/ui/SaveStatus'
 import { closeFile, openFile, renameOpenFile } from '@/editor/session'
@@ -23,6 +25,7 @@ import type { FileRecord } from '@/core/files/types'
 import { Icon } from '@/ui/icons'
 import { IconButton } from '@/ui/IconButton'
 import { ErrorBoundary } from './ErrorBoundary'
+import { ReadToolbar } from './ReadToolbar'
 import { SaveLocation } from './SaveLocation'
 import { useFiles } from './FilesContext'
 import { EditorMenuButton, Wordmark } from './Shell'
@@ -81,7 +84,7 @@ function Editor({ file }: { file: FileRecord }) {
   const theme = useSettings((s) => s.theme)
   const toggleTheme = useSettings((s) => s.toggleTheme)
   const scene = useScene()
-  const { canUndo, canRedo, tool, levels, focusId, selected, rootId, title, panelOpen, painter, view, insertOpen, relationFrom, selectedObject, minimap, panelTab } = useEditor()
+  const { canUndo, canRedo, tool, levels, focusId, selected, rootId, title, panelOpen, painter, view, insertOpen, relationFrom, selectedObject, minimap, panelTab, readOnly, readPanelOpen } = useEditor()
   const isKb = file.type === 'kb'
   const [params] = useSearchParams()
   const topicParam = params.get('topic')
@@ -108,7 +111,7 @@ function Editor({ file }: { file: FileRecord }) {
   const hasTopic = selected.length > 0
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col" data-mode={readOnly ? 'read' : 'edit'}>
       <header className="flex h-12 shrink-0 items-center gap-2 overflow-x-auto whitespace-nowrap border-b border-line bg-surface px-3">
         <EditorMenuButton />
         <Link to={backTo} aria-label="Back to files" title="Back to files" className="grid h-9 w-9 shrink-0 place-items-center rounded-ui hover:bg-bg">
@@ -119,6 +122,7 @@ function Editor({ file }: { file: FileRecord }) {
         <input
           aria-label={isKb ? 'Knowledge base name' : 'Map name'}
           value={title}
+          readOnly={readOnly}
           onChange={(e) => A.setTitle(e.target.value)}
           onBlur={() => void renameOpenFile(title.trim() || file.name)}
           onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
@@ -126,6 +130,7 @@ function Editor({ file }: { file: FileRecord }) {
         />
         <SaveStatus />
         <SaveLocation />
+        <ReadModeSwitch />
         <div className="ml-auto flex shrink-0 items-center gap-0.5">
           <IconButton icon="hand" label="Hand tool: drag to pan" keys="H" active={tool === 'pan'} onClick={() => A.setTool('pan')} />
           <IconButton icon="select" label="Select tool: drag to box-select" keys="V" active={tool === 'select'} onClick={() => A.setTool('select')} />
@@ -134,16 +139,25 @@ function Editor({ file }: { file: FileRecord }) {
           <TagFilter />
           <IconButton icon="focus" label="Focus on the selected branch" keys="Ctrl+Shift+F" active={!!focusId} onClick={A.toggleFocus} />
           <Divider />
-          <IconButton icon="format" label="Layout, themes, marks and topic details" keys="F4" active={panelOpen} onClick={() => A.togglePanel()} />
-          <IconButton icon="painter" label="Format painter: copy a topic's look, then click topics" active={!!painter} onClick={A.togglePainter} />
-          <Divider />
-          {isKb && <IconButton icon="notebook" label="Notes panel for the selected topic" active={panelOpen && panelTab === 'notes'} onClick={() => A.togglePanel('notes')} caption="Notes" />}
+          {readOnly ? (
+            <IconButton icon="notebook" label="Notes and tags of the selected topic (read only)" keys="F4" active={readPanelOpen} onClick={() => A.togglePanel()} caption="Details" />
+          ) : (
+            <>
+              <IconButton icon="format" label="Layout, themes, marks and topic details" keys="F4" active={panelOpen} onClick={() => A.togglePanel()} />
+              <IconButton icon="painter" label="Format painter: copy a topic's look, then click topics" active={!!painter} onClick={A.togglePainter} />
+              <Divider />
+              {isKb && <IconButton icon="notebook" label="Notes panel for the selected topic" active={panelOpen && panelTab === 'notes'} onClick={() => A.togglePanel('notes')} caption="Notes" />}
+            </>
+          )}
           <IconButton icon="command" label="Command palette" keys="Ctrl+K" onClick={() => A.setPalette(true)} />
           <IconButton icon="help" label="Keyboard shortcuts" keys="?" onClick={() => A.setHelp(true)} />
           <IconButton icon={theme === 'light' ? 'moon' : 'sun'} label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`} onClick={toggleTheme} />
         </div>
       </header>
 
+      {readOnly ? (
+        <ReadToolbar file={file} />
+      ) : (
       <div role="toolbar" aria-label="Editing tools" className="flex shrink-0 items-center gap-0.5 overflow-x-auto border-b border-line bg-surface px-3 py-1">
         <IconButton icon="map" label="Map view" active={view === 'map'} onClick={() => C.setView('map')} caption="Map" />
         <IconButton icon="outline" label="Outline view" keys={keysOf('viewOutline')} active={view === 'outline'} onClick={() => C.setView('outline')} caption="Outline" />
@@ -174,6 +188,7 @@ function Editor({ file }: { file: FileRecord }) {
           <InsertMenu />
         </div>
       </div>
+      )}
 
       <div className="relative flex min-h-0 flex-1">
         <main className="relative min-w-0 flex-1" aria-label={view === 'map' ? 'Map canvas' : 'Outline'}>
@@ -182,8 +197,8 @@ function Editor({ file }: { file: FileRecord }) {
           </div>
           {view === 'outline' && <OutlineView />}
           <SearchBar />
-          <ObjectBar />
-          <QuickToolbar />
+          {!readOnly && <ObjectBar />}
+          {!readOnly && <QuickToolbar />}
           <CommandPalette />
           <ShortcutSheet />
           <ContextMenu />
@@ -191,9 +206,14 @@ function Editor({ file }: { file: FileRecord }) {
           <OcrDialog />
           <NoticeToast />
         </main>
-        {panelOpen && (
+        {!readOnly && panelOpen && (
           <ErrorBoundary inline label="The format panel">
             <FormatPanel />
+          </ErrorBoundary>
+        )}
+        {readOnly && readPanelOpen && (
+          <ErrorBoundary inline label="The details panel">
+            <ReadPanel />
           </ErrorBoundary>
         )}
       </div>
@@ -250,13 +270,23 @@ export default function EditorScreen({ kind }: { kind: 'map' | 'kb' }) {
   const { repo, ready, files } = useFiles()
   const [state, setState] = useState<{ id: string; file: FileRecord | null } | null>(null)
 
+  const [params] = useSearchParams()
+  const readParam = params.get('read') === '1'
   useEffect(() => {
     let alive = true
-    void openFile(id, repo).then((file) => alive && setState({ id, file }))
+    void (async () => {
+      // A file that is protected, shared as view-only in Drive, asked for in Read mode, or covered by the preference opens read-only.
+      const rec = await repo.get(id).catch(() => null)
+      const viewOnly = await ((repo as { isViewOnly?: (id: string) => Promise<boolean> }).isViewOnly?.(id) ?? Promise.resolve(false))
+      const reason = viewOnly ? 'drive' : readParam ? 'link' : rec?.readOnlyDefault ? 'file' : useSettings.getState().openAllReadOnly ? 'preference' : undefined
+      const file = await openFile(id, repo, { readOnly: reason, viewOnly, fileDefault: !!rec?.readOnlyDefault })
+      if (alive) setState({ id, file })
+    })()
     return () => {
       alive = false
       void closeFile()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, repo])
 
   // Keep the header record fresh (name, type) while the file is open.

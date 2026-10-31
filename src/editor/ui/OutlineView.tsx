@@ -3,7 +3,8 @@ import { addChild, addSibling, deleteTopics, moveTopic, reorder, setCollapsed, s
 import { buildIndex, childrenOf } from '@/core/model/tree'
 import { computeNumbers } from '@/core/numbering'
 import { Icon } from '@/ui/icons'
-import { selectOnly } from '../actions'
+import { selectOnly, toggleFold } from '../actions'
+import { viewTopics } from '../scene'
 import { mapDoc } from '../mapdoc'
 import { useEditor } from '../store'
 import { MarkBadge } from './MarkBadge'
@@ -21,18 +22,19 @@ interface RowProps {
   collapsed: boolean
   number: string
   selected: boolean
+  readOnly: boolean
   register: (id: string, el: HTMLInputElement | null) => void
   onKey: (e: React.KeyboardEvent<HTMLInputElement>, row: Row) => void
 }
 
-const OutlineRow = memo(function OutlineRow({ row, text, marks, collapsed, number, selected, register, onKey }: RowProps) {
+const OutlineRow = memo(function OutlineRow({ row, text, marks, collapsed, number, selected, readOnly, register, onKey }: RowProps) {
   return (
     <li role="treeitem" aria-level={row.depth + 1} aria-selected={selected} aria-expanded={row.hasKids ? !collapsed : undefined} className={`flex items-center gap-1 rounded-ui pr-2 ${selected ? 'bg-brand/10' : ''}`} style={{ paddingLeft: row.depth * 22 + 4 }}>
       <button
         type="button"
         aria-label={row.hasKids ? (collapsed ? 'Expand' : 'Collapse') : 'No sub topics'}
         disabled={!row.hasKids}
-        onClick={() => setCollapsed(mapDoc, [row.id], !collapsed)}
+        onClick={() => (readOnly ? toggleFold(row.id) : setCollapsed(mapDoc, [row.id], !collapsed))}
         className="grid h-7 w-6 shrink-0 place-items-center rounded text-muted hover:bg-bg disabled:opacity-0"
       >
         <Icon name={collapsed ? 'chevronRight' : 'chevronDown'} size={15} />
@@ -48,10 +50,11 @@ const OutlineRow = memo(function OutlineRow({ row, text, marks, collapsed, numbe
         key={`${row.id}:${text}`}
         ref={(el) => register(row.id, el)}
         defaultValue={text}
+        readOnly={readOnly}
         aria-label={`Topic text, level ${row.depth + 1}`}
         onFocus={() => selectOnly(row.id)}
         onBlur={(e) => {
-          if (e.currentTarget.value !== text && e.currentTarget.value.trim()) setText(mapDoc, row.id, e.currentTarget.value)
+          if (!readOnly && e.currentTarget.value !== text && e.currentTarget.value.trim()) setText(mapDoc, row.id, e.currentTarget.value)
         }}
         onKeyDown={(e) => onKey(e, row)}
         className="min-w-0 flex-1 bg-transparent py-1 text-sm outline-none"
@@ -62,7 +65,10 @@ const OutlineRow = memo(function OutlineRow({ row, text, marks, collapsed, numbe
 
 /** The whole map as an editable indented list. Edits show up in the map immediately, and the other way round. */
 export function OutlineView() {
-  const topics = useEditor((s) => s.topics)
+  const saved = useEditor((s) => s.topics)
+  const readOnly = useEditor((s) => s.readOnly)
+  const folding = useEditor((s) => s.viewCollapsed)
+  const topics = useMemo(() => viewTopics(saved, readOnly, folding), [saved, readOnly, folding])
   const rootId = useEditor((s) => s.rootId)
   const selected = useEditor((s) => s.selected)
   const numbering = useEditor((s) => s.settings.numbering)
@@ -110,6 +116,20 @@ export function OutlineView() {
   const onKey = (e: React.KeyboardEvent<HTMLInputElement>, row: Row) => {
     const t = topics[row.id]
     if (!t) return
+    if (readOnly) {
+      // Reading: the arrow keys still move through the topics, nothing else does anything.
+      const at = rowsRef.current.findIndex((r) => r.id === row.id)
+      const go = (to: number) => {
+        const target = rowsRef.current[to]
+        if (target) setPending(target.id)
+      }
+      if (e.key === 'ArrowUp') { e.preventDefault(); go(at - 1) }
+      else if (e.key === 'ArrowDown') { e.preventDefault(); go(at + 1) }
+      else if (e.key === 'ArrowRight' && row.hasKids && t.collapsed) { e.preventDefault(); toggleFold(row.id) }
+      else if (e.key === 'ArrowLeft' && row.hasKids && !t.collapsed) { e.preventDefault(); toggleFold(row.id) }
+      else if (e.key === 'Escape') e.currentTarget.blur()
+      return
+    }
     const list = rowsRef.current
     const i = list.findIndex((r) => r.id === row.id)
     const idx = buildIndex(topics)
@@ -168,11 +188,21 @@ export function OutlineView() {
     <div className="absolute inset-0 overflow-y-auto bg-bg" role="region" aria-label="Outline view">
       <div className="mx-auto max-w-3xl px-4 py-5">
         <p className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted">
-          <span>Enter: new topic</span>
-          <span>Tab / Shift+Tab: indent / outdent</span>
-          <span>↑ ↓: move between topics</span>
-          <span>Alt+↑ ↓: reorder</span>
-          <span>Backspace on an empty topic: delete</span>
+          {readOnly ? (
+            <>
+              <span>Read mode: nothing can be changed</span>
+              <span>↑ ↓: move between topics</span>
+              <span>← →: fold or unfold</span>
+            </>
+          ) : (
+            <>
+              <span>Enter: new topic</span>
+              <span>Tab / Shift+Tab: indent / outdent</span>
+              <span>↑ ↓: move between topics</span>
+              <span>Alt+↑ ↓: reorder</span>
+              <span>Backspace on an empty topic: delete</span>
+            </>
+          )}
         </p>
         <ul role="tree" className="space-y-0.5 rounded-ui border border-line bg-surface p-2">
           {rows.map((row) => {
@@ -187,6 +217,7 @@ export function OutlineView() {
                 collapsed={!!t.collapsed}
                 number={numbers.get(row.id) ?? ''}
                 selected={sel.has(row.id)}
+                readOnly={readOnly}
                 register={register}
                 onKey={onKey}
               />

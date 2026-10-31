@@ -9,6 +9,7 @@ import { setSetting } from '@/core/settings'
 import { centerOn, primary, selectIds, selectOnly } from './actions'
 import { mapDoc } from './mapdoc'
 import { showNotice } from './notice'
+import { mayEdit } from './readmode'
 import { useEditor, type DetailsSection, type PanelTab, type ViewMode } from './store'
 
 const get = useEditor.getState
@@ -25,6 +26,7 @@ export function editObject(ref: ObjectRef | null) {
 
 /** Starts a relationship from the selected topic: the next topic you click is the other end. */
 export function startRelationship() {
+  if (!mayEdit('Relationship lines')) return
   const sel = get().selected
   if (sel.length >= 2) {
     finishRelationship(sel[0] as string, sel[1] as string)
@@ -127,12 +129,14 @@ export function toggleTagFilter(tag: string) {
 export const clearTagFilter = () => set({ tagFilter: [] })
 
 export function toggleTaskDone(topicId: string) {
+  if (!mayEdit('Changing a task')) return
   const t = get().topics[topicId]
   patchTask(mapDoc, topicId, { done: !(t?.task?.done ?? false) })
 }
 
 /** Link a topic to another topic: click this, then click the target topic. */
 export function startLinkPick(fromId: string) {
+  if (!mayEdit('Linking topics')) return
   set({ linkFrom: fromId })
   showNotice('Click the topic to link to. Press Esc to cancel.')
 }

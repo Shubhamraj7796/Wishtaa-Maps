@@ -1,6 +1,7 @@
 import { cmdPasteText } from './actions'
 import { addImageToTopic, currentTopicId, firstImageFile } from './images'
 import { showNotice } from './notice'
+import { blockedInReadMode } from './readmode'
 import { commandFor } from './registry'
 import { useEditor } from './store'
 
@@ -37,6 +38,11 @@ export function installKeyboard(): () => void {
   const onPaste = (e: ClipboardEvent) => {
     const editing = useEditor.getState().editingId !== null
     if (typing(e.target) && !editing) return // search box, title, palette: normal text paste
+    if (useEditor.getState().readOnly) {
+      e.preventDefault() // nothing can be pasted into a map that is being read
+      blockedInReadMode('Pasting')
+      return
+    }
 
     // An image on the clipboard goes into the topic being edited or selected.
     const image = firstImageFile(e.clipboardData)
