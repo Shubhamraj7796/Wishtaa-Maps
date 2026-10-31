@@ -7,6 +7,10 @@ import { DriveConflictError, DriveError } from './errors'
 import { driveFileName, nameFromDrive, packFile, restoreBlobs, unpackFile, type BlobStores } from './format'
 import { baseOf, classify, describeWriter, markerProps, type Marker } from './sync'
 import { sourceOf, sourceProps } from './openable'
+import { sha256Hex } from '../images/sha256'
+import type { PictureRef } from './format'
+import type { PictureSync } from './pictures'
+import type { DriveMeta } from '../files/types'
 
 export interface DriveConflict {
   fileId: string
@@ -25,6 +29,26 @@ export interface DriveRepositoryOptions {
   sessionId?: string
   /** The address the app runs at (shown to the person when another address wrote the file). */
   writerOrigin?: string
+  /**
+   * Pictures as separate Drive files. Without it a map file carries its pictures inside (the older way, still used by tests of it).
+   */
+  pictures?: PicturesIntegration
+}
+
+export interface PicturesIntegration {
+  sync: PictureSync
+  /** Sizes and types of stored pictures, for the list in the map file. */
+  refs(ids: readonly string[]): Promise<PictureRef[]>
+}
+
+/** What a base keeps across saves besides Drive's own numbers. */
+export function withExtras(prev: DriveMeta | null | undefined, next: DriveMeta, extra: Partial<DriveMeta> = {}): DriveMeta {
+  const out: DriveMeta = { ...next }
+  if (prev?.picturesFolderId) out.picturesFolderId = prev.picturesFolderId
+  if (prev?.format) out.format = prev.format
+  if (prev?.hash) out.hash = prev.hash
+  if (prev?.refs) out.refs = prev.refs
+  return { ...out, ...extra }
 }
 
 const DIRTY_KEY = 'wishtaamaps:drive-unsynced'
@@ -208,11 +232,45 @@ export class DriveRepository implements FileRepository {
     return !!f && f.type !== 'folder' && f.storage === 'drive' && !!f.contentRef
   }
 
-  private async pack(f: FileRecord, content: Uint8Array): Promise<string> {
+  private async pack(f: FileRecord, content: Uint8Array, mode: 'embed' | 'refs' = this.opts.pictures ? 'refs' : 'embed'): Promise<string> {
+    const pictureRefs = mode === 'refs' ? await this.refsFor(f) : undefined
     return packFile(
-      { type: f.type === 'kb' ? 'kb' : 'map', name: f.name, createdAt: f.createdAt, modifiedAt: f.modifiedAt, content, imageIds: f.imageIds, attachmentIds: f.attachmentIds },
-      this.opts.blobs?.()
+      { type: f.type === 'kb' ? 'kb' : 'map', name: f.name, createdAt: f.createdAt, modifiedAt: f.modifiedAt, content, imageIds: f.imageIds, attachmentIds: f.attachmentIds, pictureRefs },
+      this.opts.blobs?.(),
+      { pictures: mode }
     )
+  }
+
+  /** The pictures a map uses: what this device holds, completed from what the map file last listed (pictures not downloaded here yet). */
+  private async refsFor(f: FileRecord): Promise<PictureRef[]> {
+    const ids = f.imageIds ?? []
+    const have = new Map((await this.opts.pictures?.refs(ids) ?? []).map((r) => [r.id, r]))
+    for (const r of f.driveMeta?.refs ?? []) if (ids.includes(r.id) && !have.has(r.id)) have.set(r.id, r)
+    return ids.filter((id, i) => ids.indexOf(id) === i).flatMap((id) => (have.has(id) ? [have.get(id) as PictureRef] : []))
+  }
+
+  /** What changes in a file's base when Drive's copy was read: its pictures folder and format. */
+  private remoteExtras(un: { version: number; pictureRefs: PictureRef[] }, remote: DriveFileMeta): Partial<DriveMeta> {
+    // The saved fingerprint described the older content, so it is dropped: the next save always compares against what is really here.
+    return { hash: undefined, ...(un.version >= 2 ? { refs: un.pictureRefs } : {}), format: un.version >= 2 ? 2 : undefined, ...(remote.appProperties?.picturesFolderId ? { picturesFolderId: remote.appProperties.picturesFolderId } : {}) }
+  }
+
+  /** A fingerprint of everything a save would send: the map's content, its name and which pictures it uses. */
+  private async fingerprint(f: FileRecord, content: Uint8Array): Promise<string> {
+    const head = new TextEncoder().encode(`${f.name}\n${[...(f.imageIds ?? [])].sort().join(',')}\n${(f.attachmentIds ?? []).join(',')}\n`)
+    const all = new Uint8Array(head.length + content.length)
+    all.set(head)
+    all.set(content, head.length)
+    return sha256Hex(all)
+  }
+
+  /** The Drive folder that holds a map's pictures, made on first need. */
+  private async picturesFolder(f: FileRecord & { contentRef: string }, parentId: string | undefined): Promise<string> {
+    const known = f.driveMeta?.picturesFolderId
+    if (known) return known
+    const parent = parentId ?? (await this.api.ensureAppFolder())
+    const made = await this.api.createFolder(`${f.name}_pictures`.slice(0, 120), parent)
+    return made.id
   }
 
   /** Brings Drive's copy into the local cache and records the version we now have. */
@@ -221,7 +279,7 @@ export class DriveRepository implements FileRepository {
     if (!isReadableContent(un.content)) throw new DriveError('other', 'The copy in Google Drive could not be read.')
     await restoreBlobs(un, this.opts.blobs?.())
     await this.local.saveContent(f.id, un.content, saveMetaFromContent(f.id, un.content))
-    await this.local.update(f.id, { driveMeta: baseOf(remote) })
+    await this.local.update(f.id, { driveMeta: withExtras(f.driveMeta, baseOf(remote), this.remoteExtras(un, remote)), ...(un.version >= 2 ? { imageIds: un.pictureRefs.map((p) => p.id) } : {}) })
     driveLog('pulled', { file: f.name, stored: baseOf(remote) })
     this.markUnsynced(f.id, false)
     return un.content
@@ -265,7 +323,7 @@ export class DriveRepository implements FileRepository {
     if (external) {
       if (await this.sameContent(f)) {
         // Another writer, but the content is identical to ours: nothing to choose, adopt Drive's revision.
-        await this.local.update(id, { driveMeta: baseOf(remote) })
+        await this.local.update(id, { driveMeta: withExtras(f.driveMeta, baseOf(remote)) })
         driveLog('adopted-identical', { file: f.name, stored: baseOf(remote) })
         this.markUnsynced(id, false)
         this.clearConflict(id)
@@ -278,12 +336,39 @@ export class DriveRepository implements FileRepository {
     this.clearConflict(id)
     const content = await this.local.loadContent(id)
     if (!content) return
+    const pics = this.opts.pictures
+    let folderId = f.driveMeta?.picturesFolderId
+    const ids = f.imageIds ?? []
+    const fingerprint = pics ? await this.fingerprint(f, content) : undefined
+    if (pics) {
+      // A map that still carries its pictures inside is converted in a safe order: every picture is in Drive FIRST, and only
+      // then is the new file written. If anything fails the old file is left exactly as it was.
+      const converting = f.driveMeta?.format !== 2 && ids.length > 0
+      if (!folderId || converting) {
+        folderId = await this.picturesFolder(f, remote.parents?.[0])
+        if (converting) await pics.sync.uploadAll(f.id, folderId, ids)
+      }
+      // Nothing changed since the last save that reached Drive: send nothing (a picture resize, a no-op save, an undo and redo back).
+      if (f.driveMeta?.format === 2 && f.driveMeta.hash === fingerprint && f.driveMeta.picturesFolderId === folderId) {
+        void pics.sync.enqueue(f.id, folderId, ids).catch(() => undefined)
+        this.markUnsynced(id, false)
+        driveLog('skipped-same', { file: f.name })
+        return
+      }
+    }
     const marker = this.nextMarker()
-    const out = await this.api.update(f.contentRef, { name: driveFileName(f.name), body: await this.pack(f, content), appProperties: markerProps(marker) })
+    const out = await this.api.update(f.contentRef, {
+      name: driveFileName(f.name),
+      body: await this.pack(f, content),
+      appProperties: { ...markerProps(marker), ...(folderId ? { picturesFolderId: folderId } : {}) },
+    })
     // The new base (revision and our marker) is stored before this save counts as finished, so the next one compares against it.
-    await this.local.update(id, { driveMeta: baseOf(out, marker) })
-    driveLog('saved', { file: f.name, stored: baseOf(out, marker) })
+    const next = withExtras(f.driveMeta, baseOf(out, marker), pics ? { format: 2, picturesFolderId: folderId, hash: fingerprint, refs: await this.refsFor(f) } : {})
+    await this.local.update(id, { driveMeta: next })
+    driveLog('saved', { file: f.name, stored: next })
     this.markUnsynced(id, false)
+    // The map is safe now. Its pictures follow in the background (each one at most once); editing never waits for them.
+    if (pics && folderId) void pics.sync.enqueue(f.id, folderId, ids).catch(() => undefined)
   }
 
   // ---- FileRepository: delegated ------------------------------------------------------------------------
@@ -300,8 +385,29 @@ export class DriveRepository implements FileRepository {
   move(id: string, parentId: string | null) {
     return this.local.move(id, parentId)
   }
-  duplicate(id: string) {
-    return this.local.duplicate(id)
+  /**
+   * A copy of a file. For a file in Drive, Drive makes the copy itself, of the map file and of every picture file in its folder:
+   * nothing is sent from this device. Anything else is copied as before.
+   */
+  async duplicate(id: string): Promise<FileRecord> {
+    const f = await this.local.get(id)
+    if (!this.isDrive(f) || !this.api.available() || !this.opts.pictures || !f.driveMeta?.picturesFolderId) return this.local.duplicate(id)
+    const remote = await this.api.meta(f.contentRef)
+    const parent = remote.parents?.[0] ?? (await this.api.ensureAppFolder())
+    const local = await this.local.duplicate(id) // the browser's own copy (content and index); then pointed at the new Drive files
+    const folder = await this.api.createFolder(`${local.name}_pictures`.slice(0, 120), parent)
+    const pictures = await this.api.listFolder(f.driveMeta.picturesFolderId)
+    let next = 0
+    await Promise.all(
+      Array.from({ length: 4 }, async () => {
+        while (next < pictures.length) {
+          const p = pictures[next++] as DriveFileMeta
+          await this.api.copy(p.id, { parentId: folder.id })
+        }
+      })
+    )
+    const made = await this.api.copy(f.contentRef, { name: driveFileName(local.name), parentId: parent, appProperties: { picturesFolderId: folder.id } })
+    return this.local.update(local.id, { storage: 'drive', contentRef: made.id, driveMeta: { ...baseOf(made), format: 2, picturesFolderId: folder.id } })
   }
   trash(id: string) {
     return this.local.trash(id)
@@ -364,7 +470,7 @@ export class DriveRepository implements FileRepository {
         if (state !== 'external') return this.local.loadContent(id)
         if (this.unsynced.has(id)) {
           if (await this.sameContent(f)) {
-            await this.local.update(id, { driveMeta: baseOf(remote) }) // identical: nothing to choose, adopt silently
+            await this.local.update(id, { driveMeta: withExtras(f.driveMeta, baseOf(remote)) }) // identical: nothing to choose, adopt silently
             this.markUnsynced(id, false)
             this.clearConflict(id)
             return this.local.loadContent(id)
@@ -446,9 +552,23 @@ export class DriveRepository implements FileRepository {
     if (!content) throw new DriveError('other', 'This file has no content to save yet.')
     const parentId = parentFolderId ?? (await this.api.ensureAppFolder())
     const marker = this.nextMarker()
-    const made = await this.api.create({ name: driveFileName(f.name), parentId, body: await this.pack(f, content), appProperties: { ...markerProps(marker), ...(f.readOnlyDefault ? { [READ_ONLY_PROP]: '1' } : {}), ...(f.source ? sourceProps(f.source) : {}) } })
+    const pics = this.opts.pictures
+    const folderId = pics ? await this.picturesFolder({ ...f, contentRef: '' }, parentId) : undefined
+    const made = await this.api.create({
+      name: driveFileName(f.name),
+      parentId,
+      body: await this.pack(f, content),
+      appProperties: { ...markerProps(marker), ...(f.readOnlyDefault ? { [READ_ONLY_PROP]: '1' } : {}), ...(f.source ? sourceProps(f.source) : {}), ...(folderId ? { picturesFolderId: folderId } : {}) },
+    })
     driveLog('moved-to-drive', { file: f.name, stored: baseOf(made, marker) })
-    return this.local.update(id, { storage: 'drive', contentRef: made.id, driveMeta: baseOf(made, marker) })
+    const rec = await this.local.update(id, {
+      storage: 'drive',
+      contentRef: made.id,
+      driveMeta: { ...baseOf(made, marker), ...(pics ? { format: 2 as const, picturesFolderId: folderId, hash: await this.fingerprint(f, content) } : {}) },
+    })
+    // The map file is in Drive; the pictures go up in the background and the editor stays free.
+    if (pics && folderId) void pics.sync.enqueue(id, folderId, f.imageIds ?? []).catch(() => undefined)
+    return rec
   }
 
   /**
@@ -493,7 +613,7 @@ export class DriveRepository implements FileRepository {
     await restoreBlobs(un, this.opts.blobs?.())
     const rec = await this.local.create({ type: un.type, name: un.name || nameFromDrive(remote.name), content: un.content, storage: 'drive' })
     await this.local.saveContent(rec.id, un.content, saveMetaFromContent(rec.id, un.content))
-    return this.local.update(rec.id, { contentRef: driveFileId, driveMeta: baseOf(remote), ...(remote.appProperties?.[READ_ONLY_PROP] === '1' ? { readOnlyDefault: true } : {}), ...(sourceOf(remote.appProperties) ? { source: sourceOf(remote.appProperties) } : {}) })
+    return this.local.update(rec.id, { contentRef: driveFileId, driveMeta: { ...baseOf(remote), ...this.remoteExtras(un, remote) }, ...(un.version >= 2 ? { imageIds: un.pictureRefs.map((p) => p.id) } : {}), ...(remote.appProperties?.[READ_ONLY_PROP] === '1' ? { readOnlyDefault: true } : {}), ...(sourceOf(remote.appProperties) ? { source: sourceOf(remote.appProperties) } : {}) })
   }
 
   /**
@@ -547,7 +667,7 @@ export class DriveRepository implements FileRepository {
         if (content) {
           const marker = this.nextMarker()
           const out = await this.api.update(f.contentRef, { name: driveFileName(f.name), body: await this.pack(f, content), appProperties: markerProps(marker) })
-          await this.local.update(id, { driveMeta: baseOf(out, marker) })
+          await this.local.update(id, { driveMeta: withExtras(f.driveMeta, baseOf(out, marker)) })
           driveLog('kept-mine', { file: f.name, stored: baseOf(out, marker) })
         }
         this.markUnsynced(id, false)

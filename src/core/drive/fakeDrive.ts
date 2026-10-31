@@ -21,6 +21,8 @@ function checksum(text: string): string {
 export class FakeDrive implements DriveApi {
   files = new Map<string, Stored>()
   isOnline = true
+  /** Everything sent TO Drive, for counting: request count and bytes of content. */
+  stats = { requests: 0, bytesUploaded: 0, uploads: 0, copies: 0 }
   isConnected = true
   failNextWith: DriveError | null = null
   /** The next write reaches Drive but its reply is lost (the connection drops after the upload). */
@@ -36,6 +38,7 @@ export class FakeDrive implements DriveApi {
 
   private gate(call: string) {
     this.calls.push(call)
+    this.stats.requests++
     if (!this.isOnline) throw new DriveError('offline', 'No connection to Google Drive.')
     if (this.failNextWith) {
       const e = this.failNextWith
@@ -77,6 +80,8 @@ export class FakeDrive implements DriveApi {
 
   async create({ name, parentId, body, appProperties }: { name: string; parentId: string; body: string; appProperties?: Record<string, string> }) {
     this.gate('create')
+    this.stats.bytesUploaded += body.length
+    this.stats.uploads++
     return this.store(name, WISHTAA_MIME, [parentId], body, appProperties)
   }
 
@@ -91,6 +96,8 @@ export class FakeDrive implements DriveApi {
     if (!f) throw new DriveError('notfound', 'not found', 404)
     if (name) f.meta.name = name
     if (appProperties) f.meta.appProperties = { ...f.meta.appProperties, ...appProperties }
+    this.stats.bytesUploaded += body.length
+    this.stats.uploads++
     this.changeContent(f, body)
     if (this.loseNextReply) {
       this.loseNextReply = false
@@ -139,6 +146,36 @@ export class FakeDrive implements DriveApi {
     const f = this.files.get(meta.id)
     if (f) f.meta.size = String(bytes.byteLength)
     return { ...f?.meta } as DriveFileMeta
+  }
+
+  async uploadBinary({ name, parentId, bytes, mimeType, appProperties, onProgress }: { name: string; parentId: string; bytes: Uint8Array; mimeType: string; appProperties?: Record<string, string>; onProgress?: (f: number) => void }) {
+    this.gate(`uploadBinary ${name}`)
+    this.stats.bytesUploaded += bytes.byteLength
+    this.stats.uploads++
+    const meta = this.store(name, mimeType, [parentId], '', appProperties)
+    this.bytes.set(meta.id, bytes.slice())
+    const f = this.files.get(meta.id)
+    if (f) f.meta.size = String(bytes.byteLength)
+    onProgress?.(1)
+    return { ...(f?.meta as DriveFileMeta) }
+  }
+
+  async copy(id: string, { name, parentId, appProperties }: { name?: string; parentId: string; appProperties?: Record<string, string> }) {
+    this.gate(`copy ${id}`)
+    this.stats.copies++
+    const src = this.files.get(id)
+    if (!src) throw new DriveError('notfound', 'not found', 404)
+    const meta = this.store(name ?? src.meta.name, src.meta.mimeType, [parentId], src.body, { ...src.meta.appProperties, ...appProperties })
+    const bytes = this.bytes.get(id)
+    if (bytes) this.bytes.set(meta.id, bytes.slice())
+    const f = this.files.get(meta.id)
+    if (f && src.meta.size) f.meta.size = src.meta.size
+    return { ...(f?.meta as DriveFileMeta) }
+  }
+
+  async listFolder(parentId: string) {
+    this.gate(`listFolder ${parentId}`)
+    return [...this.files.values()].filter((f) => f.meta.parents?.includes(parentId) && !f.meta.trashed).map((f) => ({ ...f.meta }))
   }
 
   async list(parentId: string) {

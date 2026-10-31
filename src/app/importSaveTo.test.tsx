@@ -73,6 +73,8 @@ function choose(...files: File[]) {
 
 const everything = async () => [...(await driveRepository.list({ parentId: 'any' })), ...(await driveRepository.list({ parentId: 'any', trashed: true }))]
 const driveFiles = () => [...fake.files.values()].filter((f) => f.meta.name.endsWith('.wishtaa'))
+/** The picture files in Drive (the full-size ones; each also has a small version). */
+const pictureFiles = () => [...fake.files.values()].filter((f) => f.meta.appProperties?.pictureKind === 'full')
 const appFolderId = () => [...fake.files.values()].find((f) => f.meta.name === 'Wishtaa Maps')?.meta.id
 
 beforeEach(async () => {
@@ -131,7 +133,8 @@ describe('Import: Save to, Drive connected', () => {
     expect(rec).toMatchObject({ name: 'IND_AS_2', storage: 'drive', topicCount: 9 })
     expect(driveFiles()).toHaveLength(1)
     expect(driveFiles()[0]!.meta.parents).toEqual([appFolderId()])
-    expect(unpackFile(driveFiles()[0]!.body).images).toHaveLength(8)
+    expect(unpackFile(driveFiles()[0]!.body).pictureRefs).toHaveLength(8)
+    await waitFor(() => expect(pictureFiles()).toHaveLength(8))
     expect(rec!.contentRef).toBe(driveFiles()[0]!.meta.id)
   })
 
@@ -320,7 +323,8 @@ describe('Import: when Drive fails', () => {
     expect(files).toHaveLength(1)
     expect(files[0]).toMatchObject({ storage: 'drive' })
     expect(driveFiles()).toHaveLength(1)
-    expect(unpackFile(driveFiles()[0]!.body).images).toHaveLength(8)
+    expect(unpackFile(driveFiles()[0]!.body).pictureRefs).toHaveLength(8)
+    await waitFor(() => expect(pictureFiles()).toHaveLength(8))
   })
 
   it('Retry that fails again stays on the message', async () => {

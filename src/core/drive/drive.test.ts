@@ -12,7 +12,7 @@ import { DriveClient, toDriveError, type FolderCache } from './client'
 import { DriveAuth, DRIVE_SCOPE, type Gis, type GisTokenResponse } from './auth'
 import { DriveConflictError, DriveError } from './errors'
 import { FakeDrive } from './fakeDrive'
-import { FORMAT_VERSION, packFile, restoreBlobs, unpackFile, type BlobStores } from './format'
+import { FORMAT_VERSION, REFS_VERSION, packFile, restoreBlobs, unpackFile, type BlobStores } from './format'
 import { DriveRepository } from './repository'
 
 const texts = (bytes: Uint8Array | null) => {
@@ -70,7 +70,7 @@ describe('.wishtaa file format', () => {
   it('rejects files that are not ours, or are from a newer version', () => {
     expect(() => unpackFile('not json')).toThrow(/not a Wishtaa Maps file/)
     expect(() => unpackFile('{"hello":1}')).toThrow(/not a Wishtaa Maps file/)
-    const newer = JSON.stringify({ app: 'wishtaa-maps', version: FORMAT_VERSION + 1, type: 'map', name: 'x', content: '' })
+    const newer = JSON.stringify({ app: 'wishtaa-maps', version: REFS_VERSION + 1, type: 'map', name: 'x', content: '' })
     expect(() => unpackFile(newer)).toThrow(/newer version/)
   })
 })

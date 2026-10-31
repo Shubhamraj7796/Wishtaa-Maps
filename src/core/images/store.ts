@@ -20,14 +20,24 @@ export interface ImageStore {
   getMeta(id: string): Promise<ImageMeta | undefined>
   delete(id: string): Promise<void>
   keys(): Promise<string[]>
+  /** A small picture (about 256 px) drawn instead of the full one when zoomed out or moving. */
+  putThumb(id: string, blob: Blob): Promise<void>
+  getThumb(id: string): Promise<Blob | undefined>
 }
 
 const meta = ({ id, width, height, type, size }: ImageMeta): ImageMeta => ({ id, width, height, type, size })
 
 export class MemoryImageStore implements ImageStore {
   private items = new Map<string, StoredImage>()
+  private thumbs = new Map<string, Blob>()
   async put(image: StoredImage) {
     this.items.set(image.id, image)
+  }
+  async putThumb(id: string, blob: Blob) {
+    this.thumbs.set(id, blob)
+  }
+  async getThumb(id: string) {
+    return this.thumbs.get(id)
   }
   async get(id: string) {
     return this.items.get(id)
@@ -38,6 +48,7 @@ export class MemoryImageStore implements ImageStore {
   }
   async delete(id: string) {
     this.items.delete(id)
+    this.thumbs.delete(id)
   }
   async keys() {
     return [...this.items.keys()]
@@ -50,6 +61,10 @@ interface Row extends ImageMeta {
 
 export const DEFAULT_DB_NAME = 'wishtaa-maps-images'
 const STORE = 'images'
+/** Sizes only, so asking a picture's size never reads its bytes. */
+const META = 'meta'
+const THUMBS = 'thumbs'
+const DB_VERSION = 2
 
 function wrap<T>(req: IDBRequest<T>): Promise<T> {
   return new Promise((resolve, reject) => {
@@ -69,8 +84,11 @@ export class IndexedDbImageStore implements ImageStore {
 
   private db(): Promise<IDBDatabase> {
     this.dbPromise ??= new Promise((resolve, reject) => {
-      const open = indexedDB.open(this.dbName, 1)
-      open.onupgradeneeded = () => open.result.createObjectStore(STORE, { keyPath: 'id' })
+      const open = indexedDB.open(this.dbName, DB_VERSION)
+      open.onupgradeneeded = () => {
+        const db = open.result
+        for (const name of [STORE, META, THUMBS]) if (!db.objectStoreNames.contains(name)) db.createObjectStore(name, { keyPath: 'id' })
+      }
       open.onsuccess = () => resolve(open.result)
       open.onerror = () => {
         this.dbPromise = null
@@ -86,8 +104,9 @@ export class IndexedDbImageStore implements ImageStore {
 
   async put(image: StoredImage) {
     const row: Row = { ...meta(image), data: await image.blob.arrayBuffer() }
-    const tx = (await this.db()).transaction(STORE, 'readwrite')
+    const tx = (await this.db()).transaction([STORE, META], 'readwrite')
     tx.objectStore(STORE).put(row)
+    tx.objectStore(META).put(meta(image))
     await new Promise<void>((resolve, reject) => {
       tx.oncomplete = () => resolve()
       tx.onerror = () => reject(tx.error ?? new Error('Could not save the image'))
@@ -101,12 +120,34 @@ export class IndexedDbImageStore implements ImageStore {
   }
 
   async getMeta(id: string) {
+    const db = await this.db()
+    const fast = (await wrap(db.transaction(META, 'readonly').objectStore(META).get(id))) as ImageMeta | undefined
+    if (fast) return fast
+    // A picture saved before sizes were kept apart: read it once and remember its size.
     const row = (await wrap((await this.store('readonly')).get(id))) as Row | undefined
-    return row && meta(row)
+    if (!row) return undefined
+    await wrap(db.transaction(META, 'readwrite').objectStore(META).put(meta(row))).catch(() => undefined)
+    return meta(row)
+  }
+
+  async putThumb(id: string, blob: Blob) {
+    const db = await this.db()
+    await wrap(db.transaction(THUMBS, 'readwrite').objectStore(THUMBS).put({ id, type: blob.type, data: await blob.arrayBuffer() }))
+  }
+
+  async getThumb(id: string) {
+    const db = await this.db()
+    const row = (await wrap(db.transaction(THUMBS, 'readonly').objectStore(THUMBS).get(id))) as { type: string; data: ArrayBuffer } | undefined
+    return row && new Blob([row.data], { type: row.type })
   }
 
   async delete(id: string) {
-    await wrap((await this.store('readwrite')).delete(id))
+    const tx = (await this.db()).transaction([STORE, META, THUMBS], 'readwrite')
+    for (const name of [STORE, META, THUMBS]) tx.objectStore(name).delete(id)
+    await new Promise<void>((resolve, reject) => {
+      tx.oncomplete = () => resolve()
+      tx.onerror = () => reject(tx.error ?? new Error('Could not delete the image'))
+    })
   }
 
   async keys() {

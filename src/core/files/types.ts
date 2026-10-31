@@ -13,6 +13,14 @@ export interface DriveMeta {
   /** Who wrote that revision: the editing tab's session and its write counter (see `drive/sync.ts`). */
   session?: string
   counter?: number
+  /** The Drive folder holding this map's pictures (one file per picture). */
+  picturesFolderId?: string
+  /** 2 once the map file refers to pictures by id; unset for a file that still has them embedded. */
+  format?: 1 | 2
+  /** A fingerprint of what was last sent (map content, name and picture ids): a save with the same one sends nothing. */
+  hash?: string
+  /** The pictures the map file lists (id, size, type), kept so a device that has not downloaded them all never drops one on save. */
+  refs?: { id: string; width: number; height: number; type: string; size: number }[]
 }
 
 /** One folder, mind map or knowledge base. */

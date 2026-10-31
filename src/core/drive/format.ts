@@ -7,7 +7,19 @@ export const WISHTAA_MIME = 'application/vnd.wishtaa.map+json'
 /** Files made before the type existed are plain JSON. They are still read; they are not rewritten just to change their type. */
 export const WISHTAA_LEGACY_MIME = 'application/json'
 export const WISHTAA_EXT = '.wishtaa'
+/** Pictures embedded in the file (the first format, and what a shared copy uses). */
 export const FORMAT_VERSION = 1
+/** Pictures referred to by id; their bytes are separate files in Drive. */
+export const REFS_VERSION = 2
+
+/** What the map file says about a picture: enough to lay it out and to fetch it. */
+export interface PictureRef {
+  id: string
+  width: number
+  height: number
+  type: string
+  size: number
+}
 const APP = 'wishtaa-maps'
 
 interface BlobEntry {
@@ -32,6 +44,8 @@ export interface WishtaaFile {
   /** Pictures and attachments used by the map, so it opens complete on any device. */
   images?: Record<string, BlobEntry>
   attachments?: Record<string, BlobEntry>
+  /** Version 2: the pictures by id (no bytes). */
+  pictures?: PictureRef[]
 }
 
 export interface BlobStores {
@@ -47,6 +61,9 @@ export interface Unpacked {
   content: Uint8Array
   images: StoredImage[]
   attachments: StoredImage[]
+  /** 1 = pictures embedded, 2 = pictures by id. */
+  version: number
+  pictureRefs: PictureRef[]
 }
 
 async function toEntry(img: StoredImage): Promise<BlobEntry> {
@@ -76,19 +93,22 @@ export interface PackInput {
   content: Uint8Array
   imageIds?: readonly string[]
   attachmentIds?: readonly string[]
+  /** For `refs`: what to write about each picture. */
+  pictureRefs?: readonly PictureRef[]
 }
 
 /** Builds the text of a `.wishtaa` file. */
-export async function packFile(input: PackInput, blobs?: BlobStores): Promise<string> {
+export async function packFile(input: PackInput, blobs?: BlobStores, opts: { pictures?: 'embed' | 'refs' } = {}): Promise<string> {
+  const refs = opts.pictures === 'refs'
   const file: WishtaaFile = {
     app: APP,
-    version: FORMAT_VERSION,
+    version: refs ? REFS_VERSION : FORMAT_VERSION,
     type: input.type,
     name: input.name,
     createdAt: input.createdAt,
     modifiedAt: input.modifiedAt,
     content: toBase64(input.content),
-    images: await collect(blobs?.images, input.imageIds),
+    ...(refs ? { pictures: [...(input.pictureRefs ?? [])] } : { images: await collect(blobs?.images, input.imageIds) }),
     attachments: await collect(blobs?.attachments, input.attachmentIds),
   }
   return JSON.stringify(file)
@@ -107,7 +127,7 @@ export function unpackFile(text: string): Unpacked {
   if (typeof raw !== 'object' || raw === null) throw notOurs()
   const f = raw as Partial<WishtaaFile>
   if (f.app !== APP || typeof f.content !== 'string' || (f.type !== 'map' && f.type !== 'kb')) throw notOurs()
-  if (typeof f.version !== 'number' || f.version > FORMAT_VERSION) {
+  if (typeof f.version !== 'number' || f.version > REFS_VERSION) {
     throw new DriveError('other', 'This file was saved by a newer version of Wishtaa Maps. Reload the page to update, then try again.')
   }
   let content: Uint8Array
@@ -125,6 +145,8 @@ export function unpackFile(text: string): Unpacked {
     content,
     images: entries(f.images),
     attachments: entries(f.attachments),
+    version: f.version,
+    pictureRefs: (Array.isArray(f.pictures) ? f.pictures : []).filter((p): p is PictureRef => !!p && typeof p.id === 'string' && typeof p.width === 'number' && typeof p.height === 'number'),
   }
 }
 

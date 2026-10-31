@@ -38,6 +38,12 @@ export interface DriveApi {
   downloadBytes(id: string, onProgress?: (fraction: number) => void): Promise<Uint8Array>
   /** Files this app created from the original with this Drive id (the converted copies), newest first. */
   findBySource(sourceFileId: string): Promise<DriveFileMeta[]>
+  /** A binary file (a picture). Big ones go up as a resumable upload. */
+  uploadBinary(input: { name: string; parentId: string; bytes: Uint8Array; mimeType: string; appProperties?: Record<string, string>; onProgress?: (fraction: number) => void }): Promise<DriveFileMeta>
+  /** Drive makes the copy itself: nothing is sent from this device. */
+  copy(id: string, input: { name?: string; parentId: string; appProperties?: Record<string, string> }): Promise<DriveFileMeta>
+  /** Everything in a folder (any name or type), with its properties. */
+  listFolder(parentId: string): Promise<DriveFileMeta[]>
   create(input: { name: string; parentId: string; body: string; appProperties?: Record<string, string> }): Promise<DriveFileMeta>
   /** A real Drive folder inside `parentId`. */
   createFolder(name: string, parentId: string): Promise<DriveFileMeta>
@@ -189,6 +195,71 @@ export class DriveClient implements DriveApi {
     const q = `appProperties has { key='sourceFileId' and value='${escapeQuery(sourceFileId)}' } and trashed=false`
     const page = await this.json<{ files: DriveFileMeta[] }>(`${API}/files?q=${encodeURIComponent(q)}&fields=files(${FILE_FIELDS})&orderBy=createdTime%20desc&pageSize=20`)
     return page.files
+  }
+
+  /** Pictures up to this size go up in one request; bigger ones are uploaded in resumable pieces. */
+  static readonly RESUMABLE_FROM = 5 * 1024 * 1024
+  static readonly CHUNK = 8 * 1024 * 1024
+
+  async uploadBinary({ name, parentId, bytes, mimeType, appProperties, onProgress }: { name: string; parentId: string; bytes: Uint8Array; mimeType: string; appProperties?: Record<string, string>; onProgress?: (f: number) => void }): Promise<DriveFileMeta> {
+    const metadata = { name, parents: [parentId], mimeType, ...(appProperties ? { appProperties } : {}) }
+    if (bytes.byteLength <= DriveClient.RESUMABLE_FROM) {
+      const boundary = `wishtaa${Math.random().toString(36).slice(2)}`
+      const head = `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n--${boundary}\r\nContent-Type: ${mimeType}\r\n\r\n`
+      const body = new Blob([head, bytes as BlobPart, `\r\n--${boundary}--`])
+      const out = await this.json<DriveFileMeta>(`${UPLOAD}/files?uploadType=multipart&fields=${FILE_FIELDS}`, { method: 'POST', headers: { 'Content-Type': `multipart/related; boundary=${boundary}` }, body })
+      onProgress?.(1)
+      return out
+    }
+    // Resumable: open a session, then send it in pieces (the session survives a dropped connection).
+    const start = await this.request(`${UPLOAD}/files?uploadType=resumable&fields=${FILE_FIELDS}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json; charset=UTF-8', 'X-Upload-Content-Type': mimeType, 'X-Upload-Content-Length': String(bytes.byteLength) },
+      body: JSON.stringify(metadata),
+    })
+    const session = start.headers.get('Location')
+    if (!session) throw new DriveError('other', 'Google Drive did not start the upload.')
+    const total = bytes.byteLength
+    let sent = 0
+    for (;;) {
+      const end = Math.min(total, sent + DriveClient.CHUNK)
+      let res: Response
+      try {
+        res = await this.fetchImpl(session, { method: 'PUT', headers: { 'Content-Range': `bytes ${sent}-${end - 1}/${total}`, Authorization: `Bearer ${await this.tokens.getToken()}` }, body: bytes.subarray(sent, end) as BodyInit })
+      } catch {
+        throw new DriveError('offline', 'No connection to Google Drive. The upload will continue when you are back online.')
+      }
+      if (res.status === 308) {
+        const range = res.headers.get('Range')
+        sent = range ? Number(range.split('-')[1]) + 1 : end
+        onProgress?.(sent / total)
+        continue
+      }
+      if (!res.ok) throw await toDriveError(res)
+      onProgress?.(1)
+      return (await res.json()) as DriveFileMeta
+    }
+  }
+
+  copy(id: string, { name, parentId, appProperties }: { name?: string; parentId: string; appProperties?: Record<string, string> }): Promise<DriveFileMeta> {
+    return this.json<DriveFileMeta>(`${API}/files/${encodeURIComponent(id)}/copy?fields=${FILE_FIELDS}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...(name ? { name } : {}), parents: [parentId], ...(appProperties ? { appProperties } : {}) }),
+    })
+  }
+
+  async listFolder(parentId: string): Promise<DriveFileMeta[]> {
+    const q = `'${escapeQuery(parentId)}' in parents and trashed=false`
+    const out: DriveFileMeta[] = []
+    let pageToken = ''
+    do {
+      const url = `${API}/files?q=${encodeURIComponent(q)}&fields=nextPageToken,files(${FILE_FIELDS})&pageSize=1000${pageToken ? `&pageToken=${encodeURIComponent(pageToken)}` : ''}`
+      const page = await this.json<{ files: DriveFileMeta[]; nextPageToken?: string }>(url)
+      out.push(...page.files)
+      pageToken = page.nextPageToken ?? ''
+    } while (pageToken)
+    return out
   }
 
   private multipart(metadata: object, body: string) {

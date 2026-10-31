@@ -27,6 +27,9 @@ export type PanelMode = 'auto' | 'always' | 'manual'
 /** What to do when a picture could be made smaller: ask each time, always compress, or always keep the original. */
 export type PicturesPref = 'ask' | 'compress' | 'original'
 
+/** When pictures go up to Google Drive: by themselves (Automatic) or only when the person taps Sync. */
+export type PictureUploads = 'auto' | 'manual'
+
 /** Big, touch-sized controls: decided by the device (Auto), or forced on or off. */
 export type TouchControls = 'auto' | 'on' | 'off'
 
@@ -37,6 +40,8 @@ interface Saved {
   panelMode?: unknown
   picturesPref?: unknown
   touchControls?: unknown
+  pictureUploads?: unknown
+  pauseOnDataSaver?: unknown
   panelPinned?: unknown
   wheelHintSeen?: unknown
 }
@@ -65,6 +70,11 @@ interface SettingsState {
   setPicturesPref: (p: PicturesPref) => void
   touchControls: TouchControls
   setTouchControls: (t: TouchControls) => void
+  pictureUploads: PictureUploads
+  setPictureUploads: (m: PictureUploads) => void
+  /** Hold picture uploads back while the browser says data saver is on. */
+  pauseOnDataSaver: boolean
+  setPauseOnDataSaver: (on: boolean) => void
   /** The settings panel stays docked open (large screens). */
   panelPinned: boolean
   setPanelPinned: (on: boolean) => void
@@ -79,9 +89,9 @@ const initial = readSavedTheme(storage)
 
 export const useSettings = create<SettingsState>((set, get) => {
   const persist = () => {
-    const { theme, mouseWheel, openAllReadOnly, wheelHintSeen, panelMode, panelPinned, picturesPref, touchControls } = get()
+    const { theme, mouseWheel, openAllReadOnly, wheelHintSeen, panelMode, panelPinned, picturesPref, touchControls, pictureUploads, pauseOnDataSaver } = get()
     try {
-      localStorage.setItem(KEY, JSON.stringify({ theme, mouseWheel, openAllReadOnly, wheelHintSeen, panelMode, panelPinned, picturesPref, touchControls }))
+      localStorage.setItem(KEY, JSON.stringify({ theme, mouseWheel, openAllReadOnly, wheelHintSeen, panelMode, panelPinned, picturesPref, touchControls, pictureUploads, pauseOnDataSaver }))
     } catch {
       /* ignore */
     }
@@ -111,6 +121,16 @@ export const useSettings = create<SettingsState>((set, get) => {
     touchControls: saved.touchControls === 'on' || saved.touchControls === 'off' ? saved.touchControls : 'auto',
     setTouchControls: (touchControls) => {
       set({ touchControls })
+      persist()
+    },
+    pictureUploads: saved.pictureUploads === 'manual' ? 'manual' : 'auto',
+    setPictureUploads: (pictureUploads) => {
+      set({ pictureUploads })
+      persist()
+    },
+    pauseOnDataSaver: saved.pauseOnDataSaver === true,
+    setPauseOnDataSaver: (pauseOnDataSaver) => {
+      set({ pauseOnDataSaver })
       persist()
     },
     setPanelMode: (panelMode) => {
