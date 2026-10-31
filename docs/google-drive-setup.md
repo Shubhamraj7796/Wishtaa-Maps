@@ -120,13 +120,22 @@ There is one action, **Open from Google Drive**, on Home, All files, the Google 
 It uses the Google Picker (My Drive, Shared with me, Recent, shared drives; folders can be browsed; several files can be chosen) and the
 scope stays `drive.file`: choosing a file in the Picker is what gives the app access to that one file.
 
-**The Picker cannot filter by file extension.** It filters only by type (or a text search, which would stop folder browsing, so none is
-used). So the Picker lists the types a `.wishtaa` or `.emmx` usually has in Drive: `application/vnd.wishtaa.map+json`,
-`application/json` (older `.wishtaa` files), `application/octet-stream`, `application/zip`, `application/x-zip-compressed`. This means other
-files of those types can appear in the list. Every pick is therefore checked afterwards, by **name** (`.wishtaa` or `.emmx`, any capitals)
-and by **content** (a `.wishtaa` is JSON that says it is ours and has a version; an `.emmx` is a ZIP with a `document.xml`, up to 50 MB).
-Anything else is refused with "Only .wishtaa and .emmx files can be opened". The Picker has no footer, so that hint is in its title and in the
-footer of our dialog.
+**The Picker cannot filter by file extension, so we list all files and validate on selection.** Drive gives a file uploaded from a computer
+an unpredictable type (`application/octet-stream`, `application/zip`, `application/x-zip-compressed`, a vendor type, or none at all), so any
+type filter hides some `.emmx` files. The Picker is therefore built with **no type filter**: every file is listed, folders can be browsed
+(`setIncludeFolders(true)`, `setSelectFolderEnabled(false)`), and the tabs My Drive, Shared with me, Recent and Shared drives are kept. No text
+query is set either (it would stop folder browsing). The Picker title tells people: "Tip: type .emmx or .wishtaa in the search box to narrow the
+list." Every pick is then checked:
+
+1. By **name**: `.wishtaa` or `.emmx`, any capitals.
+2. If the name says neither, by **content**, after turning away obviously different types (PDF, pictures, Google Docs, Word/Excel/PowerPoint,
+   plain text, HTML) and files over 50 MB without downloading them: a ZIP with a `document.xml` at its top level is an `.emmx`; JSON that says it
+   is `wishtaa-maps` and has a version is a `.wishtaa`.
+3. Anything else is refused with "This file isn't a .wishtaa or .emmx mind map", and nothing is imported. The other files picked at the same
+   time are still opened.
+
+Under `drive.file`, a file chosen in the Picker is granted to the app for that session, so the download (`files.get` with `alt=media`) works for
+it. This is the one place files are chosen from Drive (Home, All files, the Google Drive page, the New file dialog and the command palette all use it).
 
 **New file type.** New `.wishtaa` files in Drive are created with the type `application/vnd.wishtaa.map+json`, so the Picker can show
 them precisely. Files made earlier are stored as `application/json`; they still open and save as before and are **not rewritten** just to

@@ -1,16 +1,18 @@
 import { unzipSync } from 'fflate'
 import { MAX_FILE_BYTES } from '../import/emmx/zip'
 import type { SourceLink } from '../files/types'
-import { WISHTAA_LEGACY_MIME, WISHTAA_MIME } from './format'
 
 /** What the picker shows and what we refuse, in one place. */
 export const OPEN_HINT = 'Only .wishtaa and .emmx files can be opened.'
 
+/** What is said about any file that is neither. */
+export const NOT_A_MIND_MAP = "This file isn't a .wishtaa or .emmx mind map"
+
 /**
- * The Google Picker cannot filter by file extension, only by type. So it lists these types (our own, plain JSON from older files,
- * and the types an .emmx usually has in Drive), and every pick is checked afterwards by name AND content.
+ * The Google Picker cannot filter by file extension, and Drive gives a file uploaded from a computer an unpredictable type
+ * (octet-stream, zip, x-zip-compressed, a vendor type, or none). So the Picker lists EVERY file, and each pick is checked
+ * afterwards: by name, and when the name does not say, by content.
  */
-export const PICKER_MIME_TYPES = [WISHTAA_MIME, WISHTAA_LEGACY_MIME, 'application/octet-stream', 'application/zip', 'application/x-zip-compressed']
 
 export type OpenKind = 'wishtaa' | 'emmx'
 
@@ -31,8 +33,46 @@ export function kindOfName(name: string): OpenKind | null {
 /** The name must end in .wishtaa or .emmx (any capitals). */
 export function checkName(name: string): OpenKind {
   const kind = kindOfName(name)
-  if (!kind) throw new NotOpenable(`"${name}" is not a .wishtaa or .emmx file. ${OPEN_HINT}`)
+  if (!kind) throw new NotOpenable(`${NOT_A_MIND_MAP}: "${name}". ${OPEN_HINT}`)
   return kind
+}
+
+/**
+ * True for types that can never be one of ours (a PDF, a picture, a Google Doc, a Word file...): those are turned away without
+ * downloading anything. Anything else, including no type at all, is looked at by content.
+ */
+export function clearlyOtherType(mime: string | undefined): boolean {
+  if (!mime) return false
+  return (
+    mime === 'application/pdf' ||
+    /^(image|video|audio)\//.test(mime) ||
+    mime.startsWith('application/vnd.google-apps.') ||
+    mime.startsWith('application/vnd.openxmlformats-officedocument.') ||
+    mime === 'application/msword' ||
+    mime === 'application/vnd.ms-excel' ||
+    mime === 'application/vnd.ms-powerpoint' ||
+    mime === 'text/html' ||
+    mime === 'text/plain' ||
+    mime === 'text/csv'
+  )
+}
+
+/** Looks inside a file whose name does not say what it is: an .emmx is a ZIP with a document.xml, a .wishtaa is our JSON. */
+export function sniffKind(bytes: Uint8Array): OpenKind | null {
+  if (bytes.byteLength >= 22 && bytes[0] === 0x50 && bytes[1] === 0x4b && bytes[2] === 0x03 && bytes[3] === 0x04) {
+    try {
+      checkEmmxContent(bytes, 'file')
+      return 'emmx'
+    } catch {
+      return null
+    }
+  }
+  try {
+    checkWishtaaContent(new TextDecoder('utf-8', { fatal: true }).decode(bytes), 'file')
+    return 'wishtaa'
+  } catch {
+    return null
+  }
 }
 
 /** A .wishtaa is JSON that says it is ours and has a format version. */

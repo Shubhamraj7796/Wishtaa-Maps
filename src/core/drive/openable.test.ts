@@ -9,8 +9,8 @@ import { createMapDoc, ensureRoot } from '../model/doc'
 import { addChild } from '../model/commands'
 import { DriveError } from './errors'
 import { FakeDrive } from './fakeDrive'
-import { packFile, WISHTAA_LEGACY_MIME, WISHTAA_MIME, type BlobStores } from './format'
-import { changedSinceConversion, checkEmmxContent, checkName, checkWishtaaContent, kindOfName, NotOpenable, OPEN_HINT, PICKER_MIME_TYPES, sourceOf, sourceProps } from './openable'
+import { packFile, WISHTAA_MIME, type BlobStores } from './format'
+import { changedSinceConversion, checkEmmxContent, checkName, checkWishtaaContent, kindOfName, NotOpenable, OPEN_HINT, sourceOf, sourceProps } from './openable'
 import { OPEN_PICKER_TITLE, pickOpenableFiles, type DocsViewApi, type PickerApi, type PickerResponse } from './picker'
 import { DriveRepository } from './repository'
 
@@ -155,12 +155,10 @@ describe('the Google Picker', () => {
     await p
   })
 
-  it('lists the types a .wishtaa or .emmx can have, and uses no text query (it would stop folder browsing)', async () => {
+  it('sets NO type filter, so every file is listed, and uses no text query (it would stop folder browsing)', async () => {
     const { api, log } = mockPicker()
     const p = pickOpenableFiles(opts, api)
-    const mimes = String(call(log.views[0] as never, 'mime')).split(',')
-    expect(mimes).toEqual(expect.arrayContaining([WISHTAA_MIME, WISHTAA_LEGACY_MIME, 'application/octet-stream', 'application/zip', 'application/x-zip-compressed']))
-    expect(mimes).toEqual(PICKER_MIME_TYPES)
+    for (const v of log.views) expect(v.calls.some((c) => c[0] === 'mime'), 'a type filter would hide .emmx files').toBe(false)
     expect(log.calledQuery).toBe(false)
     log.callback?.({ action: 'cancel' })
     await p
@@ -171,7 +169,7 @@ describe('the Google Picker', () => {
     const p = pickOpenableFiles(opts, api)
     expect(log.features).toEqual(expect.arrayContaining(['MULTI', 'DRIVES']))
     expect(log.title).toBe(OPEN_PICKER_TITLE)
-    expect(log.title).toMatch(/\.wishtaa and \.emmx/)
+    expect(log.title).toMatch(/type \.emmx or \.wishtaa in the search box/)
     expect(log.visible).toBe(true)
     log.callback?.({ action: 'cancel' })
     await p

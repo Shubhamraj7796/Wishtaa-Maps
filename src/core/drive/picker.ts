@@ -1,5 +1,4 @@
 import { DriveError } from './errors'
-import { PICKER_MIME_TYPES } from './openable'
 
 export interface PickedFile {
   id: string
@@ -102,13 +101,13 @@ export interface OpenedDoc {
   sizeBytes?: number
 }
 
-export const OPEN_PICKER_TITLE = 'Open from Google Drive: .wishtaa and .emmx files'
+export const OPEN_PICKER_TITLE = 'Open from Google Drive. Tip: type .emmx or .wishtaa in the search box to narrow the list.'
 
 /**
  * "Open from Google Drive": My Drive, Shared with me, Recent and shared drives, folders you can browse into, several files at
- * once. The Picker cannot filter by file extension (only by type), so it lists the types a .wishtaa or .emmx can have and
- * the caller checks every pick by name and content. Picking a file gives this app access to that one file (the `drive.file`
- * scope). `api` is only for tests.
+ * once. The Picker cannot filter by file extension, and Drive gives a file uploaded from a computer an unpredictable type, so NO
+ * type filter is set: every file is listed and the caller checks every pick by name and content. Picking a file gives this app
+ * access to that one file (the `drive.file` scope). `api` is only for tests.
  */
 export async function pickOpenableFiles(opts: { token: string; apiKey: string | undefined; clientId: string | undefined }, api?: PickerApi): Promise<OpenedDoc[]> {
   if (!opts.apiKey || !opts.clientId) {
@@ -116,11 +115,9 @@ export async function pickOpenableFiles(opts: { token: string; apiKey: string | 
   }
   const picker = api ?? (await loadPicker())
   return new Promise((resolve) => {
-    const mimes = PICKER_MIME_TYPES.join(',')
     // No text query: it would stop folder browsing.
     const view = (viewId: unknown, label: string, setup?: (v: DocsViewApi) => void) => {
       const v = new picker.DocsView(viewId)
-      v.setMimeTypes(mimes)
       v.setIncludeFolders(true)
       v.setSelectFolderEnabled(false)
       v.setLabel?.(label)

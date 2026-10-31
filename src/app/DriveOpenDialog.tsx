@@ -181,7 +181,7 @@ export function DriveOpenDialog({ docs, onClose }: { docs: OpenedDoc[]; onClose:
 
   const footer = (
     <p className="mt-3 flex items-start gap-2 border-t border-line pt-2 text-xs text-muted">
-      <Info size={13} aria-hidden="true" className="mt-0.5 shrink-0" /> {OPEN_HINT}
+      <Info size={13} aria-hidden="true" className="mt-0.5 shrink-0" /> {OPEN_HINT} In the Google window, type .emmx or .wishtaa in the search box to narrow the list.
     </p>
   )
 

@@ -1,6 +1,6 @@
 import { DriveError } from '@/core/drive/errors'
 import type { DriveApi, DriveFileMeta } from '@/core/drive/client'
-import { changedSinceConversion, checkEmmxContent, checkName, checkWishtaaContent, NotOpenable, type OpenKind } from '@/core/drive/openable'
+import { changedSinceConversion, checkEmmxContent, checkWishtaaContent, clearlyOtherType, kindOfName, NOT_A_MIND_MAP, NotOpenable, OPEN_HINT, sniffKind, type OpenKind } from '@/core/drive/openable'
 import type { OpenedDoc } from '@/core/drive/picker'
 import { MAX_FILE_BYTES } from '@/core/import/emmx/zip'
 import type { FileRecord, SourceLink } from '@/core/files/types'
@@ -54,6 +54,18 @@ export function friendlyReason(e: unknown): string {
 }
 
 /**
+ * A file whose name does not end in .wishtaa or .emmx (Drive can rename on upload, and a copy may have lost its extension): known
+ * other types and big files are turned away without downloading; the rest are looked inside.
+ */
+async function sniff(meta: DriveFileMeta, deps: OpenDeps): Promise<OpenKind> {
+  const no = () => new NotOpenable(`${NOT_A_MIND_MAP}: "${meta.name}". ${OPEN_HINT}`)
+  if (clearlyOtherType(meta.mimeType) || Number(meta.size) > MAX_FILE_BYTES) throw no()
+  const kind = sniffKind(await deps.api.downloadBytes(meta.id))
+  if (!kind) throw no()
+  return kind
+}
+
+/**
  * Looks at what was picked. Names are checked first, then size, then (for a .wishtaa) the content, and for an .emmx whether a
  * converted copy already exists. Nothing is written anywhere. A file that cannot be opened is `rejected` with the reason; the
  * rest are still returned, so one bad pick never blocks the others.
@@ -63,7 +75,7 @@ export async function inspectPicked(docs: OpenedDoc[], deps: OpenDeps): Promise<
   for (const doc of docs) {
     try {
       const meta = await deps.api.meta(doc.id)
-      const kind: OpenKind = checkName(meta.name)
+      const kind: OpenKind = kindOfName(meta.name) ?? (await sniff(meta, deps))
       if (kind === 'wishtaa') {
         checkWishtaaContent(await deps.api.download(doc.id), meta.name)
         out.push({ status: 'ok', kind, id: doc.id, name: meta.name, meta })
