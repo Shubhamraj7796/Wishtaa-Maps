@@ -5,7 +5,7 @@ const API = 'https://www.googleapis.com/drive/v3'
 const UPLOAD = 'https://www.googleapis.com/upload/drive/v3'
 export const FOLDER_MIME = 'application/vnd.google-apps.folder'
 export const APP_FOLDER_NAME = 'Wishtaa Maps'
-const FILE_FIELDS = 'id,name,mimeType,modifiedTime,version,trashed,parents'
+const FILE_FIELDS = 'id,name,mimeType,modifiedTime,version,md5Checksum,headRevisionId,trashed,parents'
 
 export interface DriveFileMeta {
   id: string
@@ -13,6 +13,9 @@ export interface DriveFileMeta {
   mimeType: string
   modifiedTime: string
   version: string
+  /** Identity of the file's content: changes only when the bytes change (not for Drive's own housekeeping). */
+  md5Checksum?: string
+  headRevisionId?: string
   trashed?: boolean
   parents?: string[]
 }

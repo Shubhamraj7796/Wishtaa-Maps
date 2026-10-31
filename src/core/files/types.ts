@@ -6,6 +6,10 @@ export interface DriveMeta {
   /** Drive's version counter for the file (changes on every edit, including from other devices). */
   version: string
   modifiedTime: string
+  /** Checksum of the content we last wrote or fetched: the file's content identity. */
+  md5?: string
+  /** The Drive revision of that content. */
+  revisionId?: string
 }
 
 /** One folder, mind map or knowledge base. */

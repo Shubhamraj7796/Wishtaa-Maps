@@ -2,8 +2,10 @@ import { descendantsOf } from '../files/tree'
 import { isReadableContent, saveMetaFromContent } from '../files/content'
 import type { CreateInput, FileIndex, FilePatch, FileRecord, FileRepository, ListQuery, SaveMeta, SearchHit, SearchQuery } from '../files/types'
 import type { DriveApi, DriveFileMeta } from './client'
+import { driveLog } from './debug'
 import { DriveConflictError, DriveError } from './errors'
 import { driveFileName, nameFromDrive, packFile, restoreBlobs, unpackFile, type BlobStores } from './format'
+import { baseOf, isExternalChange } from './sync'
 
 export interface DriveConflict {
   fileId: string
@@ -132,39 +134,58 @@ export class DriveRepository implements FileRepository {
     if (!isReadableContent(un.content)) throw new DriveError('other', 'The copy in Google Drive could not be read.')
     await restoreBlobs(un, this.opts.blobs?.())
     await this.local.saveContent(f.id, un.content, saveMetaFromContent(f.id, un.content))
-    await this.local.update(f.id, { driveMeta: { version: remote.version, modifiedTime: remote.modifiedTime } })
+    await this.local.update(f.id, { driveMeta: baseOf(remote) })
+    driveLog('pulled', { file: f.name, stored: baseOf(remote) })
     this.markUnsynced(f.id, false)
     return un.content
   }
 
   // ---- uploading -----------------------------------------------------------------------------------------
 
-  /** Sends the local copy to Drive. Throws if Drive can't be reached, or if the file changed there (a conflict). */
+  /** Sends the local copy to Drive. Throws if Drive can't be reached, or if the file's content changed there (a conflict). */
   private push(id: string): Promise<void> {
-    return this.lock(id, async () => {
-      const f = await this.local.get(id)
-      if (!this.isDrive(f)) return
-      if (this.conflictMap.has(id)) throw new DriveConflictError()
-      let remote: DriveFileMeta
-      try {
-        remote = await this.api.meta(f.contentRef)
-      } catch (e) {
-        if (e instanceof DriveError && e.kind === 'notfound') {
-          throw new DriveError('notfound', 'This file is no longer in Google Drive. Move it to Drive again to keep syncing, or keep it in this browser.')
-        }
-        throw e
+    return this.lock(id, () => this.pushLocked(id))
+  }
+
+  /**
+   * The upload itself. Must run inside `lock(id)`, which serializes everything that writes this file's record or its Drive
+   * copy: a save never starts before the previous one has stored its new base.
+   */
+  private async pushLocked(id: string): Promise<void> {
+    const f = await this.local.get(id) // fresh: the record is the single source of the base (shared by tabs of this browser)
+    if (!this.isDrive(f)) return
+    let remote: DriveFileMeta
+    try {
+      remote = await this.api.meta(f.contentRef) // always fetched anew, also on a retry
+    } catch (e) {
+      driveLog('check-failed', { file: f.name, error: e instanceof Error ? e.message : String(e) })
+      if (e instanceof DriveError && e.kind === 'notfound') {
+        throw new DriveError('notfound', 'This file is no longer in Google Drive. Move it to Drive again to keep syncing, or keep it in this browser.')
       }
-      if (remote.trashed) throw new DriveError('notfound', 'This file was moved to the Google Drive bin. Restore it there, or keep it in this browser.')
-      if (f.driveMeta && remote.version !== f.driveMeta.version) {
-        this.setConflict(id, remote)
-        throw new DriveConflictError()
-      }
-      const content = await this.local.loadContent(id)
-      if (!content) return
-      const out = await this.api.update(f.contentRef, { name: driveFileName(f.name), body: await this.pack(f, content) })
-      await this.local.update(id, { driveMeta: { version: out.version, modifiedTime: out.modifiedTime } })
-      this.markUnsynced(id, false)
+      throw e
+    }
+    if (remote.trashed) throw new DriveError('notfound', 'This file was moved to the Google Drive bin. Restore it there, or keep it in this browser.')
+    const external = isExternalChange(f.driveMeta, remote)
+    driveLog('check', {
+      file: f.name,
+      base: f.driveMeta ?? null,
+      fresh: { version: remote.version, modifiedTime: remote.modifiedTime, md5: remote.md5Checksum, rev: remote.headRevisionId },
+      versionDiffers: !!f.driveMeta && f.driveMeta.version !== remote.version,
+      externalChange: external,
     })
+    if (external) {
+      this.setConflict(id, remote)
+      throw new DriveConflictError()
+    }
+    // Not a real change (our own write, or Drive's housekeeping): a conflict raised earlier from a stale check is void.
+    this.clearConflict(id)
+    const content = await this.local.loadContent(id)
+    if (!content) return
+    const out = await this.api.update(f.contentRef, { name: driveFileName(f.name), body: await this.pack(f, content) })
+    // The new base is stored before this save counts as finished, so the next one compares against it.
+    await this.local.update(id, { driveMeta: baseOf(out) })
+    driveLog('saved', { file: f.name, stored: baseOf(out) })
+    this.markUnsynced(id, false)
   }
 
   // ---- FileRepository: delegated ------------------------------------------------------------------------
@@ -212,8 +233,11 @@ export class DriveRepository implements FileRepository {
   // ---- FileRepository: Drive-aware ----------------------------------------------------------------------
 
   async update(id: string, patch: FilePatch): Promise<FileRecord> {
-    const rec = await this.local.update(id, patch)
-    if (this.isDrive(rec) && patch.name !== undefined) {
+    const cur = await this.local.get(id)
+    if (!this.isDrive(cur)) return this.local.update(id, patch)
+    // Writing the record while a save is storing its new base could overwrite that base with an older one.
+    const rec = await this.lock(id, () => this.local.update(id, patch))
+    if (patch.name !== undefined) {
       // The new name goes to Drive with the next save (and now, if possible).
       this.markUnsynced(id, true)
       void this.push(id).catch(() => undefined)
@@ -231,7 +255,7 @@ export class DriveRepository implements FileRepository {
     try {
       return await this.lock(id, async () => {
         const remote = await this.api.meta(f.contentRef)
-        if (remote.trashed || (f.driveMeta && remote.version === f.driveMeta.version)) return this.local.loadContent(id)
+        if (remote.trashed || !isExternalChange(f.driveMeta, remote)) return this.local.loadContent(id)
         if (this.unsynced.has(id)) {
           this.setConflict(id, remote)
           return this.local.loadContent(id)
@@ -243,13 +267,19 @@ export class DriveRepository implements FileRepository {
     }
   }
 
-  /** Saves locally first (so nothing is lost), then sends to Drive. A Drive failure is thrown so the status shows it. */
+  /**
+   * Saves locally first (so nothing is lost), then sends to Drive, as ONE serialized step per file. A Drive failure is
+   * thrown so the status shows it; the local copy is already safe.
+   */
   async saveContent(id: string, data: Uint8Array, meta?: SaveMeta): Promise<FileRecord> {
-    const rec = await this.local.saveContent(id, data, meta)
-    if (!this.isDrive(rec)) return rec
-    this.markUnsynced(id, true)
-    await this.push(id)
-    return (await this.local.get(id)) ?? rec
+    const cur = await this.local.get(id)
+    if (!this.isDrive(cur)) return this.local.saveContent(id, data, meta)
+    return this.lock(id, async () => {
+      const rec = await this.local.saveContent(id, data, meta)
+      this.markUnsynced(id, true)
+      await this.pushLocked(id)
+      return (await this.local.get(id)) ?? rec
+    })
   }
 
   async remove(id: string): Promise<void> {
@@ -304,7 +334,8 @@ export class DriveRepository implements FileRepository {
     if (!content) throw new DriveError('other', 'This file has no content to save yet.')
     const parentId = parentFolderId ?? (await this.api.ensureAppFolder())
     const made = await this.api.create({ name: driveFileName(f.name), parentId, body: await this.pack(f, content) })
-    return this.local.update(id, { storage: 'drive', contentRef: made.id, driveMeta: { version: made.version, modifiedTime: made.modifiedTime } })
+    driveLog('moved-to-drive', { file: f.name, stored: baseOf(made) })
+    return this.local.update(id, { storage: 'drive', contentRef: made.id, driveMeta: baseOf(made) })
   }
 
   /**
@@ -349,7 +380,7 @@ export class DriveRepository implements FileRepository {
     await restoreBlobs(un, this.opts.blobs?.())
     const rec = await this.local.create({ type: un.type, name: un.name || nameFromDrive(remote.name), content: un.content, storage: 'drive' })
     await this.local.saveContent(rec.id, un.content, saveMetaFromContent(rec.id, un.content))
-    return this.local.update(rec.id, { contentRef: driveFileId, driveMeta: { version: remote.version, modifiedTime: remote.modifiedTime } })
+    return this.local.update(rec.id, { contentRef: driveFileId, driveMeta: baseOf(remote) })
   }
 
   /** What is in a folder of the app's Drive area (the "Wishtaa Maps" folder when none is given). */
@@ -385,7 +416,8 @@ export class DriveRepository implements FileRepository {
         const content = await this.local.loadContent(id)
         if (content) {
           const out = await this.api.update(f.contentRef, { name: driveFileName(f.name), body: await this.pack(f, content) })
-          await this.local.update(id, { driveMeta: { version: out.version, modifiedTime: out.modifiedTime } })
+          await this.local.update(id, { driveMeta: baseOf(out) })
+          driveLog('kept-mine', { file: f.name, stored: baseOf(out) })
         }
         this.markUnsynced(id, false)
       } else {

@@ -397,11 +397,11 @@ describe('Drive repository', () => {
       expect(texts(await local.loadContent(f.id))).toContain('Mine')
     })
 
-    it('keeps blocking further uploads, without asking Drive again, until it is resolved', async () => {
+    it('keeps blocking further uploads until it is resolved, checking Drive afresh each time', async () => {
       const { f } = await conflicted()
       drive.calls.length = 0
       await expect(repo.saveContent(f.id, mapWith('Base', 'Mine', 'More'))).rejects.toBeInstanceOf(DriveConflictError)
-      expect(drive.calls).toEqual([])
+      expect(drive.calls).toEqual([`meta ${f.contentRef}`]) // fresh check, no upload
     })
 
     it('tells listeners when a conflict appears and when it is gone', async () => {

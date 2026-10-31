@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+### Fixed: false "Two versions of this file" conflicts on Google Drive maps
+- **Cause**: after our own save, Drive raises its internal `version` number by itself (thumbnails, indexing, views) while the
+  content and modified time stay identical. We compared that number, so our own file looked "changed by someone else".
+- **Now** a conflict is raised only when Drive's content really differs from what we last wrote or fetched (content checksum,
+  then revision, then modified time for older records). The new base is stored from Drive's response before the next save runs,
+  saves of one file are strictly serialized, and "Keep mine", "Keep Drive's" and "Save a copy" all reset the base.
+- "Not saved - retry" re-checks Drive afresh and shows the real reason under the status.
+- A file open in two tabs shows "This file is open in another tab" instead of the tabs competing.
+- Diagnostics: open any page with `?debug=drive` (or set `localStorage['wishtaamaps:debug-drive'] = '1'`) to log every
+  check and save to the console and `window.__driveLog`.
+
 ### Themes, colour schemes and branch styling (Phase 1 of 3)
 - **New theme model (format version 2)**: a theme defines, for the central, main, sub and deeper levels, the shape, fill style,
   border, font, text colour, and the branch curve, thickness, taper and dash. Themes are JSON (`themes.json`), so adding one

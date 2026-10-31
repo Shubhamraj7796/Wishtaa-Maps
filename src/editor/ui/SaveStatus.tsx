@@ -1,5 +1,7 @@
+import { useSyncExternalStore } from 'react'
 import { retrySave } from '../session'
 import { useEditor } from '../store'
+import { otherTabOpen, subscribeOtherTab } from '../tabwatch'
 
 function Spinner() {
   return (
@@ -42,6 +44,7 @@ export function SaveStatus() {
   const status = useEditor((s) => s.save.status)
   const savedAt = useEditor((s) => s.save.savedAt)
   const reason = useEditor((s) => s.save.error)
+  const otherTab = useSyncExternalStore(subscribeOtherTab, otherTabOpen, () => false)
 
   const time = savedAt ? new Date(savedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : null
   const label =
@@ -59,7 +62,7 @@ export function SaveStatus() {
   )
 
   return (
-    <div role="status" aria-live="polite" title={tip} className="flex shrink-0 items-center text-xs text-ink">
+    <div role="status" aria-live="polite" title={tip} className="flex min-w-0 shrink-0 flex-col items-start text-xs text-ink">
       {status === 'error' ? (
         <button
           type="button"
@@ -73,6 +76,16 @@ export function SaveStatus() {
         <span className="flex items-center gap-1.5 px-1">
           {icon}
           {text}
+        </span>
+      )}
+      {status === 'error' && reason && (
+        <span data-testid="save-details" className="mt-0.5 hidden max-w-[16rem] truncate text-[11px] text-muted sm:block">
+          {reason}
+        </span>
+      )}
+      {otherTab && (
+        <span data-testid="other-tab" className="mt-0.5 hidden max-w-[16rem] truncate text-[11px] text-muted sm:block">
+          This file is open in another tab
         </span>
       )}
     </div>

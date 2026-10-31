@@ -6,7 +6,17 @@ interface Stored {
   body: string
 }
 
-/** An in-memory Google Drive for tests: versions go up on every write, like the real thing. */
+/** A small stand-in for Drive's content checksum (any change of text changes it). */
+function checksum(text: string): string {
+  let h = 2166136261
+  for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 16777619)
+  return (h >>> 0).toString(16).padStart(8, '0') + text.length.toString(16)
+}
+
+/**
+ * An in-memory Google Drive for tests: `version` goes up on every write, like the real thing, and ALSO when Drive does
+ * housekeeping of its own (`touchMetadata`), while the content checksum, revision and modifiedTime stay the same.
+ */
 export class FakeDrive implements DriveApi {
   files = new Map<string, Stored>()
   isOnline = true
@@ -37,7 +47,7 @@ export class FakeDrive implements DriveApi {
 
   private store(name: string, mimeType: string, parents: string[], body: string): DriveFileMeta {
     const id = `drive-${++this.n}`
-    const meta: DriveFileMeta = { id, name, mimeType, modifiedTime: this.tick(), version: '1', parents }
+    const meta: DriveFileMeta = { id, name, mimeType, modifiedTime: this.tick(), version: '1', parents, md5Checksum: checksum(body), headRevisionId: `rev-${id}-1` }
     this.files.set(id, { meta, body })
     return { ...meta }
   }
@@ -76,10 +86,8 @@ export class FakeDrive implements DriveApi {
     this.gate(`update ${id}`)
     const f = this.files.get(id)
     if (!f) throw new DriveError('notfound', 'not found', 404)
-    f.body = body
     if (name) f.meta.name = name
-    f.meta.version = String(Number(f.meta.version) + 1)
-    f.meta.modifiedTime = this.tick()
+    this.changeContent(f, body)
     return { ...f.meta }
   }
 
@@ -98,9 +106,22 @@ export class FakeDrive implements DriveApi {
   editElsewhere(id: string, body: string) {
     const f = this.files.get(id)
     if (!f) throw new Error('no such file')
+    this.changeContent(f, body)
+  }
+
+  private changeContent(f: Stored, body: string) {
     f.body = body
     f.meta.version = String(Number(f.meta.version) + 1)
     f.meta.modifiedTime = this.tick()
+    f.meta.md5Checksum = checksum(body)
+    f.meta.headRevisionId = `rev-${f.meta.id}-${++this.n}`
+  }
+
+  /** Drive's own housekeeping (thumbnail, indexing, a view): the version goes up, nothing else changes. */
+  touchMetadata(id: string) {
+    const f = this.files.get(id)
+    if (!f) throw new Error('no such file')
+    f.meta.version = String(Number(f.meta.version) + 1)
   }
 
   /** Adds a file as if created outside the app (for open-from-Drive). */

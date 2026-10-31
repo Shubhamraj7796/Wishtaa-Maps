@@ -15,6 +15,7 @@ import { imagesIdle, noteUndoStep, scheduleImageGc } from './images'
 import { mapDoc, resetMapDoc } from './mapdoc'
 import { getTheme } from './scene'
 import { useEditor } from './store'
+import { unwatchFile, watchFile } from './tabwatch'
 
 export { mapDoc }
 
@@ -290,6 +291,8 @@ async function doOpen(fileId: string, repo: FileRepository): Promise<FileRecord 
   })
 
   open = { fileId, autosaver: saver, dispose: () => disposers.forEach((d) => d()) }
+  watchFile(fileId)
+  disposers.push(unwatchFile)
   installPageListeners()
   try {
     localStorage.setItem(LAST_OPEN_KEY, fileId)
