@@ -399,7 +399,7 @@ describe('the Add picture menu', () => {
     render(<AddPictureMenu />)
     expect(screen.getByRole('dialog').className).toMatch(/bottom-0/)
     for (const item of screen.getAllByRole('menuitem')) expect(item.className).toMatch(/min-h-11/)
-    expect(screen.getAllByRole('menuitem', { name: /Choose from Photos/ }).length).toBeGreaterThan(0)
+    expect(screen.getByRole('menuitem', { name: /^Choose from Photos/ })).toBeTruthy() // the disabled Capture screen hint also says Choose from Photos, hence the ^
   })
 
   it('on a mouse desktop it is a popover with normal targets; the preference can force touch on or off', () => {

@@ -14,6 +14,14 @@ import { ChoiceControl, formatBytes } from './PictureChoiceDialog'
 
 const FIT_PAD = 12
 
+const blobKeys = new WeakMap<Blob, number>()
+let blobCounter = 0
+const blobKey = (b: Blob) => {
+  let k = blobKeys.get(b)
+  if (k === undefined) blobKeys.set(b, (k = ++blobCounter))
+  return k
+}
+
 interface Drag {
   handle: Handle
   start: Rect
@@ -28,7 +36,8 @@ interface Drag {
 export function CropOverlay({ codec = browserCodec }: { codec?: Codec } = {}) {
   const draft = useEditor((s) => s.pictureDraft)
   if (!draft) return null
-  return <Crop key={draft.blob.size + ':' + draft.source} codec={codec} />
+  // Keyed by the picture itself, not its size: two pictures of the same size are still two pictures.
+  return <Crop key={blobKey(draft.blob)} codec={codec} />
 }
 
 function Crop({ codec }: { codec: Codec }) {

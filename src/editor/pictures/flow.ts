@@ -7,7 +7,7 @@ import { pictureIdOf } from '@/core/images/sha256'
 import { addChild, setImage } from '@/core/model/commands'
 import { LOCAL } from '@/core/model/doc'
 import { useSettings } from '@/stores/settings'
-import { imageStore, track } from '../images'
+import { imageStore, releaseUnusedUrls, track } from '../images'
 import { mapDoc } from '../mapdoc'
 import { showNotice } from '../notice'
 import { mayEdit } from '../readmode'
@@ -110,6 +110,7 @@ export function placePictures(items: Placed[], target: PictureTarget): string | 
     })
   }, LOCAL)
   if (first) set({ selected: [first], imageSelected: first })
+  releaseUnusedUrls() // a replaced picture's old address is revoked at once
   return first
 }
 

@@ -68,21 +68,33 @@ function releaseUrl(id: string) {
   urls.delete(id)
 }
 
+/**
+ * The picture's address, keyed by its id (its content hash): when the id changes (a picture was replaced or cropped again) the
+ * old address is NEVER shown for the new picture, not even for a moment.
+ */
 export function useImageUrl(id: string): { url: string | null; missing: boolean } {
-  const [state, setState] = useState<{ url: string | null; missing: boolean }>(() => ({
-    url: urls.get(id) ?? null,
-    missing: false,
-  }))
+  const [state, setState] = useState<{ id: string; url: string | null; missing: boolean }>(() => ({ id, url: urls.get(id) ?? null, missing: false }))
   useEffect(() => {
     let cancelled = false
     void loadUrl(id).then((url) => {
-      if (!cancelled) setState(url ? { url, missing: false } : { url: null, missing: true })
+      if (!cancelled) setState(url ? { id, url, missing: false } : { id, url: null, missing: true })
     })
     return () => {
       cancelled = true
     }
   }, [id])
-  return state
+  if (state.id !== id) return { url: urls.get(id) ?? null, missing: false }
+  return { url: state.url ?? urls.get(id) ?? null, missing: state.missing }
+}
+
+/**
+ * Frees the cached addresses of pictures no topic uses any more (after a replace, a crop again, or a delete). If undo brings one
+ * back, its address is simply made again when it is next shown.
+ */
+export function releaseUnusedUrls() {
+  const used = new Set<string>()
+  for (const t of Object.values(get().topics)) if (t.image) used.add(t.image.imageId)
+  for (const id of [...urls.keys()]) if (!used.has(id) && get().lightbox !== id) releaseUrl(id)
 }
 
 // ---- cleanup of unused blobs ----
