@@ -132,7 +132,7 @@ export function placePictures(items: Placed[], target: PictureTarget): string | 
 }
 
 // ---- the choice between Compressed and Original --------------------------------------------------------------------
-export function requestChoice(items: { name: string; original: number; compressed: number }[], preview?: { original: Blob; compressed: Blob }) {
+export function requestChoice(items: { name: string; original: number; compressed: number; count?: number }[], preview?: { original: Blob; compressed: Blob }) {
   return new Promise<{ choice: 'compressed' | 'original'; remember: boolean } | null>((resolve) => {
     set({
       pictureChoice: {

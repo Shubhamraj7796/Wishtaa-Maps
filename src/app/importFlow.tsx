@@ -9,7 +9,7 @@ import { imageStore } from '@/editor/images'
 import { getPrefs } from './createPrefs'
 import { initialPickerState, placementFor, rememberChoice, SaveToPicker, type PickerState } from './createFlow'
 import { useFiles, type Dialog } from './FilesContext'
-import { importToPlacement, retryDriveUpload, type ImportedFile, type ImportOutcome, type ImportReport, type ImportSummary } from './importEmmx'
+import { importToPlacement, retryDriveUpload, type ImportProgress, type ImportedFile, type ImportOutcome, type ImportReport, type ImportSummary } from './importEmmx'
 import { Modal, buttonPrimary, buttonSecondary } from './Modal'
 import { FileKindIcon } from './FileBrowser'
 import { plural } from './format'
@@ -75,7 +75,7 @@ export function useImportEmmx() {
     /** Into this browser, in a folder: no question, no dialog. */
     const runLocal = async (files: File[], parentId: string | null) => {
       notify(files.length === 1 ? `Importing "${files[0]?.name}"…` : `Importing ${files.length} files…`)
-      const out = await importToPlacement(files, { repo, images: imageStore, attachments: attachmentStore, downscale: downscaleImage, pictures: importPictures() }, { storage: 'local', parentId }, driveRepository)
+      const out = await importToPlacement(files, { repo, images: imageStore, attachments: attachmentStore, downscale: downscaleImage, pictures: importPictures(), progress: (p) => notify(progressText(p)) }, { storage: 'local', parentId }, driveRepository)
       presentImport(out.summaries, { open, notify, setDialog })
     }
 
@@ -96,6 +96,11 @@ export function useImportEmmx() {
   }, [repo, open, notify, setDialog, localFolderId, connected])
 }
 
+/** "Reading pictures: 5 of 28", or just the step when there is no count. */
+export function progressText(p: ImportProgress): string {
+  return p.total > 0 ? `${p.label}: ${Math.min(p.done, p.total)} of ${p.total}…` : `${p.label}…`
+}
+
 type ImportDialogProps = Extract<Dialog, { kind: 'import' }>
 
 /**
@@ -111,6 +116,7 @@ export function ImportDialog({ d, onClose }: { d: ImportDialogProps; onClose: ()
   const [state, setState] = useState<PickerState>(() => initialPickerState(connected))
   const [phase, setPhase] = useState<'choose' | 'working' | 'failed'>(d.files ? 'working' : 'choose')
   const [outcome, setOutcome] = useState<ImportOutcome | null>(null)
+  const [progress, setProgress] = useState<ImportProgress | null>(null)
   const [placement, setPlacement] = useState<Placement | null>(d.fixed ?? null)
   const started = useRef(false)
 
@@ -134,7 +140,7 @@ export function ImportDialog({ d, onClose }: { d: ImportDialogProps; onClose: ()
   const run = async (files: File[], where: Placement) => {
     setPlacement(where)
     setPhase('working')
-    const out = await importToPlacement(files, { repo: f.repo, images: imageStore, attachments: attachmentStore, downscale: downscaleImage, pictures: importPictures() }, where, sender)
+    const out = await importToPlacement(files, { repo: f.repo, images: imageStore, attachments: attachmentStore, downscale: downscaleImage, pictures: importPictures(), progress: setProgress }, where, sender)
     setOutcome(out)
     if (out.failures.length) setPhase('failed')
     else done(out)
@@ -203,9 +209,13 @@ export function ImportDialog({ d, onClose }: { d: ImportDialogProps; onClose: ()
     const where = placement ? (placement.storage === 'drive' ? 'Google Drive' : 'this browser') : 'this browser'
     return (
       <Modal title="Import" onClose={() => undefined}>
-        <p role="status" className="py-4 text-center text-sm text-muted">
-          Importing and saving to {where}…
-        </p>
+        <div role="status" aria-live="polite" className="py-4 text-center text-sm text-muted">
+          <p>{progress ? progressText(progress) : `Importing and saving to ${where}…`}</p>
+          {progress && progress.total > 0 && (
+            <progress aria-label={progress.label} value={progress.done} max={progress.total} className="mt-2 h-2 w-full accent-[rgb(var(--c-brand))]" />
+          )}
+          <p className="mt-2 text-xs">Big files take a little while. You can keep this window open; nothing is lost if it takes longer.</p>
+        </div>
       </Modal>
     )
   }

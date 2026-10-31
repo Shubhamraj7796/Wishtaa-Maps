@@ -9,7 +9,7 @@ export function importPictures(): ImportPictures {
     pref: useSettings.getState().picturesPref,
     codec: browserCodec,
     async choose({ count, original, compressed }) {
-      const answer = await requestChoice([{ name: `${count} pictures`, original, compressed }])
+      const answer = await requestChoice([{ name: `${count} pictures`, original, compressed, count }])
       if (!answer) return 'original'
       if (answer.remember) rememberChoice(answer.choice)
       return answer.choice

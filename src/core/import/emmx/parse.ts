@@ -1,6 +1,7 @@
 import type { TopicStyle } from '../../model/types'
 import { parseEmmxColor } from './color'
 import { detectImage, displaySize, MAX_IMPORT_DIMENSION, MAX_IMPORT_PIXELS, sha256Hex } from './images'
+import { parseBinaryPage, type BinTopic } from './binpage'
 import { child, childrenNamed, parseXml, path, XmlError, type XmlNode } from './xml'
 import { EmmxError, readEmmxArchive, resolveMediaTarget } from './zip'
 
@@ -54,7 +55,16 @@ export interface EmmxResult {
   stats: EmmxStats
 }
 
+/** How far an import has got, so the screen can show it and stay responsive. */
+export interface EmmxProgress {
+  phase: 'reading' | 'pictures'
+  done: number
+  total: number
+}
+
 export interface EmmxOptions {
+  /** Told after the file is opened and after each picture. The importer also gives the browser a turn between pictures. */
+  onProgress?: (p: EmmxProgress) => void
   /** Treat the default texts ("Main Topic", "Subtopic", ...) as empty when the topic has a picture. On by default. */
   clearPlaceholderText?: boolean
 }
@@ -127,7 +137,9 @@ interface PageCtx {
   images: Map<string, ImportedImage>
   stats: EmmxStats
   tally: Map<string, number>
-  options: Required<EmmxOptions>
+  options: Required<Omit<EmmxOptions, 'onProgress'>> & Pick<EmmxOptions, 'onProgress'>
+  /** Pictures looked at so far, and how many the page lists. */
+  pictureProgress: { done: number; total: number }
 }
 
 function add(ctx: PageCtx, key: string, n = 1) {
@@ -136,6 +148,10 @@ function add(ctx: PageCtx, key: string, n = 1) {
 
 async function pageImage(ctx: PageCtx, rels: Map<string, string>, cache: Map<string, ImportedImage | null>, rid: string): Promise<ImportedImage | null> {
   if (cache.has(rid)) return cache.get(rid) ?? null
+  // One turn for the browser per picture (a 13 MB file has dozens), and the screen is told how far it is.
+  await new Promise<void>((r) => setTimeout(r, 0))
+  ctx.pictureProgress.done++
+  ctx.options.onProgress?.({ phase: 'pictures', done: ctx.pictureProgress.done, total: Math.max(ctx.pictureProgress.total, ctx.pictureProgress.done) })
   let result: ImportedImage | null = null
   const target = rels.get(rid)
   const name = resolveMediaTarget(target)
@@ -366,6 +382,7 @@ function formatWarnings(ctx: PageCtx, pageNote: string[]): string[] {
   line('missingRef', (c) => `${c} reference${s(c)} to missing or unsupported shapes ignored`)
   line('cycle', (c) => `${c} repeated link${s(c)} in the topic tree ignored`)
   line('unplaced', (c) => `${c} topic${s(c)} could not be placed in the tree and ${c === 1 ? 'was' : 'were'} skipped`)
+  line('reparented', (c) => `${c} topic${s(c)} could not be placed under ${c === 1 ? 'its' : 'their'} original parent and ${c === 1 ? 'was' : 'were'} put under the central topic`)
   line('tooMany', (c) => `${c} topic${s(c)} beyond the limit of 100,000 skipped`)
   for (const [k, c] of t) {
     if (k.startsWith('skipped:')) out.push(`${c} ${friendly(k.slice(8), c)} skipped`)
@@ -390,7 +407,7 @@ function readRels(entries: Map<string, Uint8Array>, page: string): Map<string, s
 }
 
 function listPages(entries: Map<string, Uint8Array>, notes: string[]): string[] {
-  const available = (n: string) => entries.has(`page/${n}.xml`)
+  const available = (n: string) => entries.has(`page/${n}.xml`) || entries.has(`mmpage/${n}.bin`)
   const listed: string[] = []
   const doc = entries.get('document.xml')
   if (doc) {
@@ -407,10 +424,88 @@ function listPages(entries: Map<string, Uint8Array>, notes: string[]): string[] 
     }
   }
   if (listed.length) return [...new Set(listed)]
-  return [...entries.keys()]
-    .filter((k) => /^page\/[A-Za-z0-9_-]{1,64}\.xml$/.test(k))
-    .map((k) => k.slice(5, -4))
+  return [
+    ...[...entries.keys()].filter((k) => /^page\/[A-Za-z0-9_-]{1,64}\.xml$/.test(k)).map((k) => k.slice(5, -4)),
+    ...[...entries.keys()].filter((k) => /^mmpage\/[A-Za-z0-9_-]{1,64}\.bin$/.test(k)).map((k) => k.slice(7, -4)),
+  ]
+    .filter((n, i, all) => all.indexOf(n) === i)
     .sort()
+}
+
+/** For a binary page the pictures are numbered in `rels/<page>_formats.xml` (`<Relationship IX="1" Target="../media/x.png"/>`). */
+function readFormatRels(entries: Map<string, Uint8Array>, page: string): Map<string, string> {
+  const rels = readRels(entries, page)
+  const bytes = entries.get(`rels/${page}_formats.xml`)
+  if (!bytes) return rels
+  try {
+    const doc = parseEntry(bytes)
+    for (const r of [...childrenNamed(doc, 'Relationship'), ...childrenNamed(child(doc, 'Relationships'), 'Relationship')].slice(0, 10_000)) {
+      if (r.attrs.IX && r.attrs.Target) rels.set(r.attrs.IX, r.attrs.Target)
+    }
+  } catch {
+    /* unreadable relationships just mean no pictures */
+  }
+  return rels
+}
+
+/**
+ * Builds a map from the topics of a binary page: the text, the tree (each topic names its parent) and the pictures. Colours,
+ * shapes and positions are not in what we can read, so the layout engine places the branches.
+ */
+async function convertBinaryPage(ctx: PageCtx, topics: BinTopic[], rels: Map<string, string>, fallbackName: string): Promise<ImportedMap | null> {
+  const first = topics[0]
+  if (!first) {
+    add(ctx, 'noRoot')
+    return null
+  }
+  const imageCache = new Map<string, ImportedImage | null>()
+  const convert = async (t: BinTopic): Promise<ImportedTopic> => {
+    let image: ImportedTopic['image']
+    if (t.picture !== null) {
+      const img = await pageImage(ctx, rels, imageCache, String(t.picture))
+      if (img) image = { hash: img.hash, ...displaySize(null, null, img) }
+    }
+    const text = t.paragraphs.join('\n').replace(/\s+$/g, '')
+    const placeholder = ctx.options.clearPlaceholderText && image && PLACEHOLDER_TEXTS.includes(text.trim().toLowerCase())
+    return { text: placeholder ? '' : text, style: {}, ...(image ? { image } : {}), children: [] }
+  }
+  const root = await convert(first)
+  const made = new Map<number, ImportedTopic>([[first.id, root]])
+  let count = 1
+  let loose = topics.slice(1)
+  // A topic is attached once its parent is; whatever names a parent we never found goes under the central topic.
+  for (let progress = true; progress && loose.length; ) {
+    progress = false
+    const rest: BinTopic[] = []
+    for (const t of loose) {
+      const parent = t.parent === null ? undefined : made.get(t.parent)
+      if (!parent) {
+        rest.push(t)
+        continue
+      }
+      if (count >= MAX_TOPICS) {
+        add(ctx, 'tooMany')
+        continue
+      }
+      const topic = await convert(t)
+      parent.children.push(topic)
+      made.set(t.id, topic)
+      count++
+      progress = true
+    }
+    loose = rest
+  }
+  for (const t of loose) {
+    if (count >= MAX_TOPICS) {
+      add(ctx, 'tooMany')
+      continue
+    }
+    root.children.push(await convert(t))
+    count++
+    add(ctx, 'reparented')
+  }
+  ctx.stats.topics += count
+  return { name: cleanName(root.text.split('\n')[0], fallbackName), root }
 }
 
 /**
@@ -423,8 +518,9 @@ export async function parseEmmx(file: ArrayBuffer | Uint8Array, options: EmmxOpt
   const bytes = file instanceof Uint8Array ? file : new Uint8Array(file)
   const { entries, oversized } = readEmmxArchive(bytes)
   const stats: EmmxStats = { pages: 0, topics: 0, images: 0, duplicateImages: 0, skippedImages: 0, unknownTypes: Object.create(null) as Record<string, number>, unsupportedElements: Object.create(null) as Record<string, number> }
-  const ctx: PageCtx = { entries, oversized, images: new Map(), stats, tally: new Map(), options: { clearPlaceholderText: options.clearPlaceholderText ?? true } }
+  const ctx: PageCtx = { entries, oversized, images: new Map(), stats, tally: new Map(), options: { clearPlaceholderText: options.clearPlaceholderText ?? true, onProgress: options.onProgress }, pictureProgress: { done: 0, total: 0 } }
   const notes: string[] = []
+  options.onProgress?.({ phase: 'reading', done: 0, total: 0 })
 
   const pages = listPages(entries, notes)
   if (!pages.length) throw new EmmxError('This file has no pages we can read.')
@@ -432,6 +528,25 @@ export async function parseEmmx(file: ArrayBuffer | Uint8Array, options: EmmxOpt
   const maps: ImportedMap[] = []
   const names = new Set<string>()
   for (const [i, p] of pages.entries()) {
+    const binary = entries.get(`mmpage/${p}.bin`)
+    if (binary && !entries.has(`page/${p}.xml`)) {
+      // A page saved by a newer EdrawMind in its compact binary format.
+      const rels = readFormatRels(entries, p)
+      ctx.pictureProgress.total += rels.size
+      const topics = parseBinaryPage(binary)
+      const made = await convertBinaryPage(ctx, topics, rels, `Page ${i + 1}`)
+      if (!made) {
+        notes.push(`Page "${p}" is in EdrawMind's newer binary format and no topics could be read from it`)
+        continue
+      }
+      notes.push('This file was saved by a newer EdrawMind in a compact format. The topics, their text and pictures were imported; colours, shapes, line styles and positions were not, so the layout is arranged for you.')
+      let name = made.name
+      for (let k = 2; names.has(name.toLowerCase()); k++) name = `${made.name} ${k}`
+      names.add(name.toLowerCase())
+      maps.push({ ...made, name })
+      stats.pages++
+      continue
+    }
     let page: XmlNode
     try {
       page = parseEntry(entries.get(`page/${p}.xml`) as Uint8Array)
@@ -439,7 +554,9 @@ export async function parseEmmx(file: ArrayBuffer | Uint8Array, options: EmmxOpt
       notes.push(`Page "${p}" could not be read${e instanceof XmlError ? `: ${e.message}` : ''}`)
       continue
     }
-    const m = await convertPage(ctx, page, readRels(entries, p), `Page ${i + 1}`)
+    const rels = readRels(entries, p)
+    ctx.pictureProgress.total += rels.size
+    const m = await convertPage(ctx, page, rels, `Page ${i + 1}`)
     if (!m) continue
     let name = m.name
     for (let k = 2; names.has(name.toLowerCase()); k++) name = `${m.name} ${k}`

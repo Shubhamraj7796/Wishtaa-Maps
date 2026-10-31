@@ -43,7 +43,19 @@ export interface ImportPictures {
   choose(info: { count: number; original: number; compressed: number }): Promise<'compressed' | 'original' | null>
 }
 
+/** What an import is doing now, in words a person can read ("Reading pictures", 5 of 28). */
+export interface ImportProgress {
+  label: string
+  done: number
+  total: number
+}
+
+/** Gives the browser a turn, so a long import never freezes the page. */
+const turn = () => new Promise<void>((r) => setTimeout(r, 0))
+
 export interface ImportDeps {
+  /** Told as the import goes: reading the file, then each picture. */
+  progress?: (p: ImportProgress) => void
   pictures?: ImportPictures
   repo: FileRepository
   images: ImageStore
@@ -97,7 +109,11 @@ export async function importEmmx(file: PickedFile, deps: ImportDeps): Promise<Im
   if (/\.(wishtaa|wishtaa\.zip)$/i.test(file.name)) return importWishtaa(file, deps, summary)
   try {
     if (file.size > MAX_FILE_BYTES) throw new EmmxError('That file is larger than 50 MB, which is more than we import.')
-    const result = await parseEmmx(await file.arrayBuffer(), deps.options)
+    deps.progress?.({ label: 'Opening the file', done: 0, total: 0 })
+    const result = await parseEmmx(await file.arrayBuffer(), {
+      ...deps.options,
+      onProgress: (p) => deps.progress?.(p.phase === 'reading' ? { label: 'Reading the file', done: 0, total: 0 } : { label: 'Reading pictures', done: p.done, total: p.total }),
+    })
     summary.warnings = [...result.warnings]
     summary.unknownTypes = { ...result.stats.unknownTypes }
     summary.unsupportedElements = { ...result.stats.unsupportedElements }
@@ -108,7 +124,10 @@ export async function importEmmx(file: PickedFile, deps: ImportDeps): Promise<Im
       const p = deps.pictures
       let originalTotal = 0
       let compressedTotal = 0
+      let looked = 0
       for (const img of result.images.values()) {
+        deps.progress?.({ label: 'Checking pictures', done: looked++, total: result.images.size })
+        await turn()
         originalTotal += img.bytes.byteLength
         let size = img.bytes.byteLength
         try {
@@ -131,7 +150,10 @@ export async function importEmmx(file: PickedFile, deps: ImportDeps): Promise<Im
     // Pictures first, so a map never refers to one that isn't stored.
     const ids = new Map<string, string>()
     let failed = 0
+    let stored = 0
     for (const img of result.images.values()) {
+      deps.progress?.({ label: 'Saving pictures', done: stored++, total: result.images.size })
+      await turn()
       const squeezed = smaller.get(img.hash)
       const id = squeezed ? await pictureIdOf(squeezed.blob) : importedImageId(img.hash)
       try {

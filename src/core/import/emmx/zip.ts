@@ -11,15 +11,18 @@ export const MAX_XML_BYTES = 25 * 1024 * 1024
 
 const PAGE_RE = /^page\/[A-Za-z0-9_-]{1,64}\.xml$/
 const RELS_RE = /^rels\/[A-Za-z0-9_-]{1,64}\.xml$/
+// Newer EdrawMind versions keep a page as a binary file here (see binpage.ts).
+const BIN_RE = /^mmpage\/[A-Za-z0-9_-]{1,64}\.bin$/
 // Pictures sit directly in media/ (no sub-folders); nothing else is ever read.
 const MEDIA_RE = /^media\/[^/\\:\0]{1,128}$/
 
-type Kind = 'doc' | 'page' | 'rels' | 'media'
+type Kind = 'doc' | 'page' | 'rels' | 'media' | 'bin'
 
 function kindOf(name: string): Kind | null {
   if (name === 'document.xml') return 'doc'
   if (PAGE_RE.test(name)) return 'page'
   if (RELS_RE.test(name)) return 'rels'
+  if (BIN_RE.test(name)) return 'bin'
   if (MEDIA_RE.test(name)) return 'media'
   return null
 }
@@ -33,7 +36,7 @@ export interface EmmxArchive {
 
 /**
  * Opens an .emmx (a ZIP) without trusting it: the size, entry count and total uncompressed size are checked before
- * anything is unpacked, only five kinds of known entries are ever unpacked, and entry names are never used as paths.
+ * anything is unpacked, only six kinds of known entries are ever unpacked, and entry names are never used as paths.
  */
 export function readEmmxArchive(bytes: Uint8Array): EmmxArchive {
   if (bytes.byteLength > MAX_FILE_BYTES) throw new EmmxError('That file is larger than 50 MB, which is more than we import.')

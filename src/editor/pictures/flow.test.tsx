@@ -215,7 +215,7 @@ describe('the choice between Compressed and Original', () => {
     const run = addPictures([photo(4000, 3000, 2000, 'a.jpg'), photo(4000, 3000, 2000, 'b.jpg'), photo(4000, 3000, 2000, 'c.jpg')], 'upload', { kind: 'topic', id: child }, { codec })
     await waitFor(() => expect(st().pictureChoice).not.toBeNull())
     render(<PictureChoiceDialog />)
-    expect(screen.getByTestId('choice-summary').textContent).toMatch(/3 pictures: 11\.7 MB to/)
+    expect(screen.getByTestId('choice-summary').textContent).toMatch(/These 3 pictures are 11\.7 MB\. Compressed they are/)
     fireEvent.click(screen.getByRole('button', { name: 'Add' }))
     await run
     expect(Object.values(st().topics).filter((x) => x.image)).toHaveLength(3)

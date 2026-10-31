@@ -56,7 +56,8 @@ export function PictureChoiceDialog() {
 
   const totalOriginal = req.items.reduce((n, i) => n + i.original, 0)
   const totalCompressed = req.items.reduce((n, i) => n + i.compressed, 0)
-  const many = req.items.length > 1
+  const pictures = req.items.reduce((n, i) => n + (i.count ?? 1), 0)
+  const many = pictures > 1
   return (
     <div className="fixed inset-0 z-50 grid place-items-end bg-black/40 p-0 sm:place-items-center sm:p-4" onPointerDown={() => req.resolve(null)}>
       <div
@@ -70,9 +71,9 @@ export function PictureChoiceDialog() {
         }}
         className="max-h-[90dvh] w-full max-w-lg space-y-3 overflow-y-auto rounded-t-ui border border-line bg-surface p-4 shadow-2xl sm:rounded-ui"
       >
-        <h2 className="text-base font-semibold">{many ? `${req.items.length} pictures` : 'Make the picture smaller?'}</h2>
+        <h2 className="text-base font-semibold">{many ? `Make ${pictures} pictures smaller?` : 'Make the picture smaller?'}</h2>
         <p className="text-sm text-muted" data-testid="choice-summary">
-          {many ? `${req.items.length} pictures: ${formatBytes(totalOriginal)} to ${formatBytes(totalCompressed)}` : `This picture is ${formatBytes(totalOriginal)}. Compressed it is ${formatBytes(totalCompressed)} and still easy to read.`}
+          {many ? `These ${pictures} pictures are ${formatBytes(totalOriginal)}. Compressed they are ${formatBytes(totalCompressed)} and still easy to read.` : `This picture is ${formatBytes(totalOriginal)}. Compressed it is ${formatBytes(totalCompressed)} and still easy to read.`}
         </p>
         <ChoiceControl value={choice} onChange={setChoice} compressed={totalCompressed} original={totalOriginal} />
         {req.preview && before && after && (

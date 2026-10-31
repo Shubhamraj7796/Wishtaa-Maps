@@ -33,7 +33,8 @@ export interface PictureDraft {
 }
 
 export interface PictureChoiceRequest {
-  items: { name: string; original: number; compressed: number }[]
+  /** `count` is how many pictures an entry stands for (an import asks once for all of a file's pictures). */
+  items: { name: string; original: number; compressed: number; count?: number }[]
   /** A picture to preview, original then compressed (single pictures). */
   preview?: { original: Blob; compressed: Blob }
   resolve: (answer: { choice: 'compressed' | 'original'; remember: boolean } | null) => void
