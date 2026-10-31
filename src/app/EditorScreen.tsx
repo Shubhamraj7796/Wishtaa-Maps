@@ -15,6 +15,7 @@ import { InsertMenu } from '@/editor/ui/InsertMenu'
 import { ObjectBar } from '@/editor/ui/ObjectBar'
 import { OutlineView } from '@/editor/ui/OutlineView'
 import { CommandPalette, ContextMenu, NoticeToast, SearchBar, ShortcutSheet } from '@/editor/ui/Overlays'
+import { QuickToolbar } from '@/editor/ui/QuickToolbar'
 import { SaveStatus } from '@/editor/ui/SaveStatus'
 import { closeFile, openFile, renameOpenFile } from '@/editor/session'
 import type { FileRecord } from '@/core/files/types'
@@ -180,6 +181,7 @@ function Editor({ file }: { file: FileRecord }) {
           {view === 'outline' && <OutlineView />}
           <SearchBar />
           <ObjectBar />
+          <QuickToolbar />
           <CommandPalette />
           <ShortcutSheet />
           <ContextMenu />

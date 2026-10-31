@@ -43,6 +43,8 @@ export type LineStyle = 'solid' | 'dashed' | 'dotted'
 export type BranchCurve = 'auto' | 'curve' | 'straight' | 'elbow' | 'roundedElbow' | 'none'
 
 /** Per-topic overrides. Anything left undefined follows the theme. */
+export type TextAlign = 'left' | 'center' | 'right'
+
 export interface TopicStyle {
   shape?: Shape
   /** Box-like shapes only: square, rounded or pill corners. Unset = the shape's own. */
@@ -73,6 +75,13 @@ export interface TopicStyle {
   fontSize?: number
   fontWeight?: number
   italic?: boolean
+  underline?: boolean
+  strike?: boolean
+  /** Colour behind the text (a highlighter pen). */
+  highlight?: string
+  align?: TextAlign
+  /** How see-through the filling is, 0 (invisible) to 1 (solid). Unset = solid. */
+  fillOpacity?: number
   /** Colour of the connector line leading to this topic (otherwise the branch colour of the theme). */
   lineColor?: string
   /** Branch leading to this topic: thick at the parent end, thinner toward the topic. Unset = follow the map and theme. */
@@ -82,6 +91,10 @@ export interface TopicStyle {
   /** Style and thickness of the connector line leading to this topic. */
   lineStyle?: LineStyle
   lineWidth?: number
+  /** How see-through the branch is, 0 to 1. Unset = solid. */
+  lineOpacity?: number
+  /** An arrow head where the branch meets this topic. */
+  lineArrow?: boolean
 }
 
 export interface Task {

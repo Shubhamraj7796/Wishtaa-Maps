@@ -4,6 +4,8 @@ import { isHex } from '@/core/theme/color'
 import { ArrowEndsIcon, Icon, LineIcon, ShapeIcon } from '@/ui/icons'
 import { deleteSelectedObject, editObject, patchObject, selectObject } from '../content'
 import { useEditor } from '../store'
+import { ColorPicker } from './ColorPicker'
+import { Slider } from './Slider'
 
 const btn = 'grid h-9 min-w-9 place-items-center rounded-ui border px-1.5 transition-colors'
 const on = 'border-brand bg-brand/15'
@@ -55,15 +57,12 @@ export function ObjectBar() {
           ))}
         </div>
         <Sep />
-        <div className="flex gap-0.5" role="group" aria-label="Line thickness">
-          {[1.5, 2.4, 4].map((w) => (
-            <button key={w} type="button" aria-pressed={(r.width ?? 2.4) === w} aria-label={`Thickness ${w}`} title={`Thickness ${w}`} onClick={() => patchObject('relationship', r.id, { width: w })} className={`${btn} ${(r.width ?? 2.4) === w ? on : off}`}>
-              <span className="block w-5 rounded-full bg-current" style={{ height: w }} />
-            </button>
-          ))}
+        <div className="flex items-center gap-1 px-1" role="group" aria-label="Line thickness and curve">
+          <Slider label="Thickness" value={r.width ?? 2.4} min={1} max={12} step={0.5} format={(v) => `${v}px`} onCommit={(v) => patchObject('relationship', r.id, { width: v })} />
+          <Slider label="Curve" value={r.bend} min={-200} max={200} step={10} format={(v) => (v === 0 ? 'straight' : String(v))} onCommit={(v) => patchObject('relationship', r.id, { bend: v })} />
         </div>
         <Sep />
-        <input type="color" aria-label="Line colour" title="Line colour" value={isHex(r.color) ? r.color : '#e11d48'} onChange={(e) => patchObject('relationship', r.id, { color: e.target.value })} className="h-8 w-9 cursor-pointer rounded border border-line bg-transparent p-0.5" />
+        <ColorPicker variant="swatch" label="Line colour" value={isHex(r.color) ? r.color : '#e11d48'} onChange={(v) => patchObject('relationship', r.id, { color: v })} onClear={r.color ? () => patchObject('relationship', r.id, { color: undefined }) : undefined} />
         <Sep />
       </>
     )

@@ -59,6 +59,10 @@ export interface EditorState {
   imageLive: ImageLive | null
   /** The width a topic is being dragged to (shown live; saved as one undo step on release). */
   widthLive: { id: string; width: number } | null
+  /** A style change shown on the canvas while a slider is dragged (nothing is saved until release). */
+  styleLive: { ids: string[]; patch: Partial<TopicStyle> } | null
+  /** Whether branch controls change this topic's branch only, or also every branch below it. */
+  branchScope: 'this' | 'branch'
   /** What "apply" reaches in the Style panel: the selected topics, all topics at their level, or their whole branch. */
   styleScope: 'selection' | 'level' | 'branch'
   notice: Notice | null
@@ -122,6 +126,8 @@ export const useEditor = create<EditorState>(() => ({
   imageSelected: null,
   imageLive: null,
   widthLive: null,
+  styleLive: null,
+  branchScope: 'this',
   styleScope: 'selection',
   notice: null,
   menu: null,

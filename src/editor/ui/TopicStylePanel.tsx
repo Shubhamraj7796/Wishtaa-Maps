@@ -16,9 +16,16 @@ export function ShapePicker({ value, onPick }: { value: Shape | undefined; onPic
   const grid = useRef<HTMLDivElement>(null)
   const options: (Shape | undefined)[] = [undefined, ...SHAPES]
   const [focus, setFocus] = useState(0)
+  const [pos, setPos] = useState<{ left: number; top: number } | null>(null)
 
   useEffect(() => {
     if (!open) return
+    // Fixed under the button (above it when there is no room), kept on screen: works inside a toolbar and on a phone.
+    const r = trigger.current?.getBoundingClientRect()
+    if (r) {
+      const w = Math.min(312, window.innerWidth - 16)
+      setPos({ left: Math.max(8, Math.min(window.innerWidth - w - 8, r.right - w)), top: r.bottom + 4 + 260 <= window.innerHeight ? r.bottom + 4 : Math.max(8, r.top - 264) })
+    }
     const i = Math.max(0, options.indexOf(value))
     setFocus(i)
     requestAnimationFrame(() => grid.current?.querySelectorAll<HTMLElement>('[role=menuitemradio]')[i]?.focus())
@@ -61,7 +68,7 @@ export function ShapePicker({ value, onPick }: { value: Shape | undefined; onPic
       {open && (
         <>
           <div className="fixed inset-0 z-30" onPointerDown={() => close(false)} />
-          <div ref={grid} role="menu" aria-label="Shapes" onKeyDown={onKey} className="absolute right-0 top-full z-40 mt-1 w-[19.5rem] max-w-[90vw] rounded-ui border border-line bg-surface p-2 shadow-xl">
+          <div ref={grid} role="menu" aria-label="Shapes" onKeyDown={onKey} className="fixed z-40 w-[19.5rem] max-w-[calc(100vw-1rem)] rounded-ui border border-line bg-surface p-2 shadow-xl" style={pos ?? undefined}>
             <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${COLUMNS}, minmax(0, 1fr))` }}>
               {options.map((sh, i) => (
                 <button
@@ -153,7 +160,15 @@ export function TopicSection({ style: st, look, count }: { style: TopicStyle; lo
               <option value="pattern">Pattern</option>
             </select>
           </Row>
-          <Color label={look.fillKind === 'gradient' ? 'From' : 'Colour'} value={look.fill === 'transparent' ? look.border : look.fill} onChange={(v) => set({ fill: v })} onClear={st.fill ? () => set({ fill: undefined }) : undefined} />
+          <Color
+            label={look.fillKind === 'gradient' ? 'From' : 'Colour'}
+            value={look.fill === 'transparent' ? look.border : look.fill}
+            onChange={(v) => set({ fill: v })}
+            onClear={st.fill ? () => set({ fill: undefined }) : undefined}
+            opacity={look.fillOpacity}
+            onOpacityPreview={(v) => A.previewStyle({ fillOpacity: v })}
+            onOpacityCommit={(v) => A.commitStyle({ fillOpacity: v >= 1 ? undefined : v })}
+          />
           {look.fillKind === 'gradient' && <Color label="To" value={look.fill2} onChange={(v) => set({ fill2: v })} onClear={st.fill2 ? () => set({ fill2: undefined }) : undefined} />}
           {look.fillKind === 'pattern' && (
             <>

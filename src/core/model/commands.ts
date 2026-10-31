@@ -106,6 +106,21 @@ export function setTopicStyle(doc: MapDoc, ids: string[], patch: Partial<TopicSt
   })
 }
 
+/** Merges a different style change into each of several topics, as one undo step. */
+export function setTopicStyles(doc: MapDoc, patches: Record<string, Partial<TopicStyle>>) {
+  const ids = Object.keys(patches).filter((id) => doc.topics.get(id))
+  if (!ids.length) return
+  tx(doc, () => {
+    for (const id of ids) {
+      const t = doc.topics.get(id)
+      if (!t) continue
+      const style: Record<string, unknown> = { ...t.style, ...patches[id] }
+      for (const k of Object.keys(style)) if (style[k] === undefined) delete style[k]
+      doc.topics.set(id, { ...t, style: style as TopicStyle })
+    }
+  })
+}
+
 /** Replaces the whole style of topics (format painter, "reset style"). One undo step. */
 export function replaceTopicStyle(doc: MapDoc, ids: string[], style: TopicStyle, withBranch = false) {
   const targets = styleTargets(doc, ids, withBranch)

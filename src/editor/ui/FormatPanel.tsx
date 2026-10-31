@@ -2,12 +2,14 @@ import { Suspense } from 'react'
 import { LAYOUTS, LAYOUT_GROUPS, layoutDef } from '@/core/layout/catalog'
 import { BRANCH_DIRS, type BranchDir } from '@/core/model/topic'
 import { MAX_SPACING, MIN_SPACING } from '@/core/settings'
+import { isLargeText } from '@/core/theme/color'
 import { resolveLook } from '@/core/theme/resolve'
 import { FONT_OPTIONS } from '@/core/theme/themes'
-import { Icon, LayoutThumb, LineIcon, type IconName } from '@/ui/icons'
+import { Icon, LayoutThumb, type IconName } from '@/ui/icons'
 import * as A from '../actions'
 import { DetailsPanelLazy } from './lazyPanels'
 import { MarkPanel } from './MarkPanel'
+import { BranchControls } from './BranchControls'
 import { Check, Color, Row, Section, field } from './panelKit'
 import { ThemeTab } from './ThemePanel'
 import { TopicSection } from './TopicStylePanel'
@@ -140,7 +142,7 @@ function StyleTab() {
       <TopicSection style={st} look={look} count={count} />
       <Section title="Text">
         <Row label="Font">
-          <select value={st.fontFamily ?? ''} onChange={(e) => A.styleSelected({ fontFamily: e.target.value || undefined })} className={field}>
+          <select aria-label="Font" value={st.fontFamily ?? ''} onChange={(e) => A.styleSelected({ fontFamily: e.target.value || undefined })} className={field}>
             <option value="">Theme default</option>
             {FONT_OPTIONS.map((f) => (
               <option key={f.label} value={f.value}>
@@ -150,32 +152,48 @@ function StyleTab() {
           </select>
         </Row>
         <Row label="Size">
-          <input type="number" min={8} max={72} value={st.fontSize ?? ''} placeholder={String(look.fontSize)} onChange={(e) => A.styleSelected({ fontSize: num(e.target.value) })} className={`${field} w-20`} />
+          <span className="flex items-center gap-1">
+            <button type="button" aria-label="Smaller text" title="Smaller text" onClick={() => A.nudgeFontSize(-2)} className={`${field} px-2 text-xs`}>
+              A−
+            </button>
+            <input type="number" aria-label="Font size" min={8} max={72} value={st.fontSize ?? ''} placeholder={String(look.fontSize)} onChange={(e) => A.styleSelected({ fontSize: num(e.target.value) })} className={`${field} w-16`} />
+            <button type="button" aria-label="Bigger text" title="Bigger text" onClick={() => A.nudgeFontSize(2)} className={`${field} px-2 text-sm`}>
+              A+
+            </button>
+          </span>
         </Row>
-        <Color label="Text colour" value={look.text} onChange={(v) => A.styleSelected({ textColor: v })} onClear={st.textColor ? () => A.styleSelected({ textColor: undefined }) : undefined} />
-        <div className="flex gap-2">
-          <button type="button" aria-pressed={look.fontWeight >= 700} onClick={() => A.styleSelected({ fontWeight: look.fontWeight >= 700 ? undefined : 700 })} className={`${field} font-bold ${look.fontWeight >= 700 ? 'border-brand bg-brand/15' : ''}`}>
+        <Color
+          label="Text colour"
+          value={look.text}
+          onChange={(v) => A.styleSelected({ textColor: v })}
+          onClear={st.textColor ? () => A.styleSelected({ textColor: undefined }) : undefined}
+          contrastAgainst={{ color: look.fill === 'transparent' ? theme.bg : look.fill, large: isLargeText(look.fontSize, look.fontWeight), what: 'on this topic’s fill' }}
+        />
+        <Color label="Highlight" value={look.highlight ?? 'transparent'} onChange={(v) => A.styleSelected({ highlight: v })} onNone={st.highlight ? () => A.styleSelected({ highlight: undefined }) : undefined} />
+        <div className="flex flex-wrap gap-2" role="group" aria-label="Text style">
+          <button type="button" aria-pressed={look.fontWeight >= 700} aria-label="Bold" title="Bold" onClick={() => A.styleSelected({ fontWeight: look.fontWeight >= 700 ? undefined : 700 })} className={`${field} font-bold ${look.fontWeight >= 700 ? 'border-brand bg-brand/15' : ''}`}>
             B
           </button>
-          <button type="button" aria-pressed={look.italic} onClick={() => A.styleSelected({ italic: look.italic ? undefined : true })} className={`${field} italic ${look.italic ? 'border-brand bg-brand/15' : ''}`}>
+          <button type="button" aria-pressed={look.italic} aria-label="Italic" title="Italic" onClick={() => A.styleSelected({ italic: look.italic ? undefined : true })} className={`${field} italic ${look.italic ? 'border-brand bg-brand/15' : ''}`}>
             I
           </button>
+          <button type="button" aria-pressed={look.underline} aria-label="Underline" title="Underline" onClick={() => A.styleSelected({ underline: look.underline ? undefined : true })} className={`${field} underline ${look.underline ? 'border-brand bg-brand/15' : ''}`}>
+            U
+          </button>
+          <button type="button" aria-pressed={look.strike} aria-label="Strikethrough" title="Strikethrough" onClick={() => A.styleSelected({ strike: look.strike ? undefined : true })} className={`${field} line-through ${look.strike ? 'border-brand bg-brand/15' : ''}`}>
+            S
+          </button>
+        </div>
+        <div className="flex gap-1.5" role="radiogroup" aria-label="Text alignment">
+          {(['left', 'center', 'right'] as const).map((al) => (
+            <button key={al} type="button" role="radio" aria-checked={look.align === al} aria-label={`Align ${al}`} title={`Align ${al}`} onClick={() => A.styleSelected({ align: al === 'center' ? undefined : al })} className={`${field} flex-1 ${look.align === al ? 'border-brand bg-brand/15' : ''}`}>
+              {al === 'left' ? '⇤' : al === 'center' ? '↔' : '⇥'}
+            </button>
+          ))}
         </div>
       </Section>
-      <Section title="Line to parent">
-        <div className="flex items-center justify-between gap-2 text-sm">
-          <span>Style</span>
-          <div className="flex gap-1.5" role="group" aria-label="Line style">
-            {(['solid', 'dashed', 'dotted'] as const).map((ls) => (
-              <button key={ls} type="button" aria-pressed={(st.lineStyle ?? 'solid') === ls} aria-label={`Line: ${ls}`} title={ls} onClick={() => A.styleSelected({ lineStyle: ls === 'solid' ? undefined : ls })} className={`grid h-9 w-12 place-items-center rounded-ui border ${(st.lineStyle ?? 'solid') === ls ? 'border-brand bg-brand/15' : 'border-line hover:bg-bg'}`}>
-                <LineIcon style={ls} />
-              </button>
-            ))}
-          </div>
-        </div>
-        <Row label="Thickness">
-          <input type="number" min={1} max={10} step={0.5} value={st.lineWidth ?? ''} placeholder="auto" onChange={(e) => A.styleSelected({ lineWidth: num(e.target.value) })} className={`${field} w-20`} />
-        </Row>
+      <Section title="Branch to parent">
+        <BranchControls />
       </Section>
       <Section title="Format painter">
         <div className="flex flex-wrap gap-2">

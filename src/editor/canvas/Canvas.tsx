@@ -28,7 +28,8 @@ import { useEditor } from '../store'
 import { finishLinkPick, finishRelationship } from '../content'
 import { Minimap } from './Minimap'
 import { ObjectsLayer } from './ObjectsLayer'
-import { taperedBranchPath } from '@/core/theme/taper'
+import { samplePath, taperedBranchPath } from '@/core/theme/taper'
+import { arrowHeadPath } from './objects'
 import { anchorOnShape, bracePath, edgePath, patternStyle, wedgePath } from './paths'
 import { TopicView } from './TopicView'
 
@@ -54,13 +55,24 @@ export function Canvas() {
   const painter = useEditor((s) => s.painter)
   const minimapOn = useEditor((s) => s.minimap)
   const widthLive = useEditor((s) => s.widthLive)
+  const styleLive = useEditor((s) => s.styleLive)
   const settings = useEditor((s) => s.settings)
   const tagFilter = useEditor((s) => s.tagFilter)
   const viewport = useEditor((s) => s.viewport)
   const canvasSize = useEditor((s) => s.canvasSize)
   const selected = useEditor((s) => s.selected)
   const editingId = useEditor((s) => s.editingId)
-  const topics = useEditor((s) => s.topics)
+  const savedTopics = useEditor((s) => s.topics)
+  // While a slider is dragged, the change is shown here without being saved.
+  const topics = useMemo(() => {
+    if (!styleLive) return savedTopics
+    const out = { ...savedTopics }
+    for (const id of styleLive.ids) {
+      const t = savedTopics[id]
+      if (t) out[id] = { ...t, style: { ...t.style, ...styleLive.patch } }
+    }
+    return out
+  }, [savedTopics, styleLive])
   const tool = useEditor((s) => s.tool)
   const search = useEditor((s) => s.search)
 
@@ -325,7 +337,7 @@ export function Canvas() {
   scene.boxes.forEach((b) => {
     if (b.x + b.w >= vx0 && b.x <= vx1 && b.y + b.h >= vy0 && b.y <= vy1) visible.push(b)
   })
-  const paths: { key: string; d: string; color: string; width: number; dash: string | undefined; taper: boolean }[] = []
+  const paths: { key: string; d: string; color: string; width: number; dash: string | undefined; taper: boolean; opacity: number; arrow: string | null }[] = []
   const mapConnector = settings.connector
   // Branches attach to each shape's own outline (a circle's edge, a heart's tip), not just the middle of its box.
   const shapeCache = new Map<string, import('@/core/model/types').Shape>()
@@ -354,7 +366,14 @@ export function Canvas() {
     const kind = themed ? (line.curve === 'curve' ? 'curve' : line.curve === 'straight' ? 'straight' : 'elbow') : e.kind
     const d = edgePath(a, b, { ...e, kind }, themed && line.curve === 'roundedElbow' ? 24 : 10, anchorOf)
     const taper = line.taper && line.width > line.endWidth && line.style === 'solid'
-    paths.push({ key: e.to, d: taper ? taperedBranchPath(d, line.width, line.endWidth) : d, color: line.color, width: line.width, dash: DASH[line.style], taper })
+    let arrow: string | null = null
+    if (line.arrow) {
+      const pts = samplePath(d)
+      const tip = pts[pts.length - 1]
+      const before = pts[pts.length - 2]
+      if (tip && before) arrow = arrowHeadPath(tip, Math.atan2(tip.y - before.y, tip.x - before.x), Math.max(11, (taper ? line.width : line.endWidth) * 3.2))
+    }
+    paths.push({ key: e.to, d: taper ? taperedBranchPath(d, line.width, line.endWidth) : d, color: line.color, width: line.width, dash: DASH[line.style], taper, opacity: line.opacity, arrow })
   }
 
   const dragTargetBox = drag?.target ? scene.boxes.get(drag.target.id) : undefined
@@ -417,11 +436,14 @@ export function Canvas() {
               )
             )}
             {paths.map((p) => (
-              p.taper ? (
-                <path key={p.key} d={p.d} fill={p.color} stroke="none" />
-              ) : (
-                <path key={p.key} d={p.d} fill="none" stroke={p.color} strokeWidth={p.width} strokeDasharray={p.dash} strokeLinecap="round" strokeLinejoin="round" />
-              )
+              <g key={p.key} opacity={p.opacity < 1 ? p.opacity : undefined}>
+                {p.taper ? (
+                  <path d={p.d} fill={p.color} stroke="none" />
+                ) : (
+                  <path d={p.d} fill="none" stroke={p.color} strokeWidth={p.width} strokeDasharray={p.dash} strokeLinecap="round" strokeLinejoin="round" />
+                )}
+                {p.arrow && <path d={p.arrow} fill={p.color} stroke="none" />}
+              </g>
             ))}
           </g>
         </svg>

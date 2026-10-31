@@ -34,6 +34,35 @@ export function contrast(a: string, b: string): number {
   return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05)
 }
 
+/** WCAG AA asks 4.5:1 for normal text and 3:1 for large text (18 px and up, or 14 px and up in bold). */
+export const AA_NORMAL = 4.5
+export const AA_LARGE = 3
+
+export const isLargeText = (fontSize: number, fontWeight = 400) => fontSize >= 24 || (fontSize >= 18.66 && fontWeight >= 700)
+
+export interface ContrastReport {
+  ratio: number
+  /** Passes WCAG AA for this text size. */
+  ok: boolean
+  /** A colour that does pass, when the current one does not (the closest of white, soft black, black). */
+  suggestion: string | null
+}
+
+/** How readable `text` is on `bg`, and a readable alternative when it is not. */
+export function contrastReport(text: string, bg: string, large = false): ContrastReport {
+  const ratio = Math.round(contrast(text, bg) * 100) / 100
+  const ok = ratio >= (large ? AA_LARGE : AA_NORMAL)
+  return { ratio, ok, suggestion: ok ? null : readableText(bg) }
+}
+
+/** `#rrggbb` from what a person may type: `abc`, `#abc`, `AABBCC`, with or without the `#`. Null when it is not a colour. */
+export function normalizeHex(input: string): string | null {
+  const v = input.trim().replace(/^#/, '')
+  if (/^[0-9a-f]{3}$/i.test(v)) return `#${v.split('').map((c) => c + c).join('').toLowerCase()}`
+  if (/^[0-9a-f]{6}$/i.test(v)) return `#${v.toLowerCase()}`
+  return null
+}
+
 /** White, soft black or pure black: whichever reads best (always at least 4.5:1) on `bg`. */
 export function readableText(bg: string): string {
   if (contrast('#ffffff', bg) >= 4.5) return '#ffffff'

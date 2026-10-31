@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+### Colour and line controls, quick toolbar (Phase 3 of 3)
+- **Quick toolbar** next to the selected topic(s): font, size, bold / italic / underline / strikethrough, text colour,
+  highlight, alignment, fill, line colour, shape, Branch, Connector style, format painter and More. Flips below when there is
+  no room above, stays on screen, keyboard reachable, touch sized. See `docs/colours-and-toolbar.md`.
+- **Colour picker**: map colours, standard colours, recent colours, hex box, eyedropper (where supported), No fill, opacity,
+  and WCAG AA contrast warnings with a one-click readable colour.
+- **Branch controls**: colour, thickness 1 to 20, curve (curved, straight, elbow, rounded elbow, tapered, none), dash, arrow
+  head, opacity; for one branch or for the branch and everything below.
+- **Relationship lines**: colour picker, thickness and curve sliders alongside dash and arrow ends.
+- **Text**: underline, strikethrough, highlight, left / centre / right, A+ / A-.
+- Slider drags show live on the canvas and save as one undo step.
+
 ### Topic shapes and size (Phase 2 of 3)
 - **30 shapes**, drawn as cached SVG paths with text-safe areas and connection points: boxes, circles, double circle, diamond,
   hexagon, octagon, cloud, bursts, speech bubble, heart, star, cross, clover, gem, shield, underlines, text only, and more.

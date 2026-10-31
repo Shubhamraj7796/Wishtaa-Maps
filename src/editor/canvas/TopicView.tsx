@@ -209,11 +209,14 @@ function Mini({ label, onClick, children }: { label: string; onClick: () => void
   )
 }
 
+const JUSTIFY = { left: 'flex-start', center: 'center', right: 'flex-end' } as const
+
 export const TopicView = memo(function TopicView(p: TopicViewProps) {
   const { box, topic, isRoot } = p
   const image = topic.image
   const look = resolveLook(p.theme, { depth: box.depth, branch: box.branch, isRoot, style: topic.style, layoutShape: p.layoutShape })
   const marks = topic.marks ?? []
+  const highlight: React.CSSProperties | undefined = look.highlight ? { backgroundColor: look.highlight, color: readableText(look.highlight), borderRadius: 3, padding: '0 2px' } : undefined
   const tags = topic.tags ?? []
   const inline = topic.inlineNote?.trim() ?? ''
   const latex = topic.latex?.trim() ?? ''
@@ -238,7 +241,7 @@ export const TopicView = memo(function TopicView(p: TopicViewProps) {
   const backdrop = behind ? { background: `${p.theme.bg}d0`, borderRadius: 6, padding: '0 6px' } : undefined
 
   const title = hasTitle && (
-    <div className={`flex min-w-0 max-w-full items-center justify-center gap-1 ${simple ? 'h-full w-full' : wrapped ? 'min-h-[22px]' : 'h-[22px]'}`} style={backdrop}>
+    <div className={`flex min-w-0 max-w-full items-center gap-1 ${simple ? 'h-full w-full' : wrapped ? 'min-h-[22px]' : 'h-[22px]'}`} style={{ ...backdrop, justifyContent: JUSTIFY[look.align] }}>
       {marks.map((m, i) => (
         <MarkBadge key={`${m}-${i}`} mark={m} />
       ))}
@@ -246,11 +249,13 @@ export const TopicView = memo(function TopicView(p: TopicViewProps) {
       {p.editing ? (
         <Editor id={box.id} text={topic.text} inRow={!simple} />
       ) : wrapped ? (
-        <span className="min-w-0 whitespace-pre-wrap text-center" style={{ lineHeight: 1.3, overflowWrap: 'anywhere' }}>
+        <span className="min-w-0 whitespace-pre-wrap" style={{ lineHeight: 1.3, overflowWrap: 'anywhere', textAlign: look.align, ...highlight }}>
           {topic.text || ' '}
         </span>
       ) : (
-        <span className="min-w-0 truncate">{topic.text || ' '}</span>
+        <span className="min-w-0 truncate" style={highlight}>
+          {topic.text || ' '}
+        </span>
       )}
     </div>
   )
@@ -379,7 +384,7 @@ export const TopicView = memo(function TopicView(p: TopicViewProps) {
       </svg>
       <div
         className={`absolute flex items-center justify-center px-3 leading-none ${simple ? '' : sideBySide ? 'flex-row gap-3 py-2' : 'flex-col gap-1.5 py-2'}`}
-        style={{ left: area.x, top: area.y, width: area.w, height: area.h, color: look.text, fontFamily: look.fontFamily, fontSize: look.fontSize, fontWeight: look.fontWeight, fontStyle: look.italic ? 'italic' : 'normal' }}
+        style={{ left: area.x, top: area.y, width: area.w, height: area.h, color: look.text, fontFamily: look.fontFamily, fontSize: look.fontSize, fontWeight: look.fontWeight, fontStyle: look.italic ? 'italic' : 'normal', textDecoration: [look.underline && 'underline', look.strike && 'line-through'].filter(Boolean).join(' ') || undefined }}
       >
         {content}
       </div>

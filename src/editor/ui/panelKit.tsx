@@ -1,4 +1,4 @@
-import { isHex } from '@/core/theme/color'
+import { ColorPicker, type ColorPickerProps } from './ColorPicker'
 
 export const field = 'rounded-ui border border-line bg-surface px-2 py-1 text-sm'
 
@@ -29,18 +29,7 @@ export function Section({ title, children }: { title: string; children: React.Re
   )
 }
 
-export function Color({ label, value, onChange, onClear }: { label: string; value: string; onChange: (v: string) => void; onClear?: () => void }) {
-  return (
-    <div className="flex items-center justify-between gap-2 text-sm">
-      <span>{label}</span>
-      <span className="flex items-center gap-1.5">
-        <input aria-label={label} type="color" value={isHex(value) ? value : '#ffffff'} onChange={(e) => onChange(e.target.value)} className="h-7 w-9 cursor-pointer rounded border border-line bg-transparent p-0.5" />
-        {onClear && (
-          <button type="button" onClick={onClear} className="rounded px-1.5 text-xs text-muted hover:text-ink" title="Back to the theme's colour">
-            Auto
-          </button>
-        )}
-      </span>
-    </div>
-  )
+/** A colour row: a swatch that opens the colour picker (scheme colours, recent, hex, eyedropper, opacity, contrast). */
+export function Color({ label, value, onChange, onClear, ...more }: { label: string; value: string; onChange: (v: string) => void; onClear?: () => void } & Pick<ColorPickerProps, 'onNone' | 'opacity' | 'onOpacityPreview' | 'onOpacityCommit' | 'contrastAgainst'>) {
+  return <ColorPicker label={label} value={value} onChange={onChange} onClear={onClear} {...more} />
 }

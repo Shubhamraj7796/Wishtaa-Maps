@@ -1,4 +1,4 @@
-import type { BranchCurve, Corner, FillKind, FillPattern, LineStyle, Shape, TopicStyle } from '../model/types'
+import type { BranchCurve, Corner, FillKind, FillPattern, LineStyle, Shape, TextAlign, TopicStyle } from '../model/types'
 import { mix, readableText } from './color'
 import { centralFill, centralText, type LevelKey, type NodeMode, type Theme } from './model'
 
@@ -55,6 +55,12 @@ export interface Look {
   fontSize: number
   fontWeight: number
   italic: boolean
+  underline: boolean
+  strike: boolean
+  highlight: string | null
+  align: TextAlign
+  /** 0 to 1 */
+  fillOpacity: number
   fontFamily: string
   handDrawn: boolean
   fillKind: FillKind
@@ -135,6 +141,11 @@ export function resolveLook(theme: ResolvedTheme, a: LookArgs): Look {
     fontSize: s.fontSize ?? L.fontSize,
     fontWeight: s.fontWeight ?? L.fontWeight,
     italic: !!s.italic,
+    underline: !!s.underline,
+    strike: !!s.strike,
+    highlight: s.highlight ?? null,
+    align: s.align ?? 'center',
+    fillOpacity: clamp01(s.fillOpacity ?? 1),
     fontFamily: s.fontFamily ?? L.fontFamily ?? theme.font,
     handDrawn: theme.handDrawn,
     fillKind,
@@ -162,7 +173,13 @@ export interface Line {
   style: LineStyle
   taper: boolean
   curve: BranchCurve
+  /** 0 to 1 */
+  opacity: number
+  /** An arrow head at the topic end. */
+  arrow: boolean
 }
+
+const clamp01 = (n: number) => (Number.isFinite(n) ? Math.min(1, Math.max(0, n)) : 1)
 
 export const MIN_LINE = 1
 export const MAX_LINE = 40
@@ -199,6 +216,8 @@ export function resolveLine(theme: ResolvedTheme, a: { depth: number; branch: nu
     style: s.lineStyle ?? level.branch.dash,
     taper,
     curve: s.branchCurve ?? level.branch.curve,
+    opacity: clamp01(s.lineOpacity ?? 1),
+    arrow: !!s.lineArrow,
   }
 }
 

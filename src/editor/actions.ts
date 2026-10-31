@@ -16,6 +16,7 @@ import {
   setFloatingPosition,
   setText,
   setTopicStyle,
+  setTopicStyles,
   type Branch,
 } from '@/core/model/commands'
 import { LOCAL, snapshotTopics } from '@/core/model/doc'
@@ -24,13 +25,13 @@ import type { TopicStyle } from '@/core/model/types'
 import { isLayoutId } from '@/core/layout/catalog'
 import { setSetting, type MapSettings } from '@/core/settings'
 import { applyColorScheme, applyTheme, type ThemePreview } from '@/core/theme/apply'
-import { clampTopicWidth } from '@/core/theme/resolve'
+import { clampTopicWidth, resolveLook } from '@/core/theme/resolve'
 import { DEFAULT_THEME_ID, findTheme, type Theme } from '@/core/theme/themes'
-import { ancestorIds, buildIndex, childrenOf, topLevelOnly } from '@/core/model/tree'
+import { ancestorIds, buildIndex, childrenOf, descendantIds, topLevelOnly } from '@/core/model/tree'
 import { outlineToBranches, parseOutline, toOutline } from '@/core/io/outline'
 import { revealAncestors, searchTopics } from '@/core/search'
 import { addImageReferenceSource } from './images'
-import { getScene } from './scene'
+import { getScene, getTheme } from './scene'
 import { mapDoc } from './mapdoc'
 import { showNotice } from './notice'
 import { MAX_ZOOM, MIN_ZOOM, useEditor, type PanelTab, type Viewport } from './store'
@@ -448,6 +449,59 @@ export function styleSelected(patch: Partial<TopicStyle>) {
 export function resetStyleSelected() {
   const { ids, withBranch } = styleTargets()
   replaceTopicStyle(mapDoc, ids, {}, withBranch)
+}
+
+export type StyleMode = 'scope' | 'this' | 'branch'
+
+function targetsFor(mode: StyleMode): { ids: string[]; withBranch: boolean } {
+  if (mode === 'scope') return styleTargets()
+  return { ids: get().selected, withBranch: mode === 'branch' }
+}
+
+/** What a branch control reaches, from the "this branch / this branch and below" choice. */
+export const branchMode = (): StyleMode => (get().branchScope === 'branch' ? 'branch' : 'this')
+export const setBranchScope = (branchScope: 'this' | 'branch') => set({ branchScope })
+
+/**
+ * Shows a style change on the canvas without saving it (a slider being dragged). `null` stops. Pair with `commitStyle`
+ * on release, so a whole drag is one undo step.
+ */
+export function previewStyle(patch: Partial<TopicStyle> | null, mode: StyleMode = 'scope') {
+  if (!patch) {
+    if (get().styleLive) set({ styleLive: null })
+    return
+  }
+  const { ids, withBranch } = targetsFor(mode)
+  const topics = get().topics
+  const out = new Set(ids.filter((id) => topics[id]))
+  if (withBranch) {
+    const idx = buildIndex(topics)
+    for (const id of [...out]) descendantIds(idx, id).forEach((d) => out.add(d))
+  }
+  set({ styleLive: { ids: [...out], patch } })
+}
+
+/** Saves a style change (and drops any preview). One undo step. */
+export function commitStyle(patch: Partial<TopicStyle>, mode: StyleMode = 'scope') {
+  set({ styleLive: null })
+  const { ids, withBranch } = targetsFor(mode)
+  setTopicStyle(mapDoc, ids, patch, withBranch)
+}
+
+/** Makes the selected topics' text bigger or smaller by `delta` px (8 to 72), each from its own current size. One undo step. */
+export function nudgeFontSize(delta: number) {
+  const { ids } = styleTargets()
+  const scene = getScene()
+  const theme = getTheme(get().settings)
+  const patches: Record<string, Partial<TopicStyle>> = {}
+  for (const id of ids) {
+    const box = scene.boxes.get(id)
+    const topic = get().topics[id]
+    if (!box || !topic) continue
+    const look = resolveLook(theme, { depth: box.depth, branch: box.branch, isRoot: id === scene.rootId, style: topic.style, layoutShape: scene.layoutShape })
+    patches[id] = { fontSize: Math.min(72, Math.max(8, Math.round(look.fontSize + delta))) }
+  }
+  setTopicStyles(mapDoc, patches)
 }
 
 export const setStyleScope = (styleScope: 'selection' | 'level' | 'branch') => set({ styleScope })

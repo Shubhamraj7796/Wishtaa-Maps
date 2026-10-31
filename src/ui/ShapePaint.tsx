@@ -3,7 +3,7 @@ import { optsOfLook, shapeGeometry, type Geometry } from '@/core/shapes'
 import type { Look } from '@/core/theme/resolve'
 
 /** What the painting of a shape needs from a topic's look. */
-export type PaintLook = Pick<Look, 'fill' | 'fill2' | 'fillKind' | 'pattern' | 'border' | 'borderWidth' | 'borderDash' | 'ringColor' | 'innerFill'>
+export type PaintLook = Pick<Look, 'fill' | 'fill2' | 'fillKind' | 'pattern' | 'border' | 'borderWidth' | 'borderDash' | 'ringColor' | 'innerFill'> & { fillOpacity?: number }
 
 /** Dash pattern for a border: the topic's choice, else the shape's own (dashed and dotted boxes). */
 export function dashFor(choice: LineStyle, own: string | undefined, bw: number): string | undefined {
@@ -48,6 +48,7 @@ export function ShapePaint({ geo, look, uid }: { geo: Geometry; look: PaintLook;
   const fill = kind === 'none' ? 'none' : kind === 'gradient' ? `url(#${uid}-g)` : kind === 'pattern' ? `url(#${uid}-p)` : look.fill
   const bw = look.borderWidth
   const stroke = bw > 0 ? look.border : 'none'
+  const fo = look.fillOpacity !== undefined && look.fillOpacity < 1 ? look.fillOpacity : undefined
   return (
     <>
       <defs>
@@ -57,15 +58,15 @@ export function ShapePaint({ geo, look, uid }: { geo: Geometry; look: PaintLook;
         const dash = dashFor(look.borderDash, l.dash, bw)
         switch (l.kind) {
           case 'body':
-            return <path key={i} d={l.d} fill={fill} stroke={stroke} strokeWidth={bw} strokeDasharray={dash} strokeLinecap="round" strokeLinejoin="round" />
+            return <path key={i} d={l.d} fill={fill} fillOpacity={fo} stroke={stroke} strokeWidth={bw} strokeDasharray={dash} strokeLinecap="round" strokeLinejoin="round" />
           case 'fillOnly':
-            return <path key={i} d={l.d} fill={fill} stroke="none" />
+            return <path key={i} d={l.d} fill={fill} fillOpacity={fo} stroke="none" />
           case 'stroke':
             return <path key={i} d={l.d} fill="none" stroke={stroke} strokeWidth={bw} strokeDasharray={dash} strokeLinecap="round" strokeLinejoin="round" />
           case 'ring':
-            return <path key={i} d={l.d} fill={none(look.ringColor)} fillRule={l.evenodd ? 'evenodd' : 'nonzero'} />
+            return <path key={i} d={l.d} fill={none(look.ringColor)} fillOpacity={fo} fillRule={l.evenodd ? 'evenodd' : 'nonzero'} />
           default:
-            return <path key={i} d={l.d} fill={none(look.innerFill)} />
+            return <path key={i} d={l.d} fill={none(look.innerFill)} fillOpacity={fo} />
         }
       })}
     </>
