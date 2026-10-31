@@ -1,41 +1,66 @@
-import { Suspense, useEffect, useRef, useState } from 'react'
-import { useSettings } from '@/stores/settings'
-import { Icon, type IconName } from '@/ui/icons'
-import * as A from '../actions'
-import { afterSelection, closesOnLeave, HOT_ZONE_PX, HOVER_CLOSE_MS, HOVER_OPEN_MS, PANEL_WIDTH, panToReveal, SECTION_NAME, SELECTION_SETTLE_MS, selectionKind, TAB_FOR_KIND } from '../panel/behaviour'
-import { isPanelBusy } from '../panel/busy'
-import { getScene } from '../scene'
-import { useEditor, type PanelTab } from '../store'
-import { CanvasTab } from './CanvasTab'
-import { StyleTab } from './StyleTab'
-import { DetailsPanelLazy } from './lazyPanels'
-import { MarkPanel } from './MarkPanel'
-import { ObjectStyle } from './ObjectStyle'
-import { PictureFormat } from './PictureFormat'
+import { Suspense, useEffect, useRef, useState } from "react";
+import { useSettings } from "@/stores/settings";
+import { Icon, type IconName } from "@/ui/icons";
+import * as A from "../actions";
+import {
+  afterSelection,
+  closesOnLeave,
+  HOT_ZONE_PX,
+  HOVER_CLOSE_MS,
+  HOVER_OPEN_MS,
+  PANEL_WIDTH,
+  panToReveal,
+  SECTION_NAME,
+  SELECTION_SETTLE_MS,
+  selectionKind,
+  TAB_FOR_KIND,
+} from "../panel/behaviour";
+import { isPanelBusy } from "../panel/busy";
+import { getScene } from "../scene";
+import { useEditor, type PanelTab } from "../store";
+import { CanvasTab } from "./CanvasTab";
+import { StyleTab } from "./StyleTab";
+import { DetailsPanelLazy } from "./lazyPanels";
+import { MarkPanel } from "./MarkPanel";
+import { ObjectStyle } from "./ObjectStyle";
+import { PictureFormat } from "./PictureFormat";
 
-const ICON: Record<PanelTab, IconName> = { canvas: 'layout', style: 'style', picture: 'image', object: 'relationship', mark: 'mark', clipart: 'clipart', details: 'details', notes: 'notes' }
+const ICON: Record<PanelTab, IconName> = {
+  canvas: "layout",
+  style: "style",
+  picture: "image",
+  object: "relationship",
+  mark: "mark",
+  clipart: "clipart",
+  details: "details",
+  notes: "notes",
+};
 const TAB_TIP: Record<PanelTab, string> = {
-  canvas: 'Canvas: layout, theme, spacing and background of the whole map',
-  style: 'Style: the selected topics',
-  picture: 'Picture format: size, position and description',
-  object: 'Object style: the selected line, callout, boundary or summary',
-  mark: 'Marks: priority, progress, emoji and flags',
-  clipart: 'Clipart',
-  details: 'Details: tags, task, link, attachments, formula, table',
-  notes: 'Notes',
-}
+  canvas: "Canvas: layout, theme, spacing and background of the whole map",
+  style: "Style: the selected topics",
+  picture: "Picture format: size, position and description",
+  object: "Object style: the selected line, callout, boundary or summary",
+  mark: "Marks: priority, progress, emoji and flags",
+  clipart: "Clipart",
+  details: "Details: tags, task, link, attachments, formula, table",
+  notes: "Notes",
+};
 
 function useWide() {
-  const query = '(min-width: 768px)'
-  const [wide, setWide] = useState(() => (typeof window !== 'undefined' && window.matchMedia ? window.matchMedia(query).matches : true))
+  const query = "(min-width: 768px)";
+  const [wide, setWide] = useState(() =>
+    typeof window !== "undefined" && window.matchMedia
+      ? window.matchMedia(query).matches
+      : true,
+  );
   useEffect(() => {
-    if (!window.matchMedia) return
-    const m = window.matchMedia(query)
-    const on = () => setWide(m.matches)
-    m.addEventListener?.('change', on)
-    return () => m.removeEventListener?.('change', on)
-  }, [])
-  return wide
+    if (!window.matchMedia) return;
+    const m = window.matchMedia(query);
+    const on = () => setWide(m.matches);
+    m.addEventListener?.("change", on);
+    return () => m.removeEventListener?.("change", on);
+  }, []);
+  return wide;
 }
 
 /**
@@ -45,129 +70,212 @@ function useWide() {
  * pinned) and never takes keyboard focus by itself.
  */
 export function SettingsPanel() {
-  const readOnly = useEditor((s) => s.readOnly)
-  const open = useEditor((s) => s.panelOpen)
-  const tab = useEditor((s) => s.panelTab)
-  const kind = useEditor((s) => selectionKind(s))
-  const selKey = useEditor((s) => `${s.selectedObject ? s.selectedObject.kind + s.selectedObject.id : ''}|${s.imageSelected ?? ''}|${s.selected.join(',')}`)
-  const busy = useEditor((s) => isPanelBusy(s))
-  const fileId = useEditor((s) => s.fileId)
-  const hasPicture = useEditor((s) => (s.selected.length === 1 ? !!s.topics[s.selected[0] as string]?.image : false))
-  const announcement = useEditor((s) => s.panelAnnouncement)
-  const mode = useSettings((s) => s.panelMode)
-  const pinned = useSettings((s) => s.panelPinned)
-  const setPinned = useSettings((s) => s.setPanelPinned)
-  const wide = useWide()
-  const docked = (pinned || mode === 'always') && wide && open
+  const readOnly = useEditor((s) => s.readOnly);
+  const open = useEditor((s) => s.panelOpen);
+  const tab = useEditor((s) => s.panelTab);
+  const kind = useEditor((s) => selectionKind(s));
+  const selKey = useEditor(
+    (s) =>
+      `${s.selectedObject ? s.selectedObject.kind + s.selectedObject.id : ""}|${s.imageSelected ?? ""}|${s.selected.join(",")}`,
+  );
+  const busy = useEditor((s) => isPanelBusy(s));
+  const fileId = useEditor((s) => s.fileId);
+  const hasPicture = useEditor((s) =>
+    s.selected.length === 1
+      ? !!s.topics[s.selected[0] as string]?.image
+      : false,
+  );
+  const announcement = useEditor((s) => s.panelAnnouncement);
+  const mode = useSettings((s) => s.panelMode);
+  const pinned = useSettings((s) => s.panelPinned);
+  const setPinned = useSettings((s) => s.setPanelPinned);
+  const wide = useWide();
+  const docked = (pinned || mode === "always") && wide && open;
 
-  const hovered = useRef(false)
-  const focusWithin = useRef(false)
-  const openTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
-  const closeTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
-  const aside = useRef<HTMLElement>(null)
-  const lastKind = useRef<{ file: string | null; kind: string | null }>({ file: null, kind: null })
-  const lastKey = useRef<{ file: string | null; key: string | null }>({ file: null, key: null })
+  const hovered = useRef(false);
+  const focusWithin = useRef(false);
+  const openTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined,
+  );
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined,
+  );
+  const aside = useRef<HTMLElement>(null);
+  const lastKind = useRef<{ file: string | null; kind: string | null }>({
+    file: null,
+    kind: null,
+  });
+  const lastKey = useRef<{ file: string | null; key: string | null }>({
+    file: null,
+    key: null,
+  });
 
-  useEffect(() => () => void [clearTimeout(openTimer.current), clearTimeout(closeTimer.current)], [])
+  useEffect(
+    () => () =>
+      void [clearTimeout(openTimer.current), clearTimeout(closeTimer.current)],
+    [],
+  );
 
   // The section follows the KIND of selection. A tab picked by hand is kept until the kind changes.
   useEffect(() => {
-    if (readOnly) return
-    const prev = lastKind.current
-    lastKind.current = { file: fileId, kind }
+    if (readOnly) return;
+    const prev = lastKind.current;
+    lastKind.current = { file: fileId, kind };
     if (prev.file !== fileId) {
-      useEditor.setState({ panelTab: TAB_FOR_KIND[kind], panelTabManual: false })
-      return
+      useEditor.setState({
+        panelTab: TAB_FOR_KIND[kind],
+        panelTabManual: false,
+      });
+      return;
     }
-    if (prev.kind === kind) return
-    useEditor.setState({ panelTab: TAB_FOR_KIND[kind], panelTabManual: false, panelAnnouncement: `${SECTION_NAME[TAB_FOR_KIND[kind]]} settings` })
-  }, [kind, fileId, readOnly])
+    if (prev.kind === kind) return;
+    useEditor.setState({
+      panelTab: TAB_FOR_KIND[kind],
+      panelTabManual: false,
+      panelAnnouncement: `${SECTION_NAME[TAB_FOR_KIND[kind]]} settings`,
+    });
+  }, [kind, fileId, readOnly]);
 
   // Selecting opens the panel; clearing the selection tucks it away again. Quick changes settle first, and a drag or resize waits.
   useEffect(() => {
-    if (readOnly) return
+    if (readOnly) return;
     if (lastKey.current.file !== fileId) {
-      lastKey.current = { file: fileId, key: selKey } // opening a file does not pop the panel up
-      return
+      lastKey.current = { file: fileId, key: selKey }; // opening a file does not pop the panel up
+      return;
     }
-    lastKey.current = { file: fileId, key: selKey } // also re-checked when a drag ends or a dropdown closes (busy changes)
+    lastKey.current = { file: fileId, key: selKey }; // also re-checked when a drag ends or a dropdown closes (busy changes)
     const timer = setTimeout(() => {
-      const s = useEditor.getState()
-      const action = afterSelection({ mode, pinned, open: s.panelOpen, kind: selectionKind(s), busy: isPanelBusy(s) || focusWithin.current, hovered: hovered.current, opener: s.panelOpener })
-      if (action === 'open') useEditor.setState({ panelOpen: true, panelOpener: s.panelOpener ?? 'selection', panelAnnouncement: `${SECTION_NAME[s.panelTab]} settings opened` })
-      else if (action === 'close') A.closePanel()
-    }, SELECTION_SETTLE_MS)
-    return () => clearTimeout(timer)
-  }, [selKey, busy, mode, pinned, fileId, readOnly])
+      const s = useEditor.getState();
+      const action = afterSelection({
+        mode,
+        pinned,
+        open: s.panelOpen,
+        kind: selectionKind(s),
+        busy: isPanelBusy(s) || focusWithin.current,
+        hovered: hovered.current,
+        opener: s.panelOpener,
+      });
+      if (action === "open")
+        useEditor.setState({
+          panelOpen: true,
+          panelOpener: s.panelOpener ?? "selection",
+          panelAnnouncement: `${SECTION_NAME[s.panelTab]} settings opened`,
+        });
+      else if (action === "close") A.closePanel();
+    }, SELECTION_SETTLE_MS);
+    return () => clearTimeout(timer);
+  }, [selKey, busy, mode, pinned, fileId, readOnly]);
 
   // Always: open from the start.
   useEffect(() => {
-    if (!readOnly && mode === 'always' && !open) useEditor.setState({ panelOpen: true, panelOpener: 'handle' })
-  }, [mode, readOnly, open])
+    if (!readOnly && mode === "always" && !open)
+      useEditor.setState({ panelOpen: true, panelOpener: "handle" });
+  }, [mode, readOnly, open]);
 
   // The panel overlays the canvas: when it opens over the selected topic, glide the canvas just far enough to keep it visible.
   useEffect(() => {
-    if (!open || docked || readOnly) return
-    const s = useEditor.getState()
-    if (s.selected.length === 0 || isPanelBusy(s)) return
-    const id = s.selected[s.selected.length - 1] as string
-    const box = getScene().boxes.get(id)
-    if (!box || !s.canvasSize.w) return
-    const rect = { x: box.x * s.viewport.k + s.viewport.x, y: box.y * s.viewport.k + s.viewport.y, w: box.w * s.viewport.k, h: box.h * s.viewport.k }
-    const dx = panToReveal(rect, { w: s.canvasSize.w, h: s.canvasSize.h }, PANEL_WIDTH)
-    if (dx > 0) A.panViewportBy(-dx)
-  }, [open, docked, selKey, readOnly])
+    if (!open || docked || readOnly) return;
+    const s = useEditor.getState();
+    if (s.selected.length === 0 || isPanelBusy(s)) return;
+    const id = s.selected[s.selected.length - 1] as string;
+    const box = getScene().boxes.get(id);
+    if (!box || !s.canvasSize.w) return;
+    const rect = {
+      x: box.x * s.viewport.k + s.viewport.x,
+      y: box.y * s.viewport.k + s.viewport.y,
+      w: box.w * s.viewport.k,
+      h: box.h * s.viewport.k,
+    };
+    const dx = panToReveal(
+      rect,
+      { w: s.canvasSize.w, h: s.canvasSize.h },
+      PANEL_WIDTH,
+    );
+    if (dx > 0) A.panViewportBy(-dx);
+  }, [open, docked, selKey, readOnly]);
 
   // Swipe in from the right edge of a touch screen.
   useEffect(() => {
-    if (readOnly) return
-    let startX = -1
-    let startY = 0
+    if (readOnly) return;
+    let startX = -1;
+    let startY = 0;
     const down = (e: TouchEvent) => {
-      const t = e.touches[0]
-      startX = t && t.clientX >= window.innerWidth - 24 ? t.clientX : -1
-      startY = t?.clientY ?? 0
-    }
+      const t = e.touches[0];
+      startX = t && t.clientX >= window.innerWidth - 24 ? t.clientX : -1;
+      startY = t?.clientY ?? 0;
+    };
     const up = (e: TouchEvent) => {
-      const t = e.changedTouches[0]
-      if (startX >= 0 && t && startX - t.clientX > 50 && Math.abs(t.clientY - startY) < 60 && mode !== 'always') A.openPanel()
-      startX = -1
-    }
-    window.addEventListener('touchstart', down, { passive: true })
-    window.addEventListener('touchend', up, { passive: true })
+      const t = e.changedTouches[0];
+      if (
+        startX >= 0 &&
+        t &&
+        startX - t.clientX > 50 &&
+        Math.abs(t.clientY - startY) < 60 &&
+        mode !== "always"
+      )
+        A.openPanel();
+      startX = -1;
+    };
+    window.addEventListener("touchstart", down, { passive: true });
+    window.addEventListener("touchend", up, { passive: true });
     return () => {
-      window.removeEventListener('touchstart', down)
-      window.removeEventListener('touchend', up)
-    }
-  }, [readOnly, mode])
+      window.removeEventListener("touchstart", down);
+      window.removeEventListener("touchend", up);
+    };
+  }, [readOnly, mode]);
 
-  if (readOnly) return null
+  if (readOnly) return null;
 
   const enter = (e: React.PointerEvent) => {
-    if (e.pointerType === 'touch') return
-    hovered.current = true
-    clearTimeout(closeTimer.current)
-    if (mode === 'manual' || useEditor.getState().panelOpen) return
-    clearTimeout(openTimer.current)
+    if (e.pointerType === "touch") return;
+    hovered.current = true;
+    clearTimeout(closeTimer.current);
+    if (mode === "manual" || useEditor.getState().panelOpen) return;
+    clearTimeout(openTimer.current);
     openTimer.current = setTimeout(() => {
-      if (hovered.current && !useEditor.getState().panelOpen) useEditor.setState({ panelOpen: true, panelOpener: 'hover', panelAnnouncement: `${SECTION_NAME[useEditor.getState().panelTab]} settings opened` })
-    }, HOVER_OPEN_MS)
-  }
+      if (hovered.current && !useEditor.getState().panelOpen)
+        useEditor.setState({
+          panelOpen: true,
+          panelOpener: "hover",
+          panelAnnouncement: `${SECTION_NAME[useEditor.getState().panelTab]} settings opened`,
+        });
+    }, HOVER_OPEN_MS);
+  };
   const leave = (e: React.PointerEvent) => {
-    if (e.pointerType === 'touch') return
-    hovered.current = false
-    clearTimeout(openTimer.current)
-    clearTimeout(closeTimer.current)
+    if (e.pointerType === "touch") return;
+    hovered.current = false;
+    clearTimeout(openTimer.current);
+    clearTimeout(closeTimer.current);
     closeTimer.current = setTimeout(() => {
-      if (hovered.current || focusWithin.current) return
-      const s = useEditor.getState()
-      if (closesOnLeave({ mode, pinned, open: s.panelOpen, busy: isPanelBusy(s), opener: s.panelOpener })) A.closePanel()
-    }, HOVER_CLOSE_MS)
-  }
+      if (hovered.current || focusWithin.current) return;
+      const s = useEditor.getState();
+      if (
+        closesOnLeave({
+          mode,
+          pinned,
+          open: s.panelOpen,
+          busy: isPanelBusy(s),
+          opener: s.panelOpener,
+        })
+      )
+        A.closePanel();
+    }, HOVER_CLOSE_MS);
+  };
 
-  const shownTab: PanelTab = tab === 'picture' && !hasPicture && kind !== 'picture' ? 'style' : tab
-  const tabs: PanelTab[] = ['canvas', 'style', ...(hasPicture || kind === 'picture' ? (['picture'] as const) : []), ...(kind === 'object' ? (['object'] as const) : []), 'mark', 'clipart', 'details', 'notes']
-  const pick = (t: PanelTab) => useEditor.setState({ panelTab: t, panelTabManual: true })
+  const shownTab: PanelTab =
+    tab === "picture" && !hasPicture && kind !== "picture" ? "style" : tab;
+  const tabs: PanelTab[] = [
+    "canvas",
+    "style",
+    ...(hasPicture || kind === "picture" ? (["picture"] as const) : []),
+    ...(kind === "object" ? (["object"] as const) : []),
+    "mark",
+    "clipart",
+    "details",
+    "notes",
+  ];
+  const pick = (t: PanelTab) =>
+    useEditor.setState({ panelTab: t, panelTabManual: true });
 
   return (
     <>
@@ -177,7 +285,16 @@ export function SettingsPanel() {
 
       {!open && (
         <>
-          {mode !== 'manual' && <div aria-hidden="true" data-testid="panel-hot-zone" onPointerEnter={enter} onPointerLeave={leave} className="absolute inset-y-0 right-0 z-10" style={{ width: HOT_ZONE_PX }} />}
+          {mode !== "manual" && (
+            <div
+              aria-hidden="true"
+              data-testid="panel-hot-zone"
+              onPointerEnter={enter}
+              onPointerLeave={leave}
+              className="absolute inset-y-0 right-0 z-10"
+              style={{ width: HOT_ZONE_PX }}
+            />
+          )}
           <button
             type="button"
             data-testid="panel-handle"
@@ -192,14 +309,14 @@ export function SettingsPanel() {
           >
             <Icon name="chevronRight" size={16} className="rotate-180" />
           </button>
-          {kind !== 'none' && (
+          {kind !== "none" && (
             <button
               type="button"
               data-testid="panel-touch-button"
               onClick={() => A.openPanel()}
               className="absolute bottom-16 right-10 z-20 hidden rounded-full border border-line bg-surface px-4 py-2 text-sm font-medium shadow-lg [@media(pointer:coarse)]:block"
             >
-              {SECTION_NAME[TAB_FOR_KIND[kind]].split(' ')[0]}
+              {SECTION_NAME[TAB_FOR_KIND[kind]].split(" ")[0]}
             </button>
           )}
         </>
@@ -212,68 +329,113 @@ export function SettingsPanel() {
           role="complementary"
           aria-label="Settings panel"
           data-testid="settings-panel"
-          data-docked={docked ? 'true' : 'false'}
+          data-docked={docked ? "true" : "false"}
           data-no-wheel
           onPointerEnter={enter}
           onPointerLeave={leave}
           onPointerDown={() => {
-            if (useEditor.getState().panelOpener === 'hover') useEditor.setState({ panelOpener: 'handle' }) // used, so it stays
+            if (useEditor.getState().panelOpener === "hover")
+              useEditor.setState({ panelOpener: "handle" }); // used, so it stays
           }}
           onFocusCapture={() => (focusWithin.current = true)}
           onBlurCapture={(e) => {
-            if (!aside.current?.contains(e.relatedTarget as Node | null)) focusWithin.current = false
+            if (!aside.current?.contains(e.relatedTarget as Node | null))
+              focusWithin.current = false;
           }}
           onKeyDown={(e) => {
-            if (e.key === 'Escape' && !(e.target as HTMLElement).closest('[role=dialog]')) {
-              e.stopPropagation()
-              A.closePanel(true)
+            if (
+              e.key === "Escape" &&
+              !(e.target as HTMLElement).closest("[role=dialog]")
+            ) {
+              e.stopPropagation();
+              A.closePanel(true);
             }
           }}
           style={{ width: wide ? PANEL_WIDTH : undefined }}
           className={`flex shrink-0 flex-col border-l border-line bg-surface ${
-            docked ? 'relative' : 'absolute inset-y-0 right-0 z-30 shadow-2xl'
+            docked ? "relative" : "absolute inset-y-0 right-0 z-30 shadow-2xl"
           } max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:top-auto max-md:z-40 max-md:h-[70vh] max-md:w-auto max-md:rounded-t-ui max-md:border-t`}
         >
-          <div className="flex items-center gap-1 border-b border-line px-3 py-2">
-            <h2 className="min-w-0 flex-1 truncate text-sm font-semibold">{SECTION_NAME[shownTab]}</h2>
-            <button
-              type="button"
-              aria-pressed={pinned}
-              aria-label="Keep the settings panel open"
-              title={pinned ? 'Pinned: stays open beside the map. Click to let it tuck away again.' : 'Pin: keep the panel open beside the map'}
-              onClick={() => setPinned(!pinned)}
-              className={`grid h-8 w-8 place-items-center rounded-ui border max-md:hidden ${pinned ? 'border-brand bg-brand/15' : 'border-transparent hover:bg-bg'}`}
+          <h2 className="sr-only">{SECTION_NAME[shownTab]}</h2>
+          <div className="flex items-stretch border-b border-line">
+            <div
+              className="flex min-w-0 flex-1"
+              role="tablist"
+              aria-label="Settings sections"
             >
-              <Icon name="pin" size={16} />
-            </button>
-            <button type="button" aria-label="Close the settings panel" title="Close (Esc)" onClick={() => A.closePanel(true)} className="grid h-8 w-8 place-items-center rounded-ui hover:bg-bg">
-              <Icon name="close" size={16} />
-            </button>
-          </div>
-          <div className="flex border-b border-line" role="tablist" aria-label="Settings sections">
-            {tabs.map((t) => (
+              {tabs.map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  role="tab"
+                  aria-selected={shownTab === t}
+                  aria-label={SECTION_NAME[t]}
+                  title={TAB_TIP[t]}
+                  onClick={() => pick(t)}
+                  className={`flex min-w-0 flex-1 flex-col items-center gap-0.5 px-0.5 py-1.5 text-[10px] leading-tight ${shownTab === t ? "border-b-2 border-brand text-ink" : "text-muted hover:text-ink"}`}
+                >
+                  <Icon name={ICON[t]} size={17} />
+                  <span className="max-w-full truncate">
+                    {t === "picture"
+                      ? "Picture"
+                      : t === "object"
+                        ? "Object"
+                        : SECTION_NAME[t]}
+                  </span>
+                </button>
+              ))}
+            </div>
+            <div className="flex shrink-0 flex-col items-center justify-center gap-0.5 border-l border-line px-1">
               <button
-                key={t}
                 type="button"
-                role="tab"
-                aria-selected={shownTab === t}
-                aria-label={SECTION_NAME[t]}
-                title={TAB_TIP[t]}
-                onClick={() => pick(t)}
-                className={`flex min-w-0 flex-1 flex-col items-center gap-0.5 px-0.5 py-1.5 text-[10px] leading-tight ${shownTab === t ? 'border-b-2 border-brand text-ink' : 'text-muted hover:text-ink'}`}
+                aria-pressed={pinned}
+                aria-label="Keep the settings panel open"
+                title={
+                  pinned
+                    ? "Pinned: stays open beside the map. Click to let it tuck away again."
+                    : "Pin: keep the panel open beside the map"
+                }
+                onClick={() => setPinned(!pinned)}
+                className={`grid h-6 w-6 place-items-center rounded text-muted max-md:hidden ${pinned ? "bg-brand/15 text-ink" : "hover:bg-bg hover:text-ink"}`}
               >
-                <Icon name={ICON[t]} size={17} />
-                <span className="max-w-full truncate">{t === 'picture' ? 'Picture' : t === 'object' ? 'Object' : SECTION_NAME[t]}</span>
+                <Icon name="pin" size={13} />
               </button>
-            ))}
+              <button
+                type="button"
+                aria-label="Close the settings panel"
+                title="Close (Esc)"
+                onClick={() => A.closePanel(true)}
+                className="grid h-6 w-6 place-items-center rounded text-muted hover:bg-bg hover:text-ink"
+              >
+                <Icon name="close" size={13} />
+              </button>
+            </div>
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto" role="tabpanel" aria-label={SECTION_NAME[shownTab]}>
-            <Suspense fallback={<p className="p-4 text-sm text-muted">Loading…</p>}>
-              {shownTab === 'canvas' ? <CanvasTab /> : shownTab === 'style' ? <StyleTab /> : shownTab === 'picture' ? <PictureFormat /> : shownTab === 'object' ? <ObjectStyle /> : shownTab === 'mark' ? <MarkPanel /> : <DetailsPanelLazy tab={shownTab} />}
+          <div
+            className="min-h-0 flex-1 overflow-y-auto"
+            role="tabpanel"
+            aria-label={SECTION_NAME[shownTab]}
+          >
+            <Suspense
+              fallback={<p className="p-4 text-sm text-muted">Loading…</p>}
+            >
+              {shownTab === "canvas" ? (
+                <CanvasTab />
+              ) : shownTab === "style" ? (
+                <StyleTab />
+              ) : shownTab === "picture" ? (
+                <PictureFormat />
+              ) : shownTab === "object" ? (
+                <ObjectStyle />
+              ) : shownTab === "mark" ? (
+                <MarkPanel />
+              ) : (
+                <DetailsPanelLazy tab={shownTab} />
+              )}
             </Suspense>
           </div>
         </aside>
       )}
     </>
-  )
+  );
 }
