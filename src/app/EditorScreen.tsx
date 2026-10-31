@@ -27,6 +27,7 @@ import { closeFile, openFile, renameOpenFile } from '@/editor/session'
 import type { FileRecord } from '@/core/files/types'
 import { Icon } from '@/ui/icons'
 import { IconButton } from '@/ui/IconButton'
+import { takePendingShare } from '@/pwa/share'
 import { ErrorBoundary } from './ErrorBoundary'
 import { ReadToolbar } from './ReadToolbar'
 import { SaveLocation } from './SaveLocation'
@@ -294,6 +295,17 @@ export default function EditorScreen({ kind }: { kind: 'map' | 'kb' }) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, repo])
+
+  // Pictures shared into the app from another one wait here until this file is open; then the usual "Add picture" step runs.
+  const opened = state?.id === id
+  useEffect(() => {
+    if (!opened) return
+    const share = takePendingShare(id)
+    if (!share) return
+    const rootId = useEditor.getState().rootId
+    const target = share.target.kind === 'root' ? ({ kind: 'child', parentId: rootId } as const) : share.target
+    void import('@/editor/pictures/flow').then(({ addPictures }) => addPictures(share.files, 'gallery', target))
+  }, [opened, id])
 
   // Keep the header record fresh (name, type) while the file is open.
   const live = files.find((x) => x.id === id)

@@ -5,6 +5,8 @@ import { Dialogs } from './Dialogs'
 import { PictureChoiceDialog } from '@/editor/ui/PictureChoiceDialog'
 import { CreateBridge } from './createFlow'
 import { ConflictPrompt, DriveBanner } from './DriveUi'
+import { UpdateBar } from './PwaUi'
+import { SharedPictures } from './SharedPictures'
 import { useFiles } from './FilesContext'
 import { Cloud, HardDrive, Home, Info, Library, Menu, Moon, Plus, Search, Sparkles, Sun, Trash2, X, FileText } from './icons'
 
@@ -221,6 +223,7 @@ export function Shell(): ReactNode {
         <div className="flex min-w-0 flex-1 flex-col">
           {!immersive && <TopBar />}
           {!immersive && <LocalBanner />}
+          <UpdateBar />
           <DriveBanner />
           <ConflictPrompt />
           <div className={`min-h-0 flex-1 ${immersive ? "overflow-hidden" : "overflow-y-auto"}`}>
@@ -231,6 +234,7 @@ export function Shell(): ReactNode {
       <Dialogs />
       <CreateBridge />
       <PictureChoiceDialog />
+      <SharedPictures />
       <Toast />
     </ShellCtx.Provider>
   )

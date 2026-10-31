@@ -1,6 +1,7 @@
 import { useSettings } from '@/stores/settings'
 import { Modal, buttonSecondary } from './Modal'
 import { PictureStorage } from './PictureStorage'
+import { InstallApp } from './PwaUi'
 
 /** Preferences kept on this device. */
 export function PreferencesDialog({ onClose }: { onClose: () => void }) {
@@ -54,6 +55,7 @@ export function PreferencesDialog({ onClose }: { onClose: () => void }) {
           ))}
         </fieldset>
         <PictureStorage />
+        <InstallApp />
         <fieldset className="rounded-ui border border-line p-3">
           <legend className="px-1 font-semibold">Touch-friendly controls</legend>
           <p className="mb-2 text-xs text-muted">Big targets and bottom sheets. Auto follows the device (a touch screen, even when it shows the desktop site).</p>
