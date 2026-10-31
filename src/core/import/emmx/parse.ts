@@ -62,6 +62,18 @@ export interface EmmxOptions {
 export const PLACEHOLDER_TEXTS = ['main topic', 'subtopic', 'central topic', 'floating topic']
 
 const MAX_TOPICS = 100_000
+/** The thickness MindMaster writes when nobody chose one. Treated like "not set", so the branch stays on Automatic. */
+export const MINDMASTER_DEFAULT_THICKNESS = 10
+
+/**
+ * A manual branch thickness from the file, or null to leave the branch on Automatic. The connector's own value comes first, then the
+ * topic's BranchFormat. 0, missing and MindMaster's default (10) mean "not set"; anything else positive is kept, within 1 to 20.
+ */
+export function branchThickness(fromConnector: number | null, fromTopic: number | null): number | null {
+  const v = [fromConnector, fromTopic].find((n): n is number => n !== null && n > 0 && n !== MINDMASTER_DEFAULT_THICKNESS)
+  return v === undefined ? null : Math.min(20, Math.max(1, Math.round(v * 2) / 2))
+}
+
 const KNOWN_TOPIC_ELEMENTS = new Set(['Transform', 'ShapeFormat', 'Text', 'LevelData', 'Geometries', 'ShapeStyle', 'StyleMask', 'Layout', 'BranchFormat', 'Shape'])
 const TOPIC_TYPES = new Set(['MainIdea', 'MainTopic', 'SubTopic'])
 
@@ -193,9 +205,16 @@ async function convertShape(
     const connector = byId.get(attrV(path(shape, 'LevelData', 'ToSuper')) ?? '')
     const branch = parseEmmxColor(attrV(path(connector, 'ShapeFormat', 'LineFormat', 'LineFill', 'Color'))) ?? line
     if (branch) style.lineColor = branch
-    // A thickness written in the file stays manual; without one the branch is left on Automatic.
-    const thick = num(attrV(path(connector, 'ShapeFormat', 'LineFormat', 'Width')))
-    if (thick !== null && thick > 0) style.lineWidth = Math.min(28, Math.max(1, Math.round(thick * 2) / 2))
+    // Branch thickness and style are not in LineFormat (its LineWeight is only the connector's outline). They are the
+    // Thickness and FlexoStyle attributes of the connector's <MMConnector/> element, and <BranchFormat><Thickness/> on a topic.
+    const branch2 = child(connector, 'MMConnector')
+    const thick = branchThickness(num(branch2?.attrs.Thickness), num(attrV(path(shape, 'BranchFormat', 'Thickness'))))
+    if (thick !== null) style.lineWidth = thick
+    const flexo = branch2?.attrs.FlexoStyle
+    if (flexo === '2') {
+      style.branchCurve = 'curve'
+      style.taper = true // MindMaster's "flexo" branch 2 is a curved branch that thins toward the topic
+    } else if (flexo !== undefined && flexo !== '') add(ctx, `flexo:${flexo}`)
   }
   if (color) style.textColor = color
   if (fontPt) style.fontSize = Math.min(72, Math.max(8, Math.round((fontPt * 4) / 3)))
@@ -352,6 +371,7 @@ function formatWarnings(ctx: PageCtx, pageNote: string[]): string[] {
     if (k.startsWith('skipped:')) out.push(`${c} ${friendly(k.slice(8), c)} skipped`)
     else if (k.startsWith('asTopic:')) out.push(`${c} ${friendly(k.slice(8), c)} imported as normal topic${s(c)} (only the text and subtopics)`)
     else if (k.startsWith('nested:')) out.push(`${c} nested ${friendly(k.slice(7), c)} skipped`)
+    else if (k.startsWith('flexo:')) out.push(`${c} branch${c === 1 ? '' : 'es'} with MindMaster branch style ${k.slice(6)} use the theme's branch style (not imported yet)`)
   }
   for (const [name, c] of Object.entries(ctx.stats.unsupportedElements)) out.push(`${friendly(name, 2)} on ${c} topic${s(c)} not imported yet`)
   return out

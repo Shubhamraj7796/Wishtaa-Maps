@@ -167,17 +167,64 @@ describe('colours and fonts', () => {
     expect(r.maps[0]!.root.children[1]!.style.lineColor).toBe('#010203')
   })
 
-  it('a branch thickness written in the file stays manual; branches without one are left on Automatic', async () => {
-    const shapes =
-      topic({ id: 1, type: 'MainIdea', text: 'Centre', cx: 500, sub: [2, 3] }) +
-      topic({ id: 2, type: 'MainTopic', text: 'Thick', cx: 800, superId: 1, toSuper: 20 }) +
-      topic({ id: 3, type: 'MainTopic', text: 'Plain', cx: 200, superId: 1, toSuper: 21 }) +
-      connector(20, '#ffff0000', 6.4) +
-      connector(21, '#ff00ff00')
-    const r = await parseEmmx(simple(shapes))
-    const kids = r.maps[0]!.root.children
-    expect(kids.find((c) => c.text === 'Thick')!.style.lineWidth).toBe(6.5)
-    expect(kids.find((c) => c.text === 'Plain')!.style.lineWidth).toBeUndefined()
+  describe('branch thickness and style (MMConnector Thickness and FlexoStyle)', () => {
+    const walk = (t: { children: unknown[]; style: Record<string, unknown> }, out: { style: Record<string, unknown> }[] = []) => {
+      out.push(t)
+      for (const c of t.children as { children: unknown[]; style: Record<string, unknown> }[]) walk(c, out)
+      return out
+    }
+
+    it('the real file: every branch is left on Auto, tapered, with its colours and sides unchanged', async () => {
+      const { maps } = await parseEmmx(sample())
+      const all = walk(maps[0]!.root as never)
+      const branches = all.slice(1) // the centre has no branch
+      expect(branches.length).toBeGreaterThan(5)
+      for (const t of branches) expect(t.style.lineWidth, 'thickness stays Auto').toBeUndefined()
+      expect(branches.some((t) => t.style.taper === true && t.style.branchCurve === 'curve')).toBe(true)
+      expect(maps[0]!.root.children.map((c) => c.side)).toEqual(['right', 'left', 'left'])
+      expect(maps[0]!.root.children.map((c) => c.style.lineColor)).toEqual(['#ff7575', '#5fb7f1', '#ffcd55'])
+    })
+
+    it('the connector LineWeight (its outline) is ignored for thickness', async () => {
+      const r = await parseEmmx(simple(basicShapes()))
+      for (const t of walk(r.maps[0]!.root as never)) expect(t.style.lineWidth).toBeUndefined()
+    })
+
+    const withConnector = async (mm?: { thickness?: number; flexo?: number }, topicThickness?: number) => {
+      const shapes =
+        topic({ id: 1, type: 'MainIdea', text: 'Centre', cx: 500, sub: [2] }) +
+        topic({ id: 2, type: 'MainTopic', text: 'Leaf', cx: 800, superId: 1, toSuper: 20, extra: topicThickness === undefined ? '' : `<BranchFormat><Thickness V="${topicThickness}"/></BranchFormat>` }) +
+        connector(20, '#ffff0000', mm)
+      const r = await parseEmmx(simple(shapes))
+      return { style: r.maps[0]!.root.children[0]!.style, warnings: r.warnings }
+    }
+
+    it('a thickness other than the default stays manual', async () => {
+      expect((await withConnector({ thickness: 6, flexo: 2 })).style.lineWidth).toBe(6)
+    })
+    it('0, missing and the MindMaster default of 10 stay on Auto', async () => {
+      expect((await withConnector({ thickness: 0 })).style.lineWidth).toBeUndefined()
+      expect((await withConnector({ flexo: 2 })).style.lineWidth).toBeUndefined()
+      expect((await withConnector({ thickness: 10 })).style.lineWidth).toBeUndefined()
+      expect((await withConnector()).style.lineWidth).toBeUndefined()
+    })
+    it('is kept within 1 to 20', async () => {
+      expect((await withConnector({ thickness: 50 })).style.lineWidth).toBe(20)
+      expect((await withConnector({ thickness: 0.2 })).style.lineWidth).toBe(1)
+    })
+    it('falls back to the BranchFormat of the topic when the connector has none', async () => {
+      expect((await withConnector({ thickness: 0 }, 7)).style.lineWidth).toBe(7)
+      expect((await withConnector({ thickness: 4 }, 7)).style.lineWidth).toBe(4) // the connector comes first
+      expect((await withConnector({ thickness: 0 }, 10)).style.lineWidth).toBeUndefined()
+    })
+    it('FlexoStyle 2 is a tapered curved branch; other styles are left to the theme and listed in the report', async () => {
+      expect((await withConnector({ flexo: 2 })).style).toMatchObject({ branchCurve: 'curve', taper: true })
+      const other = await withConnector({ flexo: 7 })
+      expect(other.style.branchCurve).toBeUndefined()
+      expect(other.style.taper).toBeUndefined()
+      expect(other.warnings.join(' ')).toMatch(/MindMaster branch style 7/)
+      expect((await withConnector({ flexo: 2 })).warnings.join(' ')).not.toMatch(/branch style/)
+    })
   })
 
   it('ignores fully transparent colours', async () => {

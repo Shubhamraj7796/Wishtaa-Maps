@@ -12,6 +12,7 @@ Import only: there is no `.emmx` export.
 | Pictures inside topics | The topic's picture, at the size it was shown (kept within 40 to 1200 px) |
 | Which side a main topic was on (its position compared with the central topic) | The topic's side in the balanced mind map |
 | Fill colour, outline colour, branch colour, font size, a chosen text colour | The topic's fill, border, connector colour, font size and text colour |
+| Branch thickness and style | Auto thickness unless the file sets one (see below); a tapered curved branch for MindMaster style 2 |
 | Each page (`page/*.xml`) | A separate map named after the page (the file name for a single page) |
 
 MindMaster themes, shapes and geometry are not reproduced: the Wishtaa theme is used, but the original colours win.
@@ -86,3 +87,20 @@ failed are retried; a Drive folder that no longer exists falls back to the Wisht
 browser instead**. The imported maps stay in All files either way, even if the message is closed.
 
 In code: `importToPlacement` and `retryDriveUpload` in `src/app/importEmmx.ts`; `ImportDialog` in `src/app/importFlow.tsx`.
+
+## Branch thickness and style
+The branch to a topic is the connector shape (`Type="MMConnector"`) that leads to it, the same one that gives the branch colour.
+`LineFormat/LineWeight` on that connector is only its outline weight and is **ignored**. Thickness and style are stored here:
+
+- `<MMConnector FlexoStyle="2" Thickness="10"/>` inside the connector shape, and
+- `<BranchFormat><Thickness V="10"/></BranchFormat>` on some topic shapes.
+
+Rules:
+1. The connector's `Thickness` is read first, then the topic's `BranchFormat/Thickness`.
+2. `0`, missing, or `10` (the value MindMaster writes when nobody chose one, as seen in the sample file) leave the branch on **Auto**.
+   Any other positive value stays a **manual** thickness, rounded to half a pixel and kept within 1 to 20.
+3. `FlexoStyle="2"` becomes a tapered curved branch. Any other `FlexoStyle` is left to the theme and listed in the import report
+   ("N branches with MindMaster branch style X use the theme's branch style").
+
+The test file `tests/fixtures/IND_AS_2.emmx` has `Thickness` 10 and 0 and `FlexoStyle` 2 throughout, so all its branches import as
+Auto and tapered.
