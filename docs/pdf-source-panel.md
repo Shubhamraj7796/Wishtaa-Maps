@@ -124,14 +124,14 @@ The panel header keeps the file name and menu, page number, zoom, Capture area a
 - **Moving it.** Drag the grip at its top anywhere: on letting go it **snaps to the nearer left or right edge** of the PDF area. Its
   place is remembered per device. It starts at the left edge on a computer, and at the bottom of the right edge on a touch screen, away
   from the thumb and the system gestures. The **chevron** collapses it to one small handle (tap to open, drag to move). **Fade** dims it
-  a moment after the last touch (and wakes on touch or hover), so it never has to cover the page. It scrolls inside when the area is short.
+  a moment after the last touch (and wakes on touch or hover), so it never has to cover the page. When the tools do not fit the height they go into **two columns**, and when even that is too tall into the tools alone with a **More** button (undo, redo, turn, hide and fade open from it). The bar never has a scrollbar.
 - **Colours and sizes.** There is no permanent row of colour dots. Each marking tool shows **its own colour** as a bar on its icon.
   Tapping the active tool, or the small chevron on its corner, opens a **flyout** beside the bar with a palette plus a custom colour,
   a **thickness** slider (text size for the text box) and a live preview; the highlighter also has a **strength** slider.
   **Each tool remembers its own colour and size, across sessions, on this device** (for example Pen red, Highlight yellow).
 - **Keys** (while the PDF has the focus, shown in each tooltip): V Select, H Highlight, U Underline, S Strikethrough, P Pen, T Text box,
   R Shapes, W Whiteout, E Eraser, L Link.
-- 44 px targets on touch (32 px with a mouse). A pen (stylus) draws with its full path; once a pen has touched the screen, fingers
+- 44 px targets everywhere. A pen (stylus) draws with its full path; once a pen has touched the screen, fingers
   scroll and zoom instead of drawing, so a resting hand does nothing. Touch selection of text uses the system handles; the selection bar
   then marks it.
 - **Read mode has none of it**: the toolbar, the flyouts and the selection bar are gone; only viewing tools remain.
@@ -202,6 +202,6 @@ text box, arrow) spread over the pages:
 
 ## Files
 
-`src/core/pdf/` (types, geometry, text helpers, engine around pdf.js, device store, export, test kit) and `src/editor/pdf/` (panel,
+`src/core/pdf/` (types, geometry, text helpers, engine around pdf.js, device store, export, test kit) and `src/editor/markup/MarkupToolbar.tsx` (the floating toolbar, shared with the picture viewer) and `src/editor/pdf/` (panel,
 viewer, page view, layers, tools, selection, topics, capture, markup, export actions). Tests: `src/core/pdf/*.test.ts` and
 `src/editor/pdf/*.test.tsx`.

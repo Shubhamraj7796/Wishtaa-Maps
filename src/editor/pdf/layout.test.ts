@@ -94,3 +94,20 @@ describe('snapping the toolbar to an edge', () => {
     expect(snapToolbar(100, 10, area, { height: 700 }).y).toBe(1) // taller than the area: no room, so it takes the bottom
   })
 })
+
+import { barMode } from '../markup/MarkupToolbar'
+
+describe('the toolbar never scrolls: one column, two columns, or a More button', () => {
+  const cells = { tools: 10, extras: 6 }
+  it('one column when everything fits the height', () => {
+    expect(barMode(cells, 44, 900)).toEqual({ mode: 'one', cols: 1 })
+  })
+  it('two columns when it does not', () => {
+    expect(barMode(cells, 44, 600)).toEqual({ mode: 'two', cols: 2 })
+  })
+  it('the tools alone with a More button when even two columns are too tall', () => {
+    expect(barMode(cells, 44, 300)).toEqual({ mode: 'more', cols: 2 })
+    expect(barMode(cells, 44, 540)).toMatchObject({ mode: 'two' })
+    expect(barMode({ tools: 10, extras: 6 }, 44, 480).mode).not.toBe('one')
+  })
+})

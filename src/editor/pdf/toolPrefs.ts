@@ -108,3 +108,23 @@ export function snapToolbar(centerX: number, top: number, area: { width: number;
   const room = Math.max(1, area.height - bar.height)
   return { side, y: clamp(top / room, 0, 1) }
 }
+
+/** Where a floating toolbar was left on this device. Each surface ("pdf", "picture") keeps its own place. */
+export function loadBar(key: string): ToolbarPlace | null {
+  if (key === 'pdf') return loadPrefs().bar
+  try {
+    const b = JSON.parse(localStorage.getItem(`wishtaamaps:markup-bar:${key}`) ?? 'null') as Partial<ToolbarPlace> | null
+    return b && (b.side === 'left' || b.side === 'right') ? { side: b.side, y: clamp(Number(b.y) || 0, 0, 1), collapsed: !!b.collapsed, fade: !!b.fade } : null
+  } catch {
+    return null
+  }
+}
+
+export function saveBar(key: string, place: ToolbarPlace) {
+  if (key === 'pdf') return savePrefs({ ...loadPrefs(), bar: place })
+  try {
+    localStorage.setItem(`wishtaamaps:markup-bar:${key}`, JSON.stringify(place))
+  } catch {
+    /* not remembered */
+  }
+}

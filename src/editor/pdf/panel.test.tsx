@@ -312,6 +312,23 @@ describe('the floating markup tools', () => {
     vi.useRealTimers()
   })
 
+  it('uses two columns when the height is short, and a More button when even that is too tall: it never scrolls', () => {
+    renderTools()
+    expect(bar().getAttribute('data-bar-mode')).toBe('two')
+    expect(screen.getByRole('button', { name: 'Undo' })).toBeTruthy()
+    cleanup()
+    Object.defineProperty(HTMLElement.prototype, 'clientHeight', { configurable: true, get() { return 300 } })
+    renderTools()
+    expect(bar().getAttribute('data-bar-mode')).toBe('more')
+    expect(screen.queryByRole('button', { name: 'Undo' })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: /More: undo, redo/ }))
+    const more = screen.getByRole('dialog', { name: 'More tools' })
+    expect(within(more).getByRole('button', { name: 'Undo' })).toBeTruthy()
+    expect(within(more).getByRole('button', { name: 'Turn page 1 left' })).toBeTruthy()
+    expect(getComputedStyle(screen.getByRole('toolbar')).overflowY).not.toBe('auto')
+    Object.defineProperty(HTMLElement.prototype, 'clientHeight', { configurable: true, get() { return 600 } })
+  })
+
   it('has no tools in Read mode', async () => {
     renderTools()
     expect(screen.getByRole('toolbar')).toBeTruthy()
