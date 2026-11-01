@@ -10,12 +10,35 @@ not in the offline pre-cache list.
 
 ## Opening a PDF
 
-- **From this device** (the + button in the panel), by **dragging a file onto the panel**, or
-- **From Google Drive** with the existing Google Picker (scope stays `drive.file`; the Picker shows only PDFs). The file is
-  downloaded once and kept on this device.
+**Insert menu ▸ PDF from this device… / PDF from Google Drive…**, the **PDF** button in the top bar, the **+** button in the panel, the
+command palette ("Insert PDF from this device…", "Insert PDF from Google Drive…"), or **dragging files onto the panel**. All of them are
+hidden or blocked in Read mode. Several PDFs can be chosen or dropped at once.
 
-A PDF is checked as it is added: it must open, be at most **50 MB**, and not be password protected. pdf.js runs with scripting,
-XFA forms and `eval` turned off; only its own drawing is used, so a PDF cannot run code.
+- **From this device:** the file chooser accepts `.pdf` and `application/pdf`; a drop is judged by what is inside the file, not its name
+  or type (a PDF with no type, or typed `application/octet-stream`, is fine).
+- **From Google Drive:** a Picker of its own, set up for PDFs (the Picker for opening .wishtaa and .emmx maps is separate and
+  unchanged, except that its message now says PDFs are inserted with Insert, PDF). My Drive, Shared with me, Recent and Shared drives
+  tabs filter on `application/pdf`, folders can be browsed, several files can be chosen, and a last tab lists every file for PDFs that
+  Drive typed as a generic binary. Picking a file gives the app access to that file under the existing `drive.file` scope; it is
+  downloaded with the signed-in access and kept on this device.
+
+Every file is **checked by content**: the first bytes must contain `%PDF-` (a few bytes of junk before it are allowed, as the PDF
+format allows), then it must open. What you see when it does not:
+
+| Situation | Message |
+|---|---|
+| Not a PDF | "*name* isn't a PDF." |
+| Over 50 MB | "*name* is larger than 50 MB, which is more than we open." (a Drive file is refused before it is downloaded) |
+| Damaged | "This PDF is damaged and could not be read." |
+| Password protected | A dialog: "This PDF is password protected. Enter the password." with a password field; a wrong password says so and asks again; Cancel adds nothing. The password is kept in memory for the session only (never in the map or on disk), so a protected PDF already in a map asks again after a reload, in the panel. |
+
+When several files are picked, the ones that fail are reported by name and the rest are still added. A PDF that needs a password cannot
+be downloaded **with markup** (the copy cannot be written); the markup stays in the map.
+
+pdf.js is loaded only when the panel is first opened and is not in the offline pre-cache list. Its worker, and the files it fetches
+(JPEG 2000, JBIG2 and colour decoders as wasm, standard fonts, colour profiles and CJK character maps), come from this site: the build
+copies them to `/pdfjs/` and the dev server serves them from the package, so no other host is involved. pdf.js runs with scripting,
+XFA forms and `eval` off; the scripting engine is not shipped.
 
 ### What a map stores
 
@@ -142,7 +165,7 @@ text box, arrow) spread over the pages:
 - Inserting, merging or reordering pages (pages can be turned and hidden only).
 - True redaction (whiteout only covers).
 - Searching inside the PDF and OCR of scanned pages (Capture area then the existing OCR on a picture works).
-- Password-protected PDFs.
+- Downloading a password-protected PDF with markup.
 
 ## Files
 

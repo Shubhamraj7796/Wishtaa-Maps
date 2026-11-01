@@ -1,12 +1,12 @@
 import 'fake-indexeddb/auto'
 import * as Y from 'yjs'
-import { PDFDocument } from 'pdf-lib'
 import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs'
 import { beforeAll, describe, expect, it } from 'vitest'
 import { createMapDoc, ensureRoot, snapshotPdf, snapshotTopics } from '../model/doc'
 import { addChild } from '../model/commands'
 import { sha256Hex } from '../images/sha256'
-import { openPdf, looksLikePdf, PdfError, type PdfjsLike } from './engine'
+import { openPdf, looksLikePdf, PdfError, PdfPasswordError, type PdfjsLike } from './engine'
+import { ENCRYPTED_PDF_BASE64 } from './encrypted.fixture'
 import { fromShown, rectFrom, rectToPdf, rectToShown, rectFromShown, shownSize, toPdf, toShown, turn, unionRect } from './geometry'
 import { IndexedDbPdfStore, MemoryPdfStore } from './store'
 import { detectHeadings, flattenBookmarks, groupLines, joinHyphenation, topicTexts, type PageLines } from './text'
@@ -206,22 +206,24 @@ describe('opening a PDF', () => {
   })
 
   it('refuses what is not a PDF, is too big, or is damaged, with a message a person can read', async () => {
-    await expect(openPdf(lib, new TextEncoder().encode('just some words'))).rejects.toThrow(/not a PDF/)
+    await expect(openPdf(lib, new TextEncoder().encode('just some words'))).rejects.toThrow(/isn't a PDF/)
     await expect(openPdf(lib, new Uint8Array(51 * 1024 * 1024))).rejects.toThrow(/larger than 50 MB/)
     await expect(openPdf(lib, new TextEncoder().encode('%PDF-1.4\nthis is not really a pdf file at all'))).rejects.toBeInstanceOf(PdfError)
     expect(looksLikePdf(new TextEncoder().encode('junk\n%PDF-1.7'))).toBe(true)
   })
 
-  it('refuses a PDF protected with a password and says so', async () => {
-    const doc = await PDFDocument.create()
-    doc.addPage()
-    // pdf-lib cannot write encrypted files, so a hand-made encrypted header is used by pdf.js tests elsewhere; here the message is checked
-    // through the error name pdf.js gives.
-    const fake: PdfjsLike = {
-      Util: lib.Util,
-      getDocument: () => ({ promise: Promise.reject(Object.assign(new Error('x'), { name: 'PasswordException' })), destroy: async () => undefined }),
-    }
-    await expect(openPdf(fake, await doc.save())).rejects.toThrow(/password/)
+  it('asks for the password of a protected PDF, says when it is wrong, and opens with the right one', async () => {
+    const bytes = Uint8Array.from(Buffer.from(ENCRYPTED_PDF_BASE64, 'base64'))
+    const err = await openPdf(lib, bytes).catch((e) => e)
+    expect(err).toBeInstanceOf(PdfPasswordError)
+    expect(err.wrong).toBe(false)
+    expect(err.message).toMatch(/password protected/)
+    const wrong = await openPdf(lib, bytes, undefined, 'nope').catch((e) => e)
+    expect(wrong).toBeInstanceOf(PdfPasswordError)
+    expect(wrong.wrong).toBe(true)
+    const ok = await openPdf(lib, bytes, undefined, 'secret')
+    expect(ok.pages).toBe(1)
+    await ok.destroy()
   })
 
   it('opens without running anything: no scripts, no eval, nothing from the network', async () => {

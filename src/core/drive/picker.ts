@@ -146,18 +146,20 @@ export async function pickOpenableFiles(opts: { token: string; apiKey: string | 
 }
 
 /**
- * "Open a PDF from Google Drive": one PDF. PDFs have a reliable type in Drive, so unlike .emmx files this picker CAN filter on it. Picking
- * the file gives this app access to that one file (the `drive.file` scope) so it can be downloaded. `api` is only for tests.
+ * "Insert a PDF from Google Drive": its own Picker, set up for PDFs (the .wishtaa and .emmx picker above is not used). My Drive, Shared with
+ * me, Recent and shared drives, with folders to browse, and several PDFs can be chosen. Picking a file gives this app access to that one
+ * file (the `drive.file` scope), so it can be downloaded. A PDF uploaded from a computer is sometimes typed as a generic binary file, so a
+ * last tab lists every file for those; each pick is checked by its content afterwards. `api` is only for tests.
  */
-export async function pickPdfFile(opts: { token: string; apiKey: string | undefined; clientId: string | undefined }, api?: PickerApi): Promise<OpenedDoc | null> {
+export async function pickPdfFiles(opts: { token: string; apiKey: string | undefined; clientId: string | undefined }, api?: PickerApi): Promise<OpenedDoc[]> {
   if (!opts.apiKey || !opts.clientId) {
     throw new DriveError('config', 'Choosing a PDF from Drive needs a Google API key. Add VITE_GOOGLE_API_KEY (see the setup notes).')
   }
   const picker = api ?? (await loadPicker())
   return new Promise((resolve) => {
-    const view = (viewId: unknown, label: string, setup?: (v: DocsViewApi) => void) => {
+    const view = (viewId: unknown, label: string, setup?: (v: DocsViewApi) => void, pdfOnly = true) => {
       const v = new picker.DocsView(viewId)
-      v.setMimeTypes('application/pdf')
+      if (pdfOnly) v.setMimeTypes('application/pdf')
       v.setIncludeFolders(true)
       v.setSelectFolderEnabled(false)
       v.setLabel?.(label)
@@ -169,17 +171,17 @@ export async function pickPdfFile(opts: { token: string; apiKey: string | undefi
       .addView(view(picker.ViewId.DOCS, 'Shared with me', (v) => v.setOwnedByMe?.(false)))
     if (picker.ViewId.RECENTLY_PICKED) builder.addView(view(picker.ViewId.RECENTLY_PICKED, 'Recent'))
     builder.addView(view(picker.ViewId.DOCS, 'Shared drives', (v) => v.setEnableDrives?.(true)))
+    builder.addView(view(picker.ViewId.DOCS, 'Any file (.pdf)', undefined, false))
+    builder.enableFeature(picker.Feature.MULTISELECT_ENABLED)
     if (picker.Feature.SUPPORT_DRIVES) builder.enableFeature(picker.Feature.SUPPORT_DRIVES)
     builder
       .setOAuthToken(opts.token)
       .setDeveloperKey(opts.apiKey as string)
       .setAppId(projectNumber(opts.clientId as string))
-      .setTitle('Open a PDF from Google Drive')
+      .setTitle('Insert a PDF from Google Drive')
       .setCallback((data) => {
-        if (data.action === picker.Action.PICKED) {
-          const d = data.docs?.[0]
-          resolve(d ? { id: d.id, name: d.name, mimeType: d.mimeType, sizeBytes: d.sizeBytes } : null)
-        } else if (data.action === picker.Action.CANCEL) resolve(null)
+        if (data.action === picker.Action.PICKED) resolve((data.docs ?? []).map((d) => ({ id: d.id, name: d.name, mimeType: d.mimeType, sizeBytes: d.sizeBytes })))
+        else if (data.action === picker.Action.CANCEL) resolve([])
       })
       .build()
       .setVisible(true)

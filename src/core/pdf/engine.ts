@@ -51,6 +51,13 @@ export interface PageInfo {
 
 export class PdfError extends Error {}
 
+/** The PDF needs a password (`wrong`: the one given was not right). */
+export class PdfPasswordError extends PdfError {
+  constructor(readonly wrong: boolean) {
+    super(wrong ? 'That password is not right.' : 'This PDF is password protected. Enter the password.')
+  }
+}
+
 export interface OpenProgress {
   loaded: number
   total: number
@@ -148,18 +155,18 @@ export class PdfHandle {
 }
 
 /** Opens a PDF from its bytes. Throws a readable error for a file that is too big, not a PDF, damaged, or password protected. */
-export async function openPdf(pdfjs: PdfjsLike, bytes: Uint8Array, onProgress?: (p: OpenProgress) => void): Promise<PdfHandle> {
+export async function openPdf(pdfjs: PdfjsLike, bytes: Uint8Array, onProgress?: (p: OpenProgress) => void, password?: string): Promise<PdfHandle> {
   if (bytes.byteLength > PDF_LIMITS.maxBytes) throw new PdfError(`This PDF is larger than ${Math.round(PDF_LIMITS.maxBytes / 1048576)} MB, which is more than we open.`)
-  if (!looksLikePdf(bytes)) throw new PdfError('This file is not a PDF.')
+  if (!looksLikePdf(bytes)) throw new PdfError("This file isn't a PDF.")
   // pdf.js takes the bytes over, so it gets its own copy.
-  const task = pdfjs.getDocument({ ...SAFE_OPTIONS, data: bytes.slice() })
+  const task = pdfjs.getDocument({ ...SAFE_OPTIONS, data: bytes.slice(), ...(password ? { password } : {}) })
   if (onProgress) task.onProgress = (p) => onProgress({ loaded: p.loaded, total: p.total ?? bytes.byteLength })
   try {
     const doc = await task.promise
     return new PdfHandle(pdfjs, doc, doc.numPages, () => task.destroy())
   } catch (e) {
     const name = (e as { name?: string }).name
-    if (name === 'PasswordException') throw new PdfError('This PDF is protected with a password. Remove the password and open it again.')
+    if (name === 'PasswordException') throw new PdfPasswordError((e as { code?: number }).code === 2)
     if (name === 'InvalidPDFException') throw new PdfError('This PDF is damaged and could not be read.')
     throw new PdfError('This PDF could not be opened.')
   }

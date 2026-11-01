@@ -3,7 +3,7 @@ import { MAX_FILE_BYTES } from '../import/emmx/zip'
 import type { SourceLink } from '../files/types'
 
 /** What the picker shows and what we refuse, in one place. */
-export const OPEN_HINT = 'Only .wishtaa and .emmx files can be opened.'
+export const OPEN_HINT = 'Only .wishtaa and .emmx files can be opened. To add a PDF to a map, use Insert, PDF.'
 
 /** What is said about any file that is neither. */
 export const NOT_A_MIND_MAP = "This file isn't a .wishtaa or .emmx mind map"

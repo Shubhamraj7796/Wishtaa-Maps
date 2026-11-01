@@ -2,8 +2,8 @@ import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import type { PdfSource } from '@/core/pdf/types'
 import { Icon } from '@/ui/icons'
 import { useEditor } from '../store'
-import { addPdfFile, closePdfPanel, setPdfTool, openPdfFromDrive, pickPdfFromDevice, refetchFromDrive, removePdfFromDevice, removePdfSource, reopenPdf, setPdfPage, showSource, setPdfTab, setPdfZoom, showPdf } from './actions'
-import { accessPdf, getDeviceVersion, subscribeDevice, type PdfAccess } from './runtime'
+import { addPdfFiles, closePdfPanel, setPdfTool, openPdfFromDrive, pickPdfFromDevice, refetchFromDrive, removePdfFromDevice, removePdfSource, reopenPdf, setPdfPage, showSource, setPdfTab, setPdfZoom, showPdf } from './actions'
+import { accessPdf, bumpDevice, getDeviceVersion, rememberPassword, subscribeDevice, type PdfAccess } from './runtime'
 import { downloadMarkedPdf, saveCopyToDrive } from './exportActions'
 import { OutlineDialog } from './OutlineDialog'
 import { Viewer } from './Viewer'
@@ -238,6 +238,7 @@ function Body({ source, showHidden, tab }: { source: PdfSource | undefined; show
     )
   }
   if (access.state === 'missing') return <Missing source={source} />
+  if (access.state === 'password') return <PasswordForm source={source} wrong={access.wrong} />
   if (access.state === 'error') {
     return (
       <div role="alert" className="grid flex-1 place-items-center p-6 text-center text-sm">
@@ -262,8 +263,7 @@ function Empty() {
       onDrop={(e) => {
         e.preventDefault()
         setOver(false)
-        const f = e.dataTransfer.files[0]
-        if (f && !readOnly) void addPdfFile(f)
+        if (!readOnly) void addPdfFiles([...e.dataTransfer.files])
       }}
     >
       <div>
@@ -311,4 +311,31 @@ function OutlineLoader({ source, onClose }: { source: PdfSource; onClose: () => 
   }, [source])
   if (access?.state !== 'ready') return null
   return <OutlineDialog source={source} handle={access.handle} onClose={onClose} />
+}
+
+/** The PDF in the map needs its password (passwords are not saved, so it is asked again each session). */
+function PasswordForm({ source, wrong }: { source: PdfSource; wrong: boolean }) {
+  const [value, setValue] = useState('')
+  return (
+    <form
+      className="grid flex-1 place-items-center p-6 text-center text-sm"
+      onSubmit={(e) => {
+        e.preventDefault()
+        if (value) {
+          rememberPassword(source.hash, value)
+          bumpDevice()
+        }
+      }}
+    >
+      <div className="w-full max-w-xs">
+        <p className="font-medium">“{source.name}” is password protected.</p>
+        <p className="mt-1 text-xs text-muted">Enter the password. It is not saved.</p>
+        <input type="password" autoComplete="off" autoFocus value={value} onChange={(e) => setValue(e.target.value)} aria-label="Password" className="mt-3 w-full rounded border border-line bg-surface px-2 py-2" />
+        {wrong && <p role="alert" className="mt-1 text-bad">That password is not right. Try again.</p>}
+        <button type="submit" disabled={!value} className="mt-3 w-full rounded-ui bg-brand px-3 py-2 font-semibold text-brand-ink disabled:opacity-50 [@media(pointer:coarse)]:min-h-11">
+          Open
+        </button>
+      </div>
+    </form>
+  )
 }

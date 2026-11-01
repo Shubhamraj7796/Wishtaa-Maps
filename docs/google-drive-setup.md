@@ -116,7 +116,7 @@ reached, the new file is kept in this browser and you can retry or keep it there
 
 ## PDFs from and to Drive
 
-The PDF panel opens a PDF with the same Picker (filtered to PDFs, still scope `drive.file`) and downloads it once; a map keeps only
+The PDF panel opens a PDF with the own Picker for PDFs (mime filter `application/pdf`, folders, several files, plus an any-file tab; still scope `drive.file`) and downloads it once; a map keeps only
 a reference (name, size, hash, Drive id). **Save copy to Google Drive** uploads "Name (marked up).pdf" as a **new** file in the
 Wishtaa Maps folder (resumable above 5 MB); the original is never replaced. See `docs/pdf-source-panel.md`.
 

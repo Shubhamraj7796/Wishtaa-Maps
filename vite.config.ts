@@ -1,7 +1,7 @@
 /// <reference types="vitest" />
 import { createHash } from 'node:crypto'
-import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { cpSync, existsSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
+import { join, normalize } from 'node:path'
 import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 
@@ -31,8 +31,34 @@ function stampServiceWorker(): Plugin {
   }
 }
 
+/**
+ * pdf.js reads fonts for the standard PDF typefaces, colour profiles, CJK character maps and its JPEG 2000 / JBIG2 / colour decoders from
+ * separate files. They are served from /pdfjs/ (copied out of the package into the build; served straight from it by the dev server), so
+ * they come from this site with no other host involved. They are fetched only when a PDF needs them, and are not in the offline list.
+ */
+function pdfjsData(): Plugin {
+  const root = join('node_modules', 'pdfjs-dist')
+  const dirs = ['wasm', 'standard_fonts', 'cmaps', 'iccs']
+  const skip = (src: string) => /quickjs/i.test(src) // the scripting engine is never used
+  return {
+    name: 'pdfjs-data',
+    configureServer(server) {
+      server.middlewares.use('/pdfjs', (req, res, next) => {
+        const rel = normalize(decodeURIComponent((req.url ?? '').split('?')[0] ?? '')).replace(/^([/\\]|\.\.)+/, '')
+        const file = join(root, rel)
+        if (!dirs.includes(rel.split(/[/\\]/)[0] ?? '') ||!existsSync(file) || !statSync(file).isFile()) return next()
+        res.setHeader('Content-Type', file.endsWith('.wasm') ? 'application/wasm' : 'application/octet-stream')
+        res.end(readFileSync(file))
+      })
+    },
+    closeBundle() {
+      for (const d of dirs) if (existsSync(join(root, d))) cpSync(join(root, d), join('dist', 'pdfjs', d), { recursive: true, filter: (s) => !skip(s) })
+    },
+  }
+}
+
 export default defineConfig({
-  plugins: [react(), stampServiceWorker()],
+  plugins: [react(), stampServiceWorker(), pdfjsData()],
   resolve: { alias: { '@': '/src' } },
   test: { environment: 'node', include: ['src/**/*.test.{ts,tsx}'] },
 })

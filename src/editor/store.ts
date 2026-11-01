@@ -140,6 +140,8 @@ export interface EditorState {
   /** The PDFs, markup and page edits of the open map. */
   pdf: PdfState
   pdfPanel: PdfPanelState
+  /** A PDF is asking for its password (the dialog is shown while this is set). */
+  pdfPassword: { name: string; wrong: boolean } | null
   panelOpen: boolean
   minimap: boolean
   panelTab: PanelTab
@@ -228,6 +230,7 @@ export const useEditor = create<EditorState>(() => ({
   settings: DEFAULT_SETTINGS,
   pdf: emptyPdfState(),
   pdfPanel: closedPdfPanel(),
+  pdfPassword: null,
   panelOpen: false,
   minimap: true,
   panelTab: 'canvas',

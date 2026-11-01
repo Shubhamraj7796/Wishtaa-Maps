@@ -55,7 +55,13 @@ function geoOf(page: PDFPage): Geo {
 }
 
 export async function exportMarkedPdf(original: Uint8Array, opts: ExportOptions): Promise<Uint8Array> {
-  const doc = await PDFDocument.load(original, { updateMetadata: false })
+  let doc: PDFDocument
+  try {
+    doc = await PDFDocument.load(original, { updateMetadata: false })
+  } catch (e) {
+    if (e instanceof Error && /encrypt/i.test(`${e.name} ${e.message}`)) throw new Error('A password protected PDF cannot be downloaded with markup. Your markup stays in the map.')
+    throw e
+  }
   const pages = doc.getPages()
   const font = await doc.embedFont(StandardFonts.Helvetica)
   const byPage = new Map<number, MarkupObject[]>()

@@ -15,7 +15,7 @@ import {
 } from './images'
 import { blockedInReadMode, toggleReadMode } from './readmode'
 import { resolveTarget, startSource } from './pictures/flow'
-import { togglePdfPanel } from './pdf/actions'
+import { openPdfFromDrive, pickPdfFromDevice, togglePdfPanel } from './pdf/actions'
 import { useEditor } from './store'
 
 export interface Cmd {
@@ -63,6 +63,8 @@ export const COMMANDS: Cmd[] = [
   { id: 'paste', label: 'Paste', group: 'Edit', hint: 'Ctrl+V', run: () => {}, palette: false },
   { id: 'pasteImage', label: 'Paste an image into the selected topic', group: 'Edit', hint: 'Ctrl+V', run: () => {}, palette: false },
   { id: 'addImage', label: 'Add picture to topic…', group: 'Insert', keys: ['Alt+Shift+P'], run: () => void cmdAddImage() },
+  { id: 'insertPdf', label: 'Insert PDF from this device…', group: 'Insert', run: () => pickPdfFromDevice() },
+  { id: 'insertPdfDrive', label: 'Insert PDF from Google Drive…', group: 'Insert', run: () => void openPdfFromDrive() },
   { id: 'pdfPanel', label: 'Open or close the PDF panel', group: 'Insert', run: () => togglePdfPanel() },
   { id: 'captureScreen', label: 'Capture screen as a picture', group: 'Insert', keys: ['Alt+Shift+Q'], run: () => void captureToPicture() },
   { id: 'removeImage', label: 'Remove image from topic', group: 'Edit', run: () => removeImage() },

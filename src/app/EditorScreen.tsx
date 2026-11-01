@@ -29,6 +29,7 @@ import { Icon } from '@/ui/icons'
 import { IconButton } from '@/ui/IconButton'
 import { takePendingShare } from '@/pwa/share'
 import { togglePdfPanel } from '@/editor/pdf/actions'
+import { PasswordDialog } from '@/editor/pdf/PasswordDialog'
 import { useTouchFriendly } from '@/editor/pictures/touch'
 import { ErrorBoundary } from './ErrorBoundary'
 import { ReadToolbar } from './ReadToolbar'
@@ -204,13 +205,14 @@ function Editor({ file }: { file: FileRecord }) {
         <IconButton icon="summary" label="Summary of sibling topics" keys={keysOf('summary')} onClick={C.addSummaryToSelected} caption="Summary" />
         <Divider />
         <div className="relative">
-          <IconButton icon="insert" label="Insert: marks, clipart, picture, notes, tags, task, link, attachment, formula, table" active={insertOpen} onClick={() => C.toggleInsert()} caption="Insert" aria-haspopup="menu" aria-expanded={insertOpen} />
+          <IconButton icon="insert" label="Insert: marks, clipart, picture, notes, tags, task, link, attachment, PDF, formula, table" active={insertOpen} onClick={() => C.toggleInsert()} caption="Insert" aria-haspopup="menu" aria-expanded={insertOpen} />
           <InsertMenu />
         </div>
       </div>
       )}
 
       <div className="relative flex min-h-0 flex-1">
+        <PasswordDialog />
         {pdfOpen && pdfMode === 'side' && (
           <ErrorBoundary inline label="The PDF panel">
             <Suspense fallback={<div className="grid w-[460px] place-items-center text-sm text-muted">Loading the PDF viewer…</div>}>

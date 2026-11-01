@@ -1,15 +1,16 @@
 import { sha256Hex } from '@/core/images/sha256'
 import { newId } from '@/core/model/ids'
 import { LOCAL } from '@/core/model/doc'
-import { openPdf, PdfError } from '@/core/pdf/engine'
+import { looksLikePdf, openPdf, PdfError, PdfPasswordError } from '@/core/pdf/engine'
 import { editKey, PDF_LIMITS, type PdfSource, type SourceRef } from '@/core/pdf/types'
 import { mapDoc } from '../mapdoc'
 import { showNotice } from '../notice'
 import { mayEdit } from '../readmode'
 import { useEditor, closedPdfPanel, type PdfPanelState } from '../store'
 import { driveAuth, driveClient, driveConfig } from '@/app/drive'
-import { pickPdfFile } from '@/core/drive/picker'
-import { bumpDevice, closePdf, loadPdfjs, pdfStore } from './runtime'
+import { pickPdfFiles } from '@/core/drive/picker'
+import { askPassword } from './password'
+import { bumpDevice, closePdf, loadPdfjs, pdfStore, rememberPassword } from './runtime'
 
 const get = useEditor.getState
 const set = useEditor.setState
@@ -63,7 +64,21 @@ export async function addPdf(bytes: Uint8Array, name: string, opts: { driveId?: 
       return known
     }
     // It must open before it is kept or recorded.
-    const handle = await openPdf(await loadPdfjs(), bytes)
+    const pdfjs = await loadPdfjs()
+    let password: string | undefined
+    let handle
+    for (;;) {
+      try {
+        handle = await openPdf(pdfjs, bytes, undefined, password)
+        break
+      } catch (e) {
+        if (!(e instanceof PdfPasswordError)) throw e
+        const typed = await askPassword(name, e.wrong)
+        if (typed === null) return null // given up: nothing is added
+        password = typed
+      }
+    }
+    if (password) rememberPassword(hash, password)
     const pages = handle.pages
     await handle.destroy()
     await pdfStore.put(hash, bytes, name)
@@ -80,8 +95,9 @@ export async function addPdf(bytes: Uint8Array, name: string, opts: { driveId?: 
 
 /** A PDF from a file the person chose or dropped. */
 export async function addPdfFile(file: File): Promise<PdfSource | null> {
-  if (!/\.pdf$/i.test(file.name) && file.type !== 'application/pdf') {
-    showNotice(`"${file.name}" is not a PDF.`)
+  // A PDF is known by what is inside it, not by its name or type (some systems give none), so only a clearly different type is refused here.
+  if (file.type && file.type !== 'application/pdf' && file.type !== 'application/octet-stream' && !/\.pdf$/i.test(file.name)) {
+    showNotice(`"${file.name}" isn't a PDF.`)
     return null
   }
   if (file.size > PDF_LIMITS.maxBytes) {
@@ -91,15 +107,18 @@ export async function addPdfFile(file: File): Promise<PdfSource | null> {
   return addPdf(new Uint8Array(await file.arrayBuffer()), file.name)
 }
 
+/** Adds several files one after the other (a drop or a multiple choice). */
+export async function addPdfFiles(files: readonly File[]): Promise<void> {
+  for (const f of files) await addPdfFile(f)
+}
+
 /** Asks for a PDF on this device. Must be called from a click. */
 export function pickPdfFromDevice() {
   const input = document.createElement('input')
   input.type = 'file'
   input.accept = '.pdf,application/pdf'
-  input.onchange = () => {
-    const file = input.files?.[0]
-    if (file) void addPdfFile(file)
-  }
+  input.multiple = true
+  input.onchange = () => void addPdfFiles([...(input.files ?? [])])
   input.click()
 }
 
@@ -152,24 +171,41 @@ export const turnPage = (sourceId: string, page: number, by: 90 | -90) => {
   setPageEdit(sourceId, page, { rotation: ((((cur + by) % 360) + 360) % 360) as 0 | 90 | 180 | 270 })
 }
 
-/** Opens a PDF from Google Drive: sign in if needed, choose it in Google's picker, download it, and add it. */
+/**
+ * Inserts PDFs from Google Drive: sign in if needed, choose them in the PDF picker (several at once), download each with the signed-in
+ * access, check by content that it is a PDF, and add it. A file that is not a PDF, is too big or is damaged is reported by name and the
+ * rest still go in.
+ */
 export async function openPdfFromDrive(): Promise<PdfSource | null> {
   if (!mayEdit('Adding a PDF')) return null
+  let last: PdfSource | null = null
   try {
     if (!driveAuth.ready()) await driveAuth.connect()
     const token = await driveAuth.getToken()
-    const doc = await pickPdfFile({ token, apiKey: driveConfig.apiKey, clientId: driveConfig.clientId })
-    if (!doc) return null
-    if (doc.sizeBytes && doc.sizeBytes > PDF_LIMITS.maxBytes) {
-      showNotice(`"${doc.name}" is larger than ${Math.round(PDF_LIMITS.maxBytes / 1048576)} MB, which is more than we open.`)
-      return null
+    const docs = await pickPdfFiles({ token, apiKey: driveConfig.apiKey, clientId: driveConfig.clientId })
+    for (const doc of docs) {
+      if (doc.sizeBytes && doc.sizeBytes > PDF_LIMITS.maxBytes) {
+        showNotice(`"${doc.name}" is larger than ${Math.round(PDF_LIMITS.maxBytes / 1048576)} MB, which is more than we open.`)
+        continue
+      }
+      showNotice(`Downloading "${doc.name}" from Google Drive…`)
+      let bytes: Uint8Array
+      try {
+        bytes = await driveClient.downloadBytes(doc.id)
+      } catch (e) {
+        showNotice(e instanceof Error && e.message ? e.message : `"${doc.name}" could not be downloaded from Google Drive.`)
+        continue
+      }
+      if (!looksLikePdf(bytes)) {
+        showNotice(`"${doc.name}" isn't a PDF.`)
+        continue
+      }
+      last = (await addPdf(bytes, doc.name, { driveId: doc.id })) ?? last
     }
-    showNotice(`Downloading "${doc.name}" from Google Drive…`)
-    const bytes = await driveClient.downloadBytes(doc.id)
-    return await addPdf(bytes, doc.name, { driveId: doc.id })
+    return last
   } catch (e) {
     showNotice(e instanceof Error && e.message ? e.message : 'The PDF could not be opened from Google Drive.')
-    return null
+    return last
   }
 }
 
