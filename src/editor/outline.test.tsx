@@ -405,3 +405,88 @@ describe('Read mode', () => {
     await act(async () => void enterEditMode())
   })
 })
+
+describe('dragging a row to reorder it', () => {
+  const grip = (id: string) => document.querySelector(`[data-row="${id}"] [data-drag-handle]`) as HTMLElement
+  // A row is 30 px tall and the list starts 8 px down. These are heights in the upper or lower half of row i.
+  const at = (i: number, half: 'upper' | 'lower') => 8 + i * 30 + (half === 'upper' ? 6 : 22)
+  const move = (x: number, y: number) => act(() => void window.dispatchEvent(new MouseEvent('pointermove', { clientX: x, clientY: y })))
+  const drop = () => act(() => void window.dispatchEvent(new MouseEvent('pointerup')))
+  async function four() {
+    const ids = Array.from({ length: 4 }, (_, i) => addChild(mapDoc, st().rootId, `T${i + 1}`))
+    await settle()
+    mapDoc.undo.stopCapturing()
+    mapDoc.undo.clear()
+    return ids
+  }
+
+  it('dragging the grip of the last topic above the first moves it there, in the map too, as one undo step', async () => {
+    const ids = await four()
+    render(<OutlineView />)
+    fireEvent.pointerDown(grip(ids[3] as string), { button: 0 })
+    move(10, at(1, 'upper')) // row 0 is the central topic, row 1 is T1
+    expect(document.querySelector('[data-drop-line="before"]')).toBeTruthy() // a line shows where it will land
+    drop()
+    await settle()
+    expect(topicsOf(st().rootId)).toEqual([ids[3], ids[0], ids[1], ids[2]])
+    expect(rowIds()).toEqual([st().rootId, ids[3], ids[0], ids[1], ids[2]])
+    expect(mapDoc.undo.undoStack.length).toBe(1)
+    expect(document.querySelector('[data-drop-line]')).toBeNull() // the line is gone
+    act(() => A.cmdUndo())
+    await settle()
+    expect(topicsOf(st().rootId)).toEqual(ids)
+  })
+
+  it('dropping on the lower half goes after; dragged well to the right it becomes a sub-topic', async () => {
+    const ids = await four()
+    render(<OutlineView />)
+    fireEvent.pointerDown(grip(ids[0] as string), { button: 0 })
+    move(10, at(3, 'lower')) // after T3
+    drop()
+    await settle()
+    expect(topicsOf(st().rootId)).toEqual([ids[1], ids[2], ids[0], ids[3]])
+    fireEvent.pointerDown(grip(ids[3] as string), { button: 0 })
+    move(500, at(1, 'lower')) // far to the right of T2 (now row 1)
+    expect(document.querySelector('[data-drop-line="child"]')).toBeTruthy()
+    drop()
+    await settle()
+    expect(st().topics[ids[3] as string]?.parentId).toBe(ids[1])
+  })
+
+  it('Escape puts it back: nothing moves and no undo step is left', async () => {
+    const ids = await four()
+    render(<OutlineView />)
+    fireEvent.pointerDown(grip(ids[3] as string), { button: 0 })
+    move(10, at(1, 'upper'))
+    act(() => void window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })))
+    drop()
+    await settle()
+    expect(topicsOf(st().rootId)).toEqual(ids)
+    expect(mapDoc.undo.undoStack.length).toBe(0)
+    expect(document.querySelector('[data-drop-line]')).toBeNull()
+  })
+
+  it('a topic cannot be dropped into its own branch', async () => {
+    const ids = await four()
+    const kid = addChild(mapDoc, ids[1] as string, 'inside T2')
+    await settle()
+    mapDoc.undo.stopCapturing()
+    mapDoc.undo.clear()
+    render(<OutlineView />)
+    fireEvent.pointerDown(grip(ids[1] as string), { button: 0 })
+    move(500, at(3, 'lower')) // row 3 is T2's own child
+    drop()
+    await settle()
+    expect(st().topics[kid]?.parentId).toBe(ids[1])
+    expect(st().topics[ids[1] as string]?.parentId).toBe(st().rootId)
+    expect(mapDoc.undo.undoStack.length).toBe(0)
+  })
+
+  it('there is no grip in Read mode', async () => {
+    const ids = await four()
+    await act(async () => void (await enterReadMode()))
+    render(<OutlineView />)
+    expect(grip(ids[0] as string)).toBeNull()
+    await act(async () => void enterEditMode())
+  })
+})

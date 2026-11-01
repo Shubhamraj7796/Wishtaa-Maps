@@ -8,7 +8,8 @@ import { selectOnly, setOutlineZoom, toggleFold } from '../actions'
 import { showPreview } from '../content'
 import { noteViewportActivity, removeImage, replaceImage, useImageUrl, usePictureColor, useUpgrade, useViewMoving } from '../images'
 import { mapDoc } from '../mapdoc'
-import { offsets, pictureBox, rowHeight, ROW_H, scrollToShow, windowFor, type PictureBox } from '../outlineLayout'
+import { modeFor, resolveDrop, type DropMode } from '../outlineDrop'
+import { offsets, pictureBox, rowAt, rowHeight, ROW_H, scrollToShow, windowFor, type PictureBox } from '../outlineLayout'
 import { openAddPicture } from '../pictures/flow'
 import { viewTopics } from '../scene'
 import { useEditor } from '../store'
@@ -37,6 +38,8 @@ interface RowProps {
   readOnly: boolean
   /** How big the outline is shown (1 = 100%). */
   zoom: number
+  dragging: boolean
+  onDragStart: (e: React.PointerEvent, id: string) => void
   register: (id: string, el: HTMLInputElement | null) => void
   onKey: (e: React.KeyboardEvent<HTMLInputElement>, row: Row) => void
 }
@@ -86,7 +89,7 @@ function OutlinePicture({ topicId, image, box, label, selected, readOnly, zoom }
   )
 }
 
-const OutlineRow = memo(function OutlineRow({ row, top, height, text, image, box, marks, collapsed, number, selected, readOnly, zoom, register, onKey }: RowProps) {
+const OutlineRow = memo(function OutlineRow({ row, top, height, text, image, box, marks, collapsed, number, selected, readOnly, zoom, dragging, onDragStart, register, onKey }: RowProps) {
   const shown = oneLine(text)
   const label = shown.trim() || 'Picture'
   return (
@@ -96,12 +99,25 @@ const OutlineRow = memo(function OutlineRow({ row, top, height, text, image, box
       aria-selected={selected}
       aria-expanded={row.hasKids ? !collapsed : undefined}
       data-row={row.id}
-      className={`absolute left-0 right-0 overflow-hidden rounded-ui ${selected ? 'bg-brand/10' : ''}`}
+      className={`absolute left-0 right-0 overflow-hidden rounded-ui ${selected ? 'bg-brand/10' : ''} ${dragging ? 'opacity-40' : ''}`}
       style={{ top, height }}
     >
       {/* The row is drawn at 100% and scaled as a whole, so text, buttons and pictures zoom together. */}
       <div style={{ width: `${100 / zoom}%`, transform: zoom === 1 ? undefined : `scale(${zoom})`, transformOrigin: '0 0', paddingLeft: row.depth * 22 + 4, paddingRight: 8 }}>
       <div className="flex items-center gap-1" style={{ height: ROW_H }}>
+        {!readOnly && (
+          <span
+            role="button"
+            tabIndex={-1}
+            aria-label="Drag to reorder"
+            title="Drag to reorder (or Alt+Up and Alt+Down)"
+            data-drag-handle={row.id}
+            onPointerDown={(e) => onDragStart(e, row.id)}
+            className={`grid h-7 w-6 shrink-0 cursor-grab touch-none select-none place-items-center rounded text-muted hover:bg-bg [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-9 ${selected ? '' : 'opacity-40'}`}
+          >
+            ⠿
+          </span>
+        )}
         <button
           type="button"
           aria-label={row.hasKids ? (collapsed ? 'Expand' : 'Collapse') : 'No sub topics'}
@@ -145,7 +161,7 @@ const OutlineRow = memo(function OutlineRow({ row, top, height, text, image, box
         )}
       </div>
       {image && box && (
-        <div style={{ paddingLeft: 24 + 16 + 8, paddingTop: 2 }}>
+        <div style={{ paddingLeft: 28 + 24 + 16 + 8, paddingTop: 2 }}>
           <OutlinePicture topicId={row.id} image={image} box={box} label={label} selected={selected} readOnly={readOnly} zoom={zoom} />
         </div>
       )}
@@ -179,6 +195,7 @@ export function OutlineView() {
   const [pending, setPending] = useState<string | null>(null)
   const [scrollTop, setScrollTop] = useState(0)
   const [view, setView] = useState({ h: 0, w: 0 })
+  const [drag, setDrag] = useState<{ id: string; over: number; mode: DropMode } | null>(null)
 
   const { rows } = useMemo(() => {
     const idx = buildIndex(topics)
@@ -416,6 +433,73 @@ export function OutlineView() {
     }
   }
 
+  // Dragging a row by its grip (a mouse or a finger): a line shows where it will land, the list scrolls at its edges, and letting go
+  // moves the topic: one undo step, the same command as in the map. Escape or a cancelled touch puts it back.
+  const startsRef = useRef(starts)
+  startsRef.current = starts
+  const topicsRef = useRef(topics)
+  topicsRef.current = topics
+  const zoomRef = useRef(zoom)
+  zoomRef.current = zoom
+  const onDragStart = (e: React.PointerEvent, id: string) => {
+    if (readOnly || e.button > 0) return
+    e.preventDefault()
+    e.stopPropagation()
+    const box = scroller.current
+    const ul = list.current
+    if (!box || !ul) return
+    let over = indexOf.get(id) ?? 0
+    let mode: DropMode = 'before'
+    let velocity = 0
+    let frame2 = 0
+    const point = (ev: PointerEvent) => {
+      const r = ul.getBoundingClientRect()
+      const y = ev.clientY - r.top - 8
+      const i = Math.min(rowsRef.current.length - 1, Math.max(0, rowAt(startsRef.current, y)))
+      const row = rowsRef.current[i]
+      if (!row) return
+      const z = zoomRef.current
+      const line = ROW_H * z
+      const inside = y - (startsRef.current[i] as number)
+      const indent = (row.depth * 22 + 4 + 28 + 40) * z
+      over = i
+      mode = inside > line ? 'after' : modeFor(inside, line, ev.clientX - r.left - indent, 48 * z)
+      setDrag({ id, over, mode })
+      const b = box.getBoundingClientRect()
+      velocity = ev.clientY - b.top < 56 ? -16 : b.bottom - ev.clientY < 56 ? 16 : 0
+    }
+    const scrollLoop = () => {
+      if (velocity) box.scrollTop += velocity
+      frame2 = requestAnimationFrame(scrollLoop)
+    }
+    frame2 = requestAnimationFrame(scrollLoop)
+    const finish = (apply: boolean) => {
+      window.removeEventListener('pointermove', point)
+      window.removeEventListener('pointerup', up)
+      window.removeEventListener('pointercancel', cancel)
+      window.removeEventListener('keydown', key, true)
+      cancelAnimationFrame(frame2)
+      setDrag(null)
+      if (!apply) return
+      const target = rowsRef.current[over]
+      const drop = target ? resolveDrop(topicsRef.current, rootId, id, target.id, mode) : null
+      if (drop && moveTopic(mapDoc, id, drop.parentId, drop.index)) selectOnly(id)
+    }
+    const up = () => finish(true)
+    const cancel = () => finish(false)
+    const key = (ev: KeyboardEvent) => {
+      if (ev.key === 'Escape') {
+        ev.stopPropagation()
+        finish(false)
+      }
+    }
+    window.addEventListener('pointermove', point)
+    window.addEventListener('pointerup', up)
+    window.addEventListener('pointercancel', cancel)
+    window.addEventListener('keydown', key, true)
+    setDrag({ id, over, mode })
+  }
+
   const sel = new Set(selected)
   return (
     <div ref={scroller} onScroll={onScroll} onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd} onTouchCancel={onTouchEnd} className="absolute inset-0 overflow-auto bg-bg" style={{ touchAction: 'pan-x pan-y' }} role="region" aria-label="Outline view">
@@ -458,11 +542,25 @@ export function OutlineView() {
                 selected={sel.has(row.id)}
                 readOnly={readOnly}
                 zoom={zoom}
+                dragging={drag?.id === row.id}
+                onDragStart={onDragStart}
                 register={register}
                 onKey={onKey}
               />
             )
           })}
+          {drag && starts[drag.over] !== undefined && (
+            <div
+              aria-hidden="true"
+              data-drop-line={drag.mode}
+              className="pointer-events-none absolute right-2 z-10 rounded bg-brand"
+              style={{
+                height: 3,
+                top: (starts[drag.over] as number) + 8 + (drag.mode === 'before' ? 0 : ROW_H * zoom) - 1,
+                left: ((rows[drag.over]?.depth ?? 0) * 22 + 4 + (drag.mode === 'child' ? 72 : 0)) * zoom,
+              }}
+            />
+          )}
         </ul>
       </div>
       </div>

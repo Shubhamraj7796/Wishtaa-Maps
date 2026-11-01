@@ -40,6 +40,17 @@ While the Outline is showing, the controls at the bottom (zoom out, zoom in, the
 - **Scroll position.** The outline remembers where it was scrolled to for each file when you switch to the map and back.
 - **Saving.** Autosave, the Saved indicator and Read mode are the same in both views.
 
+## Dragging a row
+Each row has a grip (⠿) on its left, in Edit mode (a bigger target on touch screens). Drag it with a mouse or a finger:
+- a green line shows where the topic will land, and the row being moved is dimmed;
+- over the **upper half** of a row: **before** that topic; over the **lower half**: **after** it (below an open topic that has sub-topics, that is as its first sub-topic, which is where the row would appear); dragged **well to the right** of a topic: its **first sub-topic**;
+- dropping on the central topic makes it the central topic's first sub-topic; a topic cannot be dropped into its own branch;
+- the list scrolls by itself when you drag near its top or bottom edge, so you can move a topic a long way;
+- **Esc** (or a cancelled touch) puts it back. Dropping it where it already is does nothing and leaves no undo step;
+- it is one undo step, the same command as dragging in the map, and the map changes at once. Alt+Up and Alt+Down still reorder from the keyboard.
+
 ## Not in the outline
-- Dragging a row to reorder it (use Alt+Up and Alt+Down).
-- More than one picture on a topic.
+- More than one picture on a topic (see below).
+
+### Why only one picture per topic
+A topic stores one picture (`image`). Showing several would change how maps are saved (the map file, the layout engine, the map drawing, the .emmx import, Optimize pictures and the picture cleanup all read that one field), so it is a separate, deliberate change. Meanwhile adding several pictures at once makes one sub-topic for each, in order, and the Outline shows them in that order.
