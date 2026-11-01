@@ -4,7 +4,7 @@ import { buildFileIndex, referencedIds } from '@/core/files/indexer'
 import { makeThumbnail } from '@/core/files/thumbnail'
 import type { FileRecord, FileRepository, SaveMeta } from '@/core/files/types'
 import { buildScene } from '@/core/layout/engine'
-import { ensureRoot, snapshotObjects, snapshotTopics } from '@/core/model/doc'
+import { ensureRoot, snapshotObjects, snapshotPdf, snapshotTopics } from '@/core/model/doc'
 import { OBJECT_COLLECTION } from '@/core/model/objects'
 import { encodeDoc, fromBase64 } from '@/core/persistence'
 import { snapshotSettings } from '@/core/settings'
@@ -15,7 +15,7 @@ import { imagesIdle, noteUndoStep, scheduleImageGc } from './images'
 import { mapDoc, resetMapDoc } from './mapdoc'
 import { getTheme } from './scene'
 import { lockDoc } from '@/core/model/lock'
-import { useEditor, type ReadReason } from './store'
+import { closedPdfPanel, useEditor, type ReadReason } from './store'
 import { unwatchFile, watchFile } from './tabwatch'
 
 export { mapDoc }
@@ -223,6 +223,8 @@ async function doOpen(fileId: string, repo: FileRepository, opts: OpenOptions = 
     title: file.name,
     settings: snapshotSettings(mapDoc),
     objects: snapshotObjects(mapDoc),
+    pdf: snapshotPdf(mapDoc),
+    pdfPanel: closedPdfPanel(),
     editingId: null,
     editingObject: null,
     selectedObject: null,
@@ -282,6 +284,7 @@ async function doOpen(fileId: string, repo: FileRepository, opts: OpenOptions = 
     useEditor.setState({ objects, ...(gone ? { selectedObject: null, editingObject: null } : {}) })
   }
   for (const m of [mapDoc.relationships, mapDoc.callouts, mapDoc.boundaries, mapDoc.summaries]) watch(m, syncObjects)
+  for (const m of [mapDoc.pdfSources, mapDoc.markup, mapDoc.pageEdits]) watch(m, () => useEditor.setState({ pdf: snapshotPdf(mapDoc) }))
 
   const undo = mapDoc.undo
   const syncUndo = () => useEditor.setState({ canUndo: undo.undoStack.length > 0, canRedo: undo.redoStack.length > 0 })

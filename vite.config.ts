@@ -25,7 +25,7 @@ function stampServiceWorker(): Plugin {
       const page = existsSync(join(outDir, 'index.html')) ? readFileSync(join(outDir, 'index.html'), 'utf8') : ''
       const build = createHash('sha256').update(page).update(assets.join('|')).digest('hex').slice(0, 12)
       // Every real script and style. The 1,700 tiny clipart-icon files (under 4 KB each, loaded one at a time) are saved as they are used.
-      const scripts = assets.filter((n) => /\.(?:js|css)$/.test(n) && statSync(join(outDir, 'assets', n)).size >= 4096).map((n) => `/assets/${n}`)
+      const scripts = assets.filter((n) => /\.(?:js|css)$/.test(n) && !/^pdf/i.test(n) && statSync(join(outDir, 'assets', n)).size >= 4096).map((n) => `/assets/${n}`)
       writeFileSync(sw, readFileSync(sw, 'utf8').replace('__BUILD_ID__', build).replace('const PRECACHE = []', `const PRECACHE = ${JSON.stringify(scripts)}`))
     },
   }

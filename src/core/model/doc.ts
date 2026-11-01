@@ -1,5 +1,7 @@
 import { installLock } from './lock'
 import * as Y from 'yjs'
+import type { MarkupObject, PageEdit, PdfSource, PdfState } from '../pdf/types'
+import { emptyPdfState } from '../pdf/types'
 import { newId } from './ids'
 import { makeTopic, type TopicData } from './topic'
 import type { TopicMap } from './tree'
@@ -27,6 +29,12 @@ export interface MapDoc {
   callouts: Y.Map<Callout>
   boundaries: Y.Map<Boundary>
   summaries: Y.Map<Summary>
+  /** The PDFs this map refers to (references only, never the files). */
+  pdfSources: Y.Map<PdfSource>
+  /** Markup over PDF pages (the PDF itself is never changed). */
+  markup: Y.Map<MarkupObject>
+  /** Pages turned or hidden, by `sourceId:page`. */
+  pageEdits: Y.Map<PageEdit>
   undo: Y.UndoManager
 }
 
@@ -40,13 +48,16 @@ export function createMapDoc(): MapDoc {
   const callouts = ydoc.getMap<Callout>('callouts')
   const boundaries = ydoc.getMap<Boundary>('boundaries')
   const summaries = ydoc.getMap<Summary>('summaries')
+  const pdfSources = ydoc.getMap<PdfSource>('pdfSources')
+  const markup = ydoc.getMap<MarkupObject>('markup')
+  const pageEdits = ydoc.getMap<PageEdit>('pageEdits')
   // captureTimeout 0: every transaction is its own undo step.
-  const undo = new Y.UndoManager([topics, settings, relationships, callouts, boundaries, summaries], { trackedOrigins: new Set([LOCAL]), captureTimeout: 0 })
+  const undo = new Y.UndoManager([topics, settings, relationships, callouts, boundaries, summaries, pdfSources, markup, pageEdits], { trackedOrigins: new Set([LOCAL]), captureTimeout: 0 })
   undo.on('stack-item-added', () => {
     const over = undo.undoStack.length - MAX_UNDO
     if (over > 0) undo.undoStack.splice(0, over)
   })
-  return { ydoc, topics, meta, settings, relationships, callouts, boundaries, summaries, undo }
+  return { ydoc, topics, meta, settings, relationships, callouts, boundaries, summaries, pdfSources, markup, pageEdits, undo }
 }
 
 export function getRootId(doc: MapDoc): string | null {
@@ -71,6 +82,14 @@ export function snapshotTopics(doc: MapDoc): TopicMap {
   doc.topics.forEach((v, k) => {
     out[k] = v
   })
+  return out
+}
+
+export function snapshotPdf(doc: MapDoc): PdfState {
+  const out = emptyPdfState()
+  doc.pdfSources.forEach((v, k) => (out.sources[k] = v))
+  doc.markup.forEach((v, k) => (out.markup[k] = v))
+  doc.pageEdits.forEach((v, k) => (out.pageEdits[k] = v))
   return out
 }
 

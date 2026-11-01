@@ -8,7 +8,7 @@ import {
   MessageSquare, Minimize, Minus, Moon, MousePointer2, Music, Network, Notebook, Paintbrush, Palette, PanelRight, Paperclip,
   Pencil, Phone, Pin, Plus, Quote, Redo2, RefreshCw, Rocket, RotateCcw, ScanText, Search, Settings, Shapes, Shield,
   Sigma, Smile, SquareDashed, Star, StickyNote, Strikethrough, Sun, Table, Tag, Target, ThumbsDown, ThumbsUp, Trash2, Trophy,
-  Type, Underline, Undo2, Unlink, Unlock, User, Users, X, XCircle, Zap, ZoomIn, ZoomOut, SlidersHorizontal, Share2, Info as InfoIcon,
+  FileText, Type, Underline, Undo2, Unlink, Unlock, User, Users, X, XCircle, Zap, ZoomIn, ZoomOut, SlidersHorizontal, Share2, Info as InfoIcon,
 } from 'lucide-react'
 import type { Shape } from '@/core/model/types'
 import { shapeGeometry } from '@/core/shapes'
@@ -24,7 +24,7 @@ export const ICONS = {
   painter: Paintbrush, search: Search, focus: Focus, command: Command, help: CircleHelp, moon: Moon, sun: Sun,
   relationship: Share2, callout: MessageSquare, boundary: SquareDashed, summary: Braces, insert: Plus,
   notes: StickyNote, inlineNote: AlignLeft, tag: Tag, task: ListChecks, taskDone: CheckSquare, link: Link2, unlink: Unlink,
-  attachment: Paperclip, latex: Sigma, table: Table, numbering: ListOrdered, image: ImageIcon, imageAdd: ImagePlus, camera: Camera,
+  attachment: Paperclip, latex: Sigma, table: Table, numbering: ListOrdered, image: ImageIcon, imageAdd: ImagePlus, camera: Camera, pdf: FileText,
   mark: Smile, clipart: Shapes, details: Layers, layout: LayoutGrid, theme: Palette, style: Brush, outline: List, map: Network,
   chevronRight: ChevronRight, chevronDown: ChevronDown, zoomIn: ZoomIn, zoomOut: ZoomOut, fit: Locate, fullscreen: Maximize,
   exitFullscreen: Minimize, bold: Bold, italic: Italic, underline: Underline, strike: Strikethrough, h1: Heading1, h2: Heading2,

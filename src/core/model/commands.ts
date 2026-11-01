@@ -12,7 +12,7 @@ export interface Point {
 
 type BranchData = Pick<
   TopicData,
-  'text' | 'collapsed' | 'style' | 'marks' | 'note' | 'tags' | 'task' | 'link' | 'image' | 'inlineNote' | 'latex' | 'table' | 'attachments'
+  'text' | 'collapsed' | 'style' | 'marks' | 'note' | 'tags' | 'task' | 'link' | 'image' | 'source' | 'inlineNote' | 'latex' | 'table' | 'attachments'
 >
 export interface Branch {
   data: BranchData
@@ -260,6 +260,7 @@ function toBranch(topics: TopicMap, idx: ReturnType<typeof buildIndex>, id: stri
       task: t.task,
       link: t.link,
       image: t.image ?? null,
+      source: t.source ?? null,
       inlineNote: t.inlineNote ?? '',
       latex: t.latex ?? null,
       table: t.table ?? null,

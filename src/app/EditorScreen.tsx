@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom'
 import { useSettings } from '@/stores/settings'
 import { tagColor } from '@/core/settings'
@@ -28,6 +28,8 @@ import type { FileRecord } from '@/core/files/types'
 import { Icon } from '@/ui/icons'
 import { IconButton } from '@/ui/IconButton'
 import { takePendingShare } from '@/pwa/share'
+import { togglePdfPanel } from '@/editor/pdf/actions'
+import { useTouchFriendly } from '@/editor/pictures/touch'
 import { ErrorBoundary } from './ErrorBoundary'
 import { ReadToolbar } from './ReadToolbar'
 import { SaveLocation } from './SaveLocation'
@@ -84,12 +86,25 @@ function TagFilter() {
   )
 }
 
+// pdf.js is large, so the viewer is fetched only when a PDF panel is first opened.
+const PdfPanel = lazy(() => import('@/editor/pdf/PdfPanel'))
+
 function Editor({ file }: { file: FileRecord }) {
   const theme = useSettings((s) => s.theme)
   const toggleTheme = useSettings((s) => s.toggleTheme)
   const scene = useScene()
   const { canUndo, canRedo, tool, levels, focusId, selected, rootId, title, panelOpen, painter, view, insertOpen, relationFrom, selectedObject, minimap, panelTab, readOnly, readPanelOpen } = useEditor()
   const isKb = file.type === 'kb'
+  const pdfOpen = useEditor((s) => s.pdfPanel.open)
+  const touch = useTouchFriendly()
+  const [narrow, setNarrow] = useState(() => typeof window !== 'undefined' && window.innerWidth < 900)
+  useEffect(() => {
+    const on = () => setNarrow(window.innerWidth < 900)
+    window.addEventListener('resize', on)
+    return () => window.removeEventListener('resize', on)
+  }, [])
+  // Beside the map on a computer; a bottom sheet on a tablet or phone (or a narrow window).
+  const pdfMode = touch || narrow ? 'sheet' : 'side'
   const [params] = useSearchParams()
   const topicParam = params.get('topic')
   const backTo = file.parentId ? `/files/${file.parentId}` : isKb ? '/kb' : '/files'
@@ -142,6 +157,7 @@ function Editor({ file }: { file: FileRecord }) {
           <IconButton icon="search" label="Search topics and notes" keys="Ctrl+F" onClick={A.openSearch} />
           <TagFilter />
           <IconButton icon="focus" label="Focus on the selected branch" keys="Ctrl+Shift+F" active={!!focusId} onClick={A.toggleFocus} />
+          <IconButton icon="pdf" label="PDF sources: read a PDF beside the map, take topics and pictures from it, mark it up" active={pdfOpen} onClick={togglePdfPanel} />
           <Divider />
           {readOnly ? (
             <IconButton icon="notebook" label="Notes and tags of the selected topic (read only)" keys="F4" active={readPanelOpen} onClick={() => A.togglePanel()} caption="Details" />
@@ -195,6 +211,13 @@ function Editor({ file }: { file: FileRecord }) {
       )}
 
       <div className="relative flex min-h-0 flex-1">
+        {pdfOpen && pdfMode === 'side' && (
+          <ErrorBoundary inline label="The PDF panel">
+            <Suspense fallback={<div className="grid w-[460px] place-items-center text-sm text-muted">Loading the PDF viewer…</div>}>
+              <PdfPanel mode="side" />
+            </Suspense>
+          </ErrorBoundary>
+        )}
         <main className="relative min-w-0 flex-1" aria-label={view === 'map' ? 'Map canvas' : 'Outline'}>
           <div className={view === 'map' ? 'contents' : 'hidden'}>
             <Canvas />
@@ -213,6 +236,13 @@ function Editor({ file }: { file: FileRecord }) {
           <OcrDialog />
           <NoticeToast />
         </main>
+        {pdfOpen && pdfMode === 'sheet' && (
+          <ErrorBoundary inline label="The PDF panel">
+            <Suspense fallback={null}>
+              <PdfPanel mode="sheet" />
+            </Suspense>
+          </ErrorBoundary>
+        )}
         {!readOnly && (
           <ErrorBoundary inline label="The settings panel">
             <SettingsPanel />

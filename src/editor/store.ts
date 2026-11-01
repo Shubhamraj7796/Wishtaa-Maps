@@ -1,3 +1,4 @@
+import { emptyPdfState, type PdfState, type Rect } from '@/core/pdf/types'
 import { readOutlineZoom } from './navigation'
 import type { ThemePreview } from '@/core/theme/apply'
 import { create } from 'zustand'
@@ -23,6 +24,27 @@ export interface SearchState {
 
 /** Where a new picture goes: onto a topic, as a new child topic, or in place of the topic's picture. */
 export type PictureTarget = { kind: 'topic'; id: string } | { kind: 'child'; parentId: string } | { kind: 'replace'; id: string }
+/** What the pointer does on a PDF page. */
+export type PdfTool = 'select' | 'highlight' | 'underline' | 'strike' | 'pen' | 'text' | 'rect' | 'ellipse' | 'line' | 'arrow' | 'whiteout' | 'link' | 'capture'
+
+export interface PdfPanelState {
+  open: boolean
+  sourceId: string | null
+  /** The page being looked at (1-based). */
+  page: number
+  /** Pages, or the list of markup. */
+  tab: 'pages' | 'markup'
+  tool: PdfTool
+  /** Colour for markup. */
+  color: string
+  /** Zoom: null fits the width of the panel. */
+  zoom: number | null
+  /** A passage to show and mark (a source link was clicked, or a topic with one was selected). `at` makes the same place show again. */
+  focus: { sourceId: string; page: number; rect?: Rect; at: number } | null
+}
+
+export const closedPdfPanel = (): PdfPanelState => ({ open: false, sourceId: null, page: 1, tab: 'pages', tool: 'select', color: '#facc15', zoom: null, focus: null })
+
 export type PictureSource = 'upload' | 'camera' | 'gallery' | 'paste' | 'capture' | 'drop'
 
 export interface PictureDraft {
@@ -113,6 +135,9 @@ export interface EditorState {
   notice: Notice | null
   menu: { x: number; y: number; topicId: string } | null
   settings: MapSettings
+  /** The PDFs, markup and page edits of the open map. */
+  pdf: PdfState
+  pdfPanel: PdfPanelState
   panelOpen: boolean
   minimap: boolean
   panelTab: PanelTab
@@ -199,6 +224,8 @@ export const useEditor = create<EditorState>(() => ({
   notice: null,
   menu: null,
   settings: DEFAULT_SETTINGS,
+  pdf: emptyPdfState(),
+  pdfPanel: closedPdfPanel(),
   panelOpen: false,
   minimap: true,
   panelTab: 'canvas',

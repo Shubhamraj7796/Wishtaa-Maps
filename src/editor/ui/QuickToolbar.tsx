@@ -146,7 +146,7 @@ export function QuickToolbar() {
       aria-label="Quick format"
       data-placement={place.below ? 'below' : 'above'}
       onKeyDown={onKeys}
-      className="absolute z-20 flex max-w-[calc(100%-1rem)] flex-wrap items-center gap-0.5 rounded-ui border border-line bg-surface px-1 py-1 shadow-lg"
+      className="absolute z-20 flex w-max max-w-[calc(100%-1rem)] flex-wrap items-center gap-0.5 rounded-ui border border-line bg-surface px-1 py-1 shadow-lg"
       style={{ left: place.left, top: place.top }}
     >
       <select aria-label="Font family" title="Font family" value={st.fontFamily ?? ''} onChange={(e) => A.styleSelected({ fontFamily: e.target.value || undefined })} className="h-9 w-28 rounded-ui border border-transparent bg-surface px-1 text-sm hover:bg-bg [@media(pointer:coarse)]:h-11">

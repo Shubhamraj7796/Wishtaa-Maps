@@ -144,3 +144,44 @@ export async function pickOpenableFiles(opts: { token: string; apiKey: string | 
       .setVisible(true)
   })
 }
+
+/**
+ * "Open a PDF from Google Drive": one PDF. PDFs have a reliable type in Drive, so unlike .emmx files this picker CAN filter on it. Picking
+ * the file gives this app access to that one file (the `drive.file` scope) so it can be downloaded. `api` is only for tests.
+ */
+export async function pickPdfFile(opts: { token: string; apiKey: string | undefined; clientId: string | undefined }, api?: PickerApi): Promise<OpenedDoc | null> {
+  if (!opts.apiKey || !opts.clientId) {
+    throw new DriveError('config', 'Choosing a PDF from Drive needs a Google API key. Add VITE_GOOGLE_API_KEY (see the setup notes).')
+  }
+  const picker = api ?? (await loadPicker())
+  return new Promise((resolve) => {
+    const view = (viewId: unknown, label: string, setup?: (v: DocsViewApi) => void) => {
+      const v = new picker.DocsView(viewId)
+      v.setMimeTypes('application/pdf')
+      v.setIncludeFolders(true)
+      v.setSelectFolderEnabled(false)
+      v.setLabel?.(label)
+      setup?.(v)
+      return v
+    }
+    const builder = new picker.PickerBuilder()
+      .addView(view(picker.ViewId.DOCS, 'My Drive', (v) => v.setOwnedByMe?.(true)))
+      .addView(view(picker.ViewId.DOCS, 'Shared with me', (v) => v.setOwnedByMe?.(false)))
+    if (picker.ViewId.RECENTLY_PICKED) builder.addView(view(picker.ViewId.RECENTLY_PICKED, 'Recent'))
+    builder.addView(view(picker.ViewId.DOCS, 'Shared drives', (v) => v.setEnableDrives?.(true)))
+    if (picker.Feature.SUPPORT_DRIVES) builder.enableFeature(picker.Feature.SUPPORT_DRIVES)
+    builder
+      .setOAuthToken(opts.token)
+      .setDeveloperKey(opts.apiKey as string)
+      .setAppId(projectNumber(opts.clientId as string))
+      .setTitle('Open a PDF from Google Drive')
+      .setCallback((data) => {
+        if (data.action === picker.Action.PICKED) {
+          const d = data.docs?.[0]
+          resolve(d ? { id: d.id, name: d.name, mimeType: d.mimeType, sizeBytes: d.sizeBytes } : null)
+        } else if (data.action === picker.Action.CANCEL) resolve(null)
+      })
+      .build()
+      .setVisible(true)
+  })
+}

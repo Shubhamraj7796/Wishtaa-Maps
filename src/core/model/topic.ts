@@ -1,3 +1,4 @@
+import type { SourceRef } from '../pdf/types'
 import type { Topic } from './types'
 
 /** Layout direction a single branch can use instead of the map's layout. */
@@ -30,6 +31,8 @@ export interface Attachment {
 export type TopicData = Omit<Topic, 'mapId'> & {
   /** Optional so maps saved before images existed still load. */
   image?: TopicImage | null
+  /** Where in a PDF this topic comes from (shown as "p. 12"; clicking it shows the passage). */
+  source?: SourceRef | null
   /** Short note shown under the topic text. */
   inlineNote?: string
   /** LaTeX formula shown inside the topic. */
