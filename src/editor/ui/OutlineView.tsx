@@ -1,3 +1,8 @@
+import { SourceBadge } from '../pdf/SourceBadge'
+import { SOURCE_DRAG } from '../pdf/SelectionBar'
+import type { PdfSelection } from '../pdf/selection'
+import { addPdfTopics } from '../pdf/topics'
+import type { SourceRef } from '@/core/pdf/types'
 import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { addChild, addSibling, deleteTopics, moveTopic, reorder, setCollapsed, setText } from '@/core/model/commands'
 import type { TopicImage } from '@/core/model/topic'
@@ -21,6 +26,19 @@ interface Row {
   hasKids: boolean
 }
 
+/** Letting go of text dragged out of a PDF over a row: it becomes sub-topics of that row. */
+function dropSource(e: React.DragEvent, rowId: string) {
+  const raw = e.dataTransfer.getData(SOURCE_DRAG)
+  if (!raw) return
+  e.preventDefault()
+  try {
+    const { perLine, ...sel } = JSON.parse(raw) as PdfSelection & { perLine?: boolean }
+    addPdfTopics(sel, 'sub', { perLine: !!perLine, anchor: rowId })
+  } catch {
+    /* not something we made */
+  }
+}
+
 /** A line break in a topic's text is shown as a space here (the box below is one line); the stored text is not touched by it. */
 export const oneLine = (text: string) => text.replace(/\s*\r?\n\s*/g, ' ')
 
@@ -32,6 +50,8 @@ interface RowProps {
   image: TopicImage | null
   box: PictureBox | null
   marks: string[]
+  /** Where in a PDF this topic came from. */
+  source: SourceRef | null
   collapsed: boolean
   number: string
   selected: boolean
@@ -89,7 +109,7 @@ function OutlinePicture({ topicId, image, box, label, selected, readOnly, zoom }
   )
 }
 
-const OutlineRow = memo(function OutlineRow({ row, top, height, text, image, box, marks, collapsed, number, selected, readOnly, zoom, dragging, onDragStart, register, onKey }: RowProps) {
+const OutlineRow = memo(function OutlineRow({ row, top, height, text, image, box, marks, source, collapsed, number, selected, readOnly, zoom, dragging, onDragStart, register, onKey }: RowProps) {
   const shown = oneLine(text)
   const label = shown.trim() || 'Picture'
   return (
@@ -99,6 +119,8 @@ const OutlineRow = memo(function OutlineRow({ row, top, height, text, image, box
       aria-selected={selected}
       aria-expanded={row.hasKids ? !collapsed : undefined}
       data-row={row.id}
+      onDragOver={readOnly ? undefined : (e) => e.dataTransfer.types.includes(SOURCE_DRAG) && (e.preventDefault(), (e.dataTransfer.dropEffect = 'copy'))}
+      onDrop={readOnly ? undefined : (e) => dropSource(e, row.id)}
       className={`absolute left-0 right-0 overflow-hidden rounded-ui ${selected ? 'bg-brand/10' : ''} ${dragging ? 'opacity-40' : ''}`}
       style={{ top, height }}
     >
@@ -148,6 +170,7 @@ const OutlineRow = memo(function OutlineRow({ row, top, height, text, image, box
           onKeyDown={(e) => onKey(e, row)}
           className="min-w-0 flex-1 bg-transparent py-1 text-sm outline-none placeholder:italic placeholder:text-muted"
         />
+        {source && <SourceBadge source={source} />}
         {selected && !readOnly && (
           <button
             type="button"
@@ -537,6 +560,7 @@ export function OutlineView() {
                 image={t.image ?? null}
                 box={boxes[i] ?? null}
                 marks={t.marks ?? []}
+                source={t.source ?? null}
                 collapsed={!!t.collapsed}
                 number={numbers.get(row.id) ?? ''}
                 selected={sel.has(row.id)}

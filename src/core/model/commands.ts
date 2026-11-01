@@ -4,6 +4,7 @@ import { makeTopic, type BranchDir, type TopicData, type TopicImage } from './to
 import type { TopicStyle } from './types'
 import { buildIndex, childrenOf, descendantIds, isAncestorOf, topLevelOnly, type TopicMap } from './tree'
 import { pruneObjects } from './objectCommands'
+import type { SourceRef } from '../pdf/types'
 
 export interface Point {
   x: number
@@ -71,6 +72,13 @@ export function setText(doc: MapDoc, id: string, text: string) {
   const t = doc.topics.get(id)
   if (!t || t.text === text) return
   tx(doc, () => doc.topics.set(id, { ...t, text }))
+}
+
+/** Records (or with null clears) where in a PDF a topic came from. One undo step. */
+export function setSource(doc: MapDoc, id: string, source: SourceRef | null) {
+  const t = doc.topics.get(id)
+  if (!t) return
+  tx(doc, () => doc.topics.set(id, { ...t, source }))
 }
 
 /** Sets, replaces (or with null removes) a topic's image. One undo step. */

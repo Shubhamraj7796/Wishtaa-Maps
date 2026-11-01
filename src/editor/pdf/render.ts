@@ -83,3 +83,34 @@ export function releaseCanvas(canvas: HTMLCanvasElement) {
   canvas.width = 0
   canvas.height = 0
 }
+
+/**
+ * A picture (PNG) of part of a page, drawn fresh from the PDF so it is sharp however far the screen is zoomed. `rect` is in page
+ * fractions as the page is read; the longest side comes out about `longest` pixels (at least 1 pixel per point, never over 3).
+ */
+export async function renderRegion(handle: PdfHandle, n: number, rect: { x: number; y: number; w: number; h: number }, longest = 1800): Promise<Blob | null> {
+  const result = await queue.run(async () => {
+    const page = await handle.page(n)
+    try {
+      const base = page.getViewport({ scale: 1 })
+      const w = rect.w * base.width
+      const h = rect.h * base.height
+      const scale = Math.min(3, Math.max(1, longest / Math.max(w, h)))
+      const vp = page.getViewport({ scale })
+      const canvas = document.createElement('canvas')
+      canvas.width = Math.max(1, Math.round(w * scale))
+      canvas.height = Math.max(1, Math.round(h * scale))
+      const ctx = canvas.getContext('2d')
+      if (!ctx) return null
+      ctx.fillStyle = '#fff'
+      ctx.fillRect(0, 0, canvas.width, canvas.height)
+      await page.render({ canvasContext: ctx, viewport: vp, transform: [1, 0, 0, 1, -rect.x * base.width * scale, -rect.y * base.height * scale] }).promise
+      const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, 'image/png'))
+      canvas.width = 0
+      return blob
+    } finally {
+      page.cleanup()
+    }
+  }, () => false)
+  return result
+}

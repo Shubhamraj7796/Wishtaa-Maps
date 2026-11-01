@@ -8,6 +8,7 @@ import { useEditor } from '../store'
 import { setPdfPage, setPdfZoom } from './actions'
 import { PageView, shownPx, type PageBox } from './PageView'
 import { PageLayers } from './layers'
+import { SelectionBar } from './SelectionBar'
 
 const GUTTER = 12
 const GAP = 14
@@ -24,6 +25,15 @@ export function Viewer({ source, handle, showHidden }: { source: PdfSource; hand
   const scroller = useRef<HTMLDivElement>(null)
   const [view, setView] = useState({ w: 0, h: 0 })
   const [scrollTop, setScrollTop] = useState(0)
+  const [noText, setNoText] = useState(false)
+  useEffect(() => {
+    let live = true
+    setNoText(false)
+    void handle.hasText().then((has) => live && setNoText(!has)).catch(() => undefined)
+    return () => {
+      live = false
+    }
+  }, [handle])
   const [infos, setInfos] = useState<Map<number, PageInfo>>(new Map())
 
   // The size of every page, learned in batches in the background (until then a page is taken to be the size of the first).
@@ -145,6 +155,12 @@ export function Viewer({ source, handle, showHidden }: { source: PdfSource; hand
   }, [panel.zoom, fit])
 
   return (
+    <div className="relative flex min-h-0 flex-1 flex-col">
+    {noText && (
+      <p role="status" className="shrink-0 border-b border-line bg-surface px-3 py-1.5 text-xs text-muted">
+        This PDF has no text to select (it looks scanned or handwritten). Use <b>Capture area</b> to take a part of a page as a picture.
+      </p>
+    )}
     <div ref={scroller} onScroll={onScroll} className="min-h-0 flex-1 overflow-auto bg-neutral-200 dark:bg-neutral-800" data-pdf-scroller aria-label={`${source.name}, ${handle.pages} pages`}>
       <div className="relative" style={{ height: total + GAP, width: Math.max(viewW, ...pages.map((p) => shownPx(p.box).w + GUTTER * 2).slice(start, end)) }}>
         {pages.slice(start, end).map((p, k) => {
@@ -157,6 +173,8 @@ export function Viewer({ source, handle, showHidden }: { source: PdfSource; hand
           )
         })}
       </div>
+    </div>
+    <SelectionBar sourceId={source.id} root={scroller} />
     </div>
   )
 }

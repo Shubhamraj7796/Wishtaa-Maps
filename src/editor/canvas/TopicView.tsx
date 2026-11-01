@@ -17,6 +17,7 @@ import { commitImageSize, removeImage, setImageLive, useImageUrl, usePictureColo
 import { useEditor, type ImageLive } from '../store'
 import { Formula } from '../ui/Formula'
 import { MarkBadge } from '../ui/MarkBadge'
+import { SourceBadge } from '../pdf/SourceBadge'
 
 export interface TopicViewProps {
   box: LaidOut
@@ -386,6 +387,7 @@ export const TopicView = memo(function TopicView(p: TopicViewProps) {
 
   return (
     <div data-topic={box.id} role="treeitem" aria-selected={p.selected} aria-label={topic.text || (image ? 'Image topic' : 'Empty topic')} className="absolute select-none" style={style}>
+      {topic.source && !p.editing && <SourceBadge source={topic.source} className="absolute -right-1 -top-3 z-20" />}
       <svg width={W} height={box.h} viewBox={`0 0 ${W} ${box.h}`} className="pointer-events-none absolute left-0 top-0 overflow-visible" aria-hidden="true" focusable="false">
         {ringColor && (
           <>

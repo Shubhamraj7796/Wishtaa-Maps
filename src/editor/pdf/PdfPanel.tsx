@@ -2,8 +2,9 @@ import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import type { PdfSource } from '@/core/pdf/types'
 import { Icon } from '@/ui/icons'
 import { useEditor } from '../store'
-import { addPdfFile, closePdfPanel, openPdfFromDrive, pickPdfFromDevice, refetchFromDrive, removePdfFromDevice, removePdfSource, reopenPdf, setPdfPage, setPdfTab, setPdfZoom, showPdf } from './actions'
+import { addPdfFile, closePdfPanel, setPdfTool, openPdfFromDrive, pickPdfFromDevice, refetchFromDrive, removePdfFromDevice, removePdfSource, reopenPdf, setPdfPage, showSource, setPdfTab, setPdfZoom, showPdf } from './actions'
 import { accessPdf, getDeviceVersion, subscribeDevice, type PdfAccess } from './runtime'
+import { OutlineDialog } from './OutlineDialog'
 import { Viewer } from './Viewer'
 import { MarkupTab, Toolbar } from './tools'
 
@@ -33,6 +34,14 @@ export default function PdfPanel({ mode }: { mode: 'side' | 'sheet' }) {
   const [size, setSize] = useState(() => (mode === 'side' ? read(WIDTH_KEY, 460) : read(HEIGHT_KEY, 360)))
   const [menu, setMenu] = useState<'open' | 'source' | null>(null)
   const [showHidden, setShowHidden] = useState(false)
+  const [outline, setOutline] = useState(false)
+  // Choosing a topic that came from a PDF shows its passage.
+  const lastSelected = useEditor((s) => s.selected[s.selected.length - 1])
+  const linked = useEditor((s) => (lastSelected ? s.topics[lastSelected]?.source ?? null : null))
+  useEffect(() => {
+    if (linked && sources[linked.sourceId]) showSource(linked)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [linked])
 
   // Dragging the edge.
   const startResize = (e: React.PointerEvent) => {
@@ -88,6 +97,7 @@ export default function PdfPanel({ mode }: { mode: 'side' | 'sheet' }) {
               {source && !readOnly && (
                 <>
                   <hr className="my-1 border-line" />
+                  <MenuItem onClick={() => (setOutline(true), setMenu(null))}>Start an outline from this PDF…</MenuItem>
                   <MenuItem onClick={() => (void removePdfFromDevice(source.hash), setMenu(null))}>Remove from this device</MenuItem>
                   <MenuItem danger onClick={() => (removePdfSource(source.id), setMenu(null))}>Remove from this map</MenuItem>
                 </>
@@ -120,6 +130,7 @@ export default function PdfPanel({ mode }: { mode: 'side' | 'sheet' }) {
         ))}
       </div>
       <Body source={source} showHidden={showHidden} tab={panel.tab} />
+      {outline && source && <OutlineLoader source={source} onClose={() => setOutline(false)} />}
       {mode === 'side' && <div role="separator" aria-orientation="vertical" aria-label="Drag to resize" onPointerDown={startResize} className="absolute inset-y-0 -right-1 z-10 w-2 cursor-col-resize touch-none hover:bg-brand/30" />}
     </aside>
   )
@@ -129,6 +140,8 @@ export default function PdfPanel({ mode }: { mode: 'side' | 'sheet' }) {
 function Controls({ source, showHidden, setShowHidden }: { source: PdfSource; showHidden: boolean; setShowHidden: (b: boolean) => void }) {
   const page = useEditor((s) => s.pdfPanel.page)
   const zoom = useEditor((s) => s.pdfPanel.zoom)
+  const tool = useEditor((s) => s.pdfPanel.tool)
+  const readOnly = useEditor((s) => s.readOnly)
   const hiddenCount = useEditor((s) => Object.entries(s.pdf.pageEdits).filter(([k, v]) => v.hidden && k.startsWith(`${source.id}:`)).length)
   const [text, setText] = useState(String(page))
   useEffect(() => setText(String(page)), [page])
@@ -151,6 +164,11 @@ function Controls({ source, showHidden, setShowHidden }: { source: PdfSource; sh
       <button type="button" className={btn} aria-label="Zoom out" title="Zoom out" onClick={() => setPdfZoom((zoom ?? 1) / 1.25)}><Icon name="zoomOut" size={15} /></button>
       <button type="button" className="min-w-12 rounded px-1 py-1 hover:bg-bg" title="Fit to the width of the panel" onClick={() => setPdfZoom(null)} aria-label={percent === null ? 'Zoom: fit width' : `Zoom ${percent} percent. Click to fit the width`}>{percent === null ? 'Fit' : `${percent}%`}</button>
       <button type="button" className={btn} aria-label="Zoom in" title="Zoom in" onClick={() => setPdfZoom((zoom ?? 1) * 1.25)}><Icon name="zoomIn" size={15} /></button>
+      <span className="mx-1 h-4 w-px bg-line" />
+      <button type="button" className={`${btn} ${tool === 'capture' ? 'bg-brand/15 text-ink' : ''}`} aria-pressed={tool === 'capture'} title="Take part of a page as a picture (works on scans and handwriting)" disabled={readOnly} onClick={() => setPdfTool(tool === 'capture' ? 'select' : 'capture')}>
+        <Icon name="camera" size={15} />
+        <span className="ml-1 hidden sm:inline">Capture area</span>
+      </button>
       {hiddenCount > 0 && (
         <label className="ml-auto flex items-center gap-1">
           <input type="checkbox" checked={showHidden} onChange={(e) => setShowHidden(e.target.checked)} />
@@ -267,4 +285,18 @@ function Missing({ source }: { source: PdfSource }) {
       </div>
     </div>
   )
+}
+
+/** Gets the open PDF for the outline dialog (it is already open, so this is instant). */
+function OutlineLoader({ source, onClose }: { source: PdfSource; onClose: () => void }) {
+  const [access, setAccess] = useState<PdfAccess | null>(null)
+  useEffect(() => {
+    let live = true
+    void accessPdf(source).then((a) => live && setAccess(a))
+    return () => {
+      live = false
+    }
+  }, [source])
+  if (access?.state !== 'ready') return null
+  return <OutlineDialog source={source} handle={access.handle} onClose={onClose} />
 }
