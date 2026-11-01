@@ -10,6 +10,8 @@ import { useEditor, closedPdfPanel, type PdfPanelState } from '../store'
 import { driveAuth, driveClient, driveConfig } from '@/app/drive'
 import { pickPdfFiles } from '@/core/drive/picker'
 import { askPassword } from './password'
+import { rememberSize, type PanelSize } from './layout'
+import { isShape, loadPrefs, sanitizeStyle, savePrefs, type StyleKey, type ToolStyle } from './toolPrefs'
 import { bumpDevice, closePdf, loadPdfjs, pdfStore, rememberPassword } from './runtime'
 
 const get = useEditor.getState
@@ -18,6 +20,16 @@ const set = useEditor.setState
 const patch = (p: Partial<PdfPanelState>) => set({ pdfPanel: { ...get().pdfPanel, ...p } })
 
 export const closePdfPanel = () => set({ pdfPanel: { ...closedPdfPanel(), zoom: get().pdfPanel.zoom } })
+
+/** Opens or closes the panel's Outline drawer (full screen). */
+export const setPdfDrawer = (drawer: boolean) => patch({ drawer })
+export const setPdfToolSide = (toolSide: 'left' | 'right') => void (get().pdfPanel.toolSide !== toolSide && patch({ toolSide }))
+export const setPdfCollapsed = (collapsed: boolean) => patch({ collapsed, ...(collapsed ? { drawer: false } : {}) })
+/** How much of the editor the PDF takes. Page, zoom and place in the PDF are kept; "Fit" fits again. */
+export function setPdfSize(size: PanelSize) {
+  rememberSize(size)
+  patch({ size, collapsed: false, ...(size === 'full' ? {} : { drawer: false }) })
+}
 
 /** The PDF button: opens the panel on the map's first PDF (or empty, ready for one), or closes it. */
 export function togglePdfPanel() {
@@ -29,8 +41,18 @@ export function togglePdfPanel() {
 export const setPdfPage = (page: number) => patch({ page: Math.max(1, Math.round(page)) })
 export const setPdfZoom = (zoom: number | null) => patch({ zoom: zoom === null ? null : Math.min(4, Math.max(0.25, zoom)) })
 export const setPdfTab = (tab: PdfPanelState['tab']) => patch({ tab })
-export const setPdfColor = (color: string) => patch({ color })
-export const setPdfTool = (tool: PdfPanelState['tool']) => patch({ tool })
+export function setPdfTool(tool: PdfPanelState['tool']) {
+  if (isShape(tool)) {
+    patch({ tool, shape: tool })
+    savePrefs({ ...loadPrefs(), shape: tool })
+  } else patch({ tool })
+}
+/** Changes one tool's colour, size or strength; it is remembered for next time on this device. */
+export function setToolStyle(key: StyleKey, change: Partial<ToolStyle>) {
+  const styles = { ...get().pdfPanel.styles, [key]: sanitizeStyle(key, { ...get().pdfPanel.styles[key], ...change }) }
+  patch({ styles })
+  savePrefs({ ...loadPrefs(), styles })
+}
 
 /** Shows a PDF (opens the panel on it). */
 export function showPdf(sourceId: string, page = 1) {

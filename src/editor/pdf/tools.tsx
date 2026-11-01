@@ -1,100 +1,35 @@
 import { useMemo, useState } from 'react'
 import type { PdfHandle } from '@/core/pdf/engine'
 import { editKey, type MarkupKind, type MarkupObject, type PdfSource } from '@/core/pdf/types'
-import { Icon, type IconName } from '@/ui/icons'
-import { cmdRedo, cmdUndo } from '../actions'
-import { useEditor, type PdfTool } from '../store'
-import { setPageEdit, setPdfTool, setPdfColor, showSource, turnPage } from './actions'
-import { boundsOf, deleteMarkup, MARKUP_COLORS, markupByPage, selectMarkup, sendHighlightsToOutline, topicFromMarkup, updateMarkup, wordsOf } from './markup'
-
-const TOOLS: { tool: PdfTool; icon: IconName; label: string }[] = [
-  { tool: 'select', icon: 'select', label: 'Select text or markup' },
-  { tool: 'highlight', icon: 'highlighter', label: 'Highlight' },
-  { tool: 'underline', icon: 'underline', label: 'Underline' },
-  { tool: 'strike', icon: 'strike', label: 'Strikethrough' },
-  { tool: 'pen', icon: 'edit', label: 'Pen' },
-  { tool: 'text', icon: 'type', label: 'Text box' },
-  { tool: 'rect', icon: 'square', label: 'Rectangle' },
-  { tool: 'ellipse', icon: 'circle', label: 'Ellipse' },
-  { tool: 'line', icon: 'minus', label: 'Line' },
-  { tool: 'arrow', icon: 'arrowUpRight', label: 'Arrow' },
-  { tool: 'whiteout', icon: 'eraser', label: 'Whiteout (covers part of the page; the PDF underneath is not changed)' },
-  { tool: 'link', icon: 'link', label: 'Link to a page or a web address' },
-]
+import { Icon } from '@/ui/icons'
+import { useEditor } from '../store'
+import { showSource } from './actions'
+import { boundsOf, deleteMarkup, markupByPage, selectMarkup, sendHighlightsToOutline, topicFromMarkup, updateMarkup, wordsOf } from './markup'
+import { PALETTE } from './toolPrefs'
 
 const KIND_NAME: Record<MarkupKind, string> = { highlight: 'Highlight', underline: 'Underline', strike: 'Strikethrough', pen: 'Pen drawing', text: 'Text box', rect: 'Rectangle', ellipse: 'Ellipse', line: 'Line', arrow: 'Arrow', whiteout: 'Whiteout', link: 'Link' }
 
 const tap = 'grid h-9 min-w-9 shrink-0 place-items-center rounded-ui px-1.5 text-sm hover:bg-bg disabled:opacity-40 [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:min-w-11'
 
-function Swatches({ value, onPick, label }: { value: string; onPick: (c: string) => void; label: string }) {
-  return (
-    <div role="radiogroup" aria-label={label} className="flex shrink-0 items-center">
-      {MARKUP_COLORS.map((c) => (
-        <button key={c} type="button" role="radio" aria-checked={value === c} aria-label={`Colour ${c}`} title={c} onClick={() => onPick(c)} className="grid h-9 w-8 place-items-center [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-10">
-          <span className={`h-5 w-5 rounded-full border ${value === c ? 'border-ink ring-2 ring-brand' : 'border-line'}`} style={{ background: c }} />
-        </button>
-      ))}
-    </div>
-  )
-}
-
-/**
- * The markup tools (Edit mode only): what the pointer does on the page, the colour, undo and redo, and turning or hiding the page
- * being looked at. Everything is one undo step per action, in the same history as the map.
- */
-export function Toolbar({ source }: { source: PdfSource }) {
-  const readOnly = useEditor((s) => s.readOnly)
-  const tool = useEditor((s) => s.pdfPanel.tool)
-  const color = useEditor((s) => s.pdfPanel.color)
-  const page = useEditor((s) => s.pdfPanel.page)
-  const canUndo = useEditor((s) => s.canUndo)
-  const canRedo = useEditor((s) => s.canRedo)
-  const tab = useEditor((s) => s.pdfPanel.tab)
-  if (readOnly || tab !== 'pages') return null
-  return (
-    <>
-      <div className="flex shrink-0 flex-wrap items-center gap-0.5 border-b border-line px-1" role="toolbar" aria-label="Markup tools" data-pdf-tools>
-        {TOOLS.map((t) => (
-          <button key={t.tool} type="button" aria-pressed={tool === t.tool} aria-label={t.label} title={t.label} onClick={() => setPdfTool(t.tool)} className={`${tap} ${tool === t.tool ? 'bg-brand/20 text-ink' : 'text-muted'}`}>
-            <Icon name={t.icon} size={17} />
-          </button>
-        ))}
-        <span className="mx-1 h-5 w-px shrink-0 bg-line" />
-        <Swatches value={color} onPick={setPdfColor} label="Markup colour" />
-        <span className="mx-1 h-5 w-px shrink-0 bg-line" />
-        <button type="button" className={tap} aria-label="Undo" title="Undo" disabled={!canUndo} onClick={cmdUndo}>
-          <Icon name="undo" size={17} />
-        </button>
-        <button type="button" className={tap} aria-label="Redo" title="Redo" disabled={!canRedo} onClick={cmdRedo}>
-          <Icon name="redo" size={17} />
-        </button>
-        <span className="mx-1 h-5 w-px shrink-0 bg-line" />
-        <button type="button" className={tap} aria-label={`Turn page ${page} left`} title={`Turn page ${page} left`} onClick={() => turnPage(source.id, page, -90)}>
-          <Icon name="reset" size={17} />
-        </button>
-        <button type="button" className={tap} aria-label={`Turn page ${page} right`} title={`Turn page ${page} right`} onClick={() => turnPage(source.id, page, 90)}>
-          <Icon name="rotateCw" size={17} />
-        </button>
-        <button type="button" className={tap} aria-label={`Hide page ${page}`} title={`Hide page ${page} (the PDF file is not changed; it is left out when you download)`} onClick={() => setPageEdit(source.id, page, { hidden: true })}>
-          <Icon name="eyeOff" size={17} />
-        </button>
-      </div>
-      <SelectedMarkup />
-    </>
-  )
-}
-
 /** What can be done to the markup that was clicked: its colour, a note, a topic from it, delete. */
-function SelectedMarkup() {
+export function SelectedMarkup() {
   const id = useEditor((s) => s.pdfPanel.markId)
   const m = useEditor((s) => (id ? s.pdf.markup[id] : undefined))
   const [noting, setNoting] = useState(false)
   const [note, setNote] = useState('')
   if (!id || !m) return null
   return (
-    <div className="flex shrink-0 flex-wrap items-center gap-1 border-b border-line bg-brand/5 px-2 py-1 text-xs" role="group" aria-label={`${KIND_NAME[m.kind]} selected`} data-selected-markup>
+    <div className="absolute inset-x-2 top-2 z-20 flex flex-wrap items-center gap-1 rounded-ui border border-line bg-surface px-2 py-1 text-xs shadow-lg" role="group" aria-label={`${KIND_NAME[m.kind]} selected`} data-selected-markup>
       <span className="font-medium">{KIND_NAME[m.kind]}</span>
-      {m.kind !== 'whiteout' && m.kind !== 'link' && <Swatches value={m.color} onPick={(c) => updateMarkup(id, { color: c })} label="Change colour" />}
+      {m.kind !== 'whiteout' && m.kind !== 'link' && (
+        <div role="radiogroup" aria-label="Change colour" className="flex items-center">
+          {PALETTE.slice(0, 9).map((c) => (
+            <button key={c} type="button" role="radio" aria-checked={m.color.toLowerCase() === c} aria-label={`Colour ${c}`} onClick={() => updateMarkup(id, { color: c })} className="grid h-8 w-7 place-items-center [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-9">
+              <span className={`h-4 w-4 rounded-full border ${m.color.toLowerCase() === c ? 'border-ink ring-2 ring-brand' : 'border-line'}`} style={{ background: c }} />
+            </button>
+          ))}
+        </div>
+      )}
       {noting ? (
         <>
           <input autoFocus value={note} onChange={(e) => setNote(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && (updateMarkup(id, { note: note.trim() || undefined }), setNoting(false))} aria-label="Note" placeholder="Note" className="min-w-0 flex-1 rounded border border-line bg-surface px-1.5 py-1 text-sm text-ink" />

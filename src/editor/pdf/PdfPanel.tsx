@@ -2,40 +2,47 @@ import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import type { PdfSource } from '@/core/pdf/types'
 import { Icon } from '@/ui/icons'
 import { useEditor } from '../store'
-import { addPdfFiles, closePdfPanel, setPdfTool, openPdfFromDrive, pickPdfFromDevice, refetchFromDrive, removePdfFromDevice, removePdfSource, reopenPdf, setPdfPage, showSource, setPdfTab, setPdfZoom, showPdf } from './actions'
+import { addPdfFiles, closePdfPanel, openPdfFromDrive, pickPdfFromDevice, refetchFromDrive, removePdfFromDevice, removePdfSource, reopenPdf, setPdfCollapsed, setPdfDrawer, setPdfPage, setPdfSize, setPdfTab, setPdfTool, setPdfZoom, showPdf, showSource } from './actions'
 import { accessPdf, bumpDevice, getDeviceVersion, rememberPassword, subscribeDevice, type PdfAccess } from './runtime'
 import { downloadMarkedPdf, saveCopyToDrive } from './exportActions'
 import { OutlineDialog } from './OutlineDialog'
 import { Viewer } from './Viewer'
-import { MarkupTab, Toolbar } from './tools'
-
-const WIDTH_KEY = 'wishtaamaps:pdf-width'
-const HEIGHT_KEY = 'wishtaamaps:pdf-height'
-const read = (k: string, d: number) => {
-  try {
-    const v = Number(localStorage.getItem(k))
-    return Number.isFinite(v) && v > 0 ? v : d
-  } catch {
-    return d
-  }
-}
+import { MarkupTab } from './tools'
+import { TOOL_KEYS } from './FloatingTools'
+import { clampSide, loadSheetHeight, loadSideWidth, nextSize, saveSheetHeight, saveSideWidth, SIZE_LABEL, startingSize } from './layout'
+import { useTouchFriendly } from '../pictures/touch'
+import { OutlineView } from '../ui/OutlineView'
 
 const btn = 'grid h-8 min-w-8 shrink-0 place-items-center rounded px-1.5 text-sm hover:bg-bg [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:min-w-11'
 
+const typing = (t: EventTarget | null) => !!(t as HTMLElement | null)?.closest?.('input,textarea,select,[contenteditable="true"]')
+
 /**
- * The PDF source panel: beside the Outline and the Map on a computer (drag its edge to resize), a sheet along the bottom on a tablet or
- * phone. It holds the PDF's pages, the markup tools, and the list of markup.
+ * The PDF source panel: beside the Outline and the Map on a computer, a sheet along the bottom on a tablet or phone. It can be Normal,
+ * Wide (about 70%) or Full screen (the Outline then slides over it as a drawer), or tucked away to a small tab without closing the PDF.
+ * Its edge is a divider that can be dragged (mouse, finger, pen) or moved with the arrow keys; the width is remembered on this device.
  */
 export default function PdfPanel({ mode }: { mode: 'side' | 'sheet' }) {
   const panel = useEditor((s) => s.pdfPanel)
   const sources = useEditor((s) => s.pdf.sources)
   const readOnly = useEditor((s) => s.readOnly)
+  const touch = useTouchFriendly()
   const source = panel.sourceId ? sources[panel.sourceId] : undefined
   const list = Object.values(sources).sort((a, b) => a.addedAt - b.addedAt)
-  const [size, setSize] = useState(() => (mode === 'side' ? read(WIDTH_KEY, 460) : read(HEIGHT_KEY, 360)))
+  const [side, setSide] = useState(() => loadSideWidth())
+  const [sheet, setSheet] = useState(() => loadSheetHeight())
   const [menu, setMenu] = useState<'open' | 'source' | null>(null)
   const [showHidden, setShowHidden] = useState(false)
   const [outline, setOutline] = useState(false)
+  const aside = useRef<HTMLElement>(null)
+  const size = panel.size
+  const full = size === 'full'
+
+  // Opening starts in the size that suits the device: full screen for a portrait touch screen.
+  useEffect(() => {
+    setPdfSize(startingSize(touch, typeof window !== 'undefined' && window.innerHeight > window.innerWidth))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   // Read mode shows the markup but has no tools.
   useEffect(() => {
     if (readOnly && panel.tool !== 'select') setPdfTool('select')
@@ -48,42 +55,114 @@ export default function PdfPanel({ mode }: { mode: 'side' | 'sheet' }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [linked])
 
-  // Dragging the edge.
+  // Escape: close the drawer, then go back to Normal.
+  useEffect(() => {
+    if (size === 'normal' && !panel.drawer) return
+    const esc = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || typing(e.target) || document.querySelector('[role="dialog"][aria-modal="true"]') || document.querySelector('[data-flyout]')) return
+      if (panel.drawer) setPdfDrawer(false)
+      else setPdfSize('normal')
+    }
+    window.addEventListener('keydown', esc)
+    return () => window.removeEventListener('keydown', esc)
+  }, [size, panel.drawer])
+
+  const room = () => (mode === 'side' ? (aside.current?.parentElement?.clientWidth ?? window.innerWidth) : (aside.current?.parentElement?.clientHeight ?? window.innerHeight))
+  const setLength = (v: number, keep = false) => {
+    if (mode === 'side') {
+      const w = clampSide(v, room())
+      setSide(w)
+      if (!keep) saveSideWidth(w)
+    } else {
+      const h = Math.round(Math.min(Math.max(200, v), room() - 120))
+      setSheet(h)
+      if (!keep) saveSheetHeight(h)
+    }
+    if (size !== 'normal') setPdfSize('normal')
+  }
+  const lengthNow = () => (mode === 'side' ? (aside.current?.offsetWidth ?? side) : (aside.current?.offsetHeight ?? sheet))
+
+  // Dragging the divider (a mouse, a finger or a pen).
   const startResize = (e: React.PointerEvent) => {
     e.preventDefault()
     const from = mode === 'side' ? e.clientX : e.clientY
-    const was = size
+    const was = lengthNow()
+    let last = was
     const move = (ev: PointerEvent) => {
       const d = (mode === 'side' ? ev.clientX : ev.clientY) - from
-      const next = mode === 'side' ? Math.min(Math.max(280, was + d), Math.max(320, window.innerWidth - 360)) : Math.min(Math.max(200, was - d), window.innerHeight - 160)
-      setSize(next)
+      last = mode === 'side' ? was + d : was - d
+      setLength(last, true)
     }
     const up = () => {
       window.removeEventListener('pointermove', move)
       window.removeEventListener('pointerup', up)
-      try {
-        localStorage.setItem(mode === 'side' ? WIDTH_KEY : HEIGHT_KEY, String(Math.round(sizeRef.current)))
-      } catch {
-        /* not remembered */
-      }
+      window.removeEventListener('pointercancel', up)
+      setLength(last)
     }
     window.addEventListener('pointermove', move)
     window.addEventListener('pointerup', up)
+    window.addEventListener('pointercancel', up)
   }
-  const sizeRef = useRef(size)
-  sizeRef.current = size
+  // The same with the arrow keys; double-click or Enter switches between Normal and Wide.
+  const onDividerKey = (e: React.KeyboardEvent) => {
+    const step = e.shiftKey ? 96 : 24
+    const grow = mode === 'side' ? 'ArrowRight' : 'ArrowUp'
+    const shrink = mode === 'side' ? 'ArrowLeft' : 'ArrowDown'
+    if (e.key === grow) setLength(lengthNow() + step)
+    else if (e.key === shrink) setLength(lengthNow() - step)
+    else if (e.key === 'Home') setLength(0)
+    else if (e.key === 'End') setLength(9999)
+    else if (e.key === 'Enter' || e.key === ' ') setPdfSize(size === 'wide' ? 'normal' : 'wide')
+    else return
+    e.preventDefault()
+  }
+  const toggleWide = () => setPdfSize(size === 'wide' ? 'normal' : 'wide')
 
-  const style = mode === 'side' ? { width: size } : { height: size }
+  // Tool keys while the PDF has the focus.
+  const onKeyDown = (e: React.KeyboardEvent) => {
+    if (readOnly || panel.tab !== 'pages' || e.ctrlKey || e.metaKey || e.altKey || typing(e.target)) return
+    const t = TOOL_KEYS[e.key.toLowerCase()]
+    if (t) {
+      e.preventDefault()
+      setPdfTool(t)
+    }
+  }
+
+  const sizeStyle: React.CSSProperties = full
+    ? { paddingBottom: 'env(safe-area-inset-bottom)', paddingLeft: 'env(safe-area-inset-left)', paddingRight: 'env(safe-area-inset-right)' }
+    : mode === 'side'
+      ? { width: size === 'wide' ? '70%' : side }
+      : { height: size === 'wide' ? '70%' : sheet, paddingBottom: 'env(safe-area-inset-bottom)' }
+  const place = full ? 'absolute inset-0 z-[45]' : mode === 'side' ? 'relative z-[35]' : 'absolute inset-x-0 bottom-0 z-[45] border-t border-line shadow-2xl'
+
+  if (panel.collapsed) {
+    return (
+      <aside aria-label="PDF source (hidden)" data-pdf-panel={mode} data-pdf-size="collapsed" className={mode === 'side' ? 'relative z-10 flex w-10 shrink-0 flex-col items-center border-r border-line bg-surface py-2' : 'absolute bottom-3 right-3 z-30'}>
+        <button type="button" className={`${btn} ${mode === 'sheet' ? 'h-12 w-12 rounded-full border border-line bg-surface shadow-lg' : ''}`} aria-label="Show the PDF panel" title="Show the PDF panel" onClick={() => setPdfCollapsed(false)}>
+          <Icon name="pdf" size={18} />
+        </button>
+        {mode === 'side' && <span className="mt-2 text-[10px] text-muted [writing-mode:vertical-rl]">{source?.name ?? 'PDF'}</span>}
+      </aside>
+    )
+  }
+
   return (
     <aside
+      ref={aside}
       aria-label="PDF source"
       data-pdf-panel={mode}
-      className={`relative flex min-h-0 shrink-0 flex-col bg-surface text-ink ${mode === 'side' ? 'border-r border-line' : 'absolute inset-x-0 bottom-0 z-30 border-t border-line shadow-2xl'}`}
-      style={style}
+      data-pdf-size={size}
+      onKeyDown={onKeyDown}
+      className={`${place} flex min-h-0 shrink-0 flex-col bg-surface text-ink ${mode === 'side' && !full ? 'border-r border-line' : ''}`}
+      style={sizeStyle}
     >
-      {mode === 'sheet' && <div role="separator" aria-orientation="horizontal" aria-label="Drag to resize" onPointerDown={startResize} className="grid h-5 shrink-0 cursor-row-resize touch-none place-items-center"><span className="h-1 w-10 rounded-full bg-line" /></div>}
+      {mode === 'sheet' && !full && (
+        <div role="separator" tabIndex={0} aria-orientation="horizontal" aria-label="Resize the PDF panel (drag, or use the up and down arrow keys)" aria-valuenow={Math.round(sheet)} onKeyDown={onDividerKey} onDoubleClick={toggleWide} onPointerDown={startResize} className="grid h-6 shrink-0 cursor-row-resize touch-none place-items-center focus:bg-brand/20 [@media(pointer:coarse)]:h-7">
+          <span className="h-1 w-10 rounded-full bg-line" />
+        </div>
+      )}
       <div className="flex shrink-0 items-center gap-1 border-b border-line px-1.5 py-1">
-        <button type="button" className={btn} aria-label="Close the PDF panel" title="Close" onClick={closePdfPanel}>
+        <button type="button" className={btn} aria-label="Close the PDF panel" title="Close the PDF (it stays in the map)" onClick={closePdfPanel}>
           <Icon name="close" size={16} />
         </button>
         <div className="relative min-w-0 flex-1">
@@ -130,21 +209,69 @@ export default function PdfPanel({ mode }: { mode: 'side' | 'sheet' }) {
             )}
           </div>
         )}
+        <button
+          type="button"
+          className={btn}
+          data-expand
+          aria-label={full ? 'Restore the PDF to its normal size' : `Make the PDF bigger (now ${SIZE_LABEL[size]}; next ${SIZE_LABEL[nextSize(size)]})`}
+          title={full ? 'Restore (Esc)' : `${SIZE_LABEL[size]}. Click for ${SIZE_LABEL[nextSize(size)]}`}
+          onClick={() => setPdfSize(nextSize(size))}
+        >
+          <Icon name={full ? 'shrink' : 'expand'} size={16} />
+        </button>
+        <button type="button" className={btn} aria-label="Hide the PDF panel (the PDF stays open)" title="Hide the panel, keep the PDF open" onClick={() => setPdfCollapsed(true)}>
+          <Icon name={mode === 'side' ? 'chevronLeft' : 'chevronDown'} size={16} />
+        </button>
       </div>
 
       {source && <Controls source={source} showHidden={showHidden} setShowHidden={setShowHidden} />}
-      {source && !readOnly && <Toolbar source={source} />}
       <div role="tablist" aria-label="PDF panel" className="flex shrink-0 gap-1 border-b border-line px-2 py-1 text-xs">
         {(['pages', 'markup'] as const).map((t) => (
-          <button key={t} type="button" role="tab" aria-selected={panel.tab === t} onClick={() => setPdfTab(t)} className={`rounded px-2 py-1 ${panel.tab === t ? 'bg-brand/15 font-semibold' : 'hover:bg-bg'}`}>
+          <button key={t} type="button" role="tab" aria-selected={panel.tab === t} onClick={() => setPdfTab(t)} className={`rounded px-2 py-1 [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:px-3 ${panel.tab === t ? 'bg-brand/15 font-semibold' : 'hover:bg-bg'}`}>
             {t === 'pages' ? 'Pages' : 'Markup'}
           </button>
         ))}
       </div>
       <Body source={source} showHidden={showHidden} tab={panel.tab} />
       {outline && source && <OutlineLoader source={source} onClose={() => setOutline(false)} />}
-      {mode === 'side' && <div role="separator" aria-orientation="vertical" aria-label="Drag to resize" onPointerDown={startResize} className="absolute inset-y-0 -right-1 z-10 w-2 cursor-col-resize touch-none hover:bg-brand/30" />}
+      {mode === 'side' && !full && (
+        <div role="separator" tabIndex={0} aria-orientation="vertical" aria-label="Resize the PDF panel (drag, or use the left and right arrow keys; double-click for Wide)" aria-valuenow={Math.round(side)} onKeyDown={onDividerKey} onDoubleClick={toggleWide} onPointerDown={startResize} className="absolute inset-y-0 -right-1.5 z-10 w-3 cursor-col-resize touch-none hover:bg-brand/30 focus:bg-brand/40 [@media(pointer:coarse)]:-right-2.5 [@media(pointer:coarse)]:w-5" />
+      )}
+      {full && <OutlineDrawer />}
     </aside>
+  )
+}
+
+/** In full screen: a small floating button that slides the Outline over the PDF, so topics can be added from highlights without leaving. */
+function OutlineDrawer() {
+  const open = useEditor((s) => s.pdfPanel.drawer)
+  const toolSide = useEditor((s) => s.pdfPanel.toolSide)
+  return (
+    <>
+      {!open && (
+        <button type="button" data-outline-drawer-button className={`absolute bottom-16 z-40 flex h-11 items-center gap-1.5 ${toolSide === 'left' ? 'right-3' : 'left-3'} rounded-full border border-line bg-surface px-3 text-sm font-medium shadow-lg hover:bg-bg`} aria-label="Show the Outline over the PDF" title="Show the Outline" onClick={() => setPdfDrawer(true)}>
+          <Icon name="outline" size={16} />
+          Outline
+        </button>
+      )}
+      {open && (
+        <>
+          <div className="absolute inset-0 z-40 bg-black/20" onPointerDown={() => setPdfDrawer(false)} />
+          <div role="complementary" aria-label="Outline" data-outline-drawer className="absolute inset-y-0 right-0 z-50 flex w-[min(440px,92%)] flex-col border-l border-line bg-bg shadow-2xl" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+            <div className="flex shrink-0 items-center gap-2 border-b border-line bg-surface px-3 py-2">
+              <Icon name="outline" size={16} />
+              <span className="flex-1 text-sm font-medium">Outline</span>
+              <button type="button" className={btn} aria-label="Hide the Outline" onClick={() => setPdfDrawer(false)}>
+                <Icon name="close" size={16} />
+              </button>
+            </div>
+            <div className="relative min-h-0 flex-1 overflow-auto">
+              <OutlineView />
+            </div>
+          </div>
+        </>
+      )}
+    </>
   )
 }
 

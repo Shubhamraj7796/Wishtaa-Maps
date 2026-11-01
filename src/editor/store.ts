@@ -1,3 +1,5 @@
+import { loadPrefs, type Shape, type ToolStyles } from './pdf/toolPrefs'
+import type { PanelSize } from './pdf/layout'
 import { emptyPdfState, type PdfState, type Rect } from '@/core/pdf/types'
 import { readOutlineZoom } from './navigation'
 import type { ThemePreview } from '@/core/theme/apply'
@@ -25,7 +27,7 @@ export interface SearchState {
 /** Where a new picture goes: onto a topic, as a new child topic, or in place of the topic's picture. */
 export type PictureTarget = { kind: 'topic'; id: string } | { kind: 'child'; parentId: string } | { kind: 'replace'; id: string }
 /** What the pointer does on a PDF page. */
-export type PdfTool = 'select' | 'highlight' | 'underline' | 'strike' | 'pen' | 'text' | 'rect' | 'ellipse' | 'line' | 'arrow' | 'whiteout' | 'link' | 'capture'
+export type PdfTool = 'select' | 'eraser' | 'highlight' | 'underline' | 'strike' | 'pen' | 'text' | 'rect' | 'ellipse' | 'line' | 'arrow' | 'whiteout' | 'link' | 'capture'
 
 export interface PdfPanelState {
   open: boolean
@@ -35,8 +37,18 @@ export interface PdfPanelState {
   /** Pages, or the list of markup. */
   tab: 'pages' | 'markup'
   tool: PdfTool
-  /** Colour for markup. */
-  color: string
+  /** Each marking tool's own colour, size and strength (kept on this device). */
+  styles: ToolStyles
+  /** The shape the Shapes button last used. */
+  shape: Shape
+  /** How much of the editor the PDF takes. */
+  size: PanelSize
+  /** The panel is tucked away to a small tab; the PDF stays open. */
+  collapsed: boolean
+  /** In full screen, the Outline slides over the PDF. */
+  drawer: boolean
+  /** Which edge of the PDF the floating tools are on (the Outline button goes on the other). */
+  toolSide: 'left' | 'right'
   /** Zoom: null fits the width of the panel. */
   zoom: number | null
   /** A passage to show and mark (a source link was clicked, or a topic with one was selected). `at` makes the same place show again. */
@@ -45,7 +57,10 @@ export interface PdfPanelState {
   markId: string | null
 }
 
-export const closedPdfPanel = (): PdfPanelState => ({ open: false, sourceId: null, page: 1, tab: 'pages', tool: 'select', color: '#facc15', zoom: null, focus: null, markId: null })
+export const closedPdfPanel = (): PdfPanelState => {
+  const prefs = loadPrefs()
+  return { open: false, sourceId: null, page: 1, tab: 'pages', tool: 'select', styles: prefs.styles, shape: prefs.shape, size: 'normal', collapsed: false, drawer: false, toolSide: prefs.bar?.side ?? 'left', zoom: null, focus: null, markId: null }
+}
 
 export type PictureSource = 'upload' | 'camera' | 'gallery' | 'paste' | 'capture' | 'drop'
 

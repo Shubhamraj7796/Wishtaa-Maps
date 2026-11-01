@@ -7,6 +7,7 @@ import { mapDoc } from '../mapdoc'
 import { showNotice } from '../notice'
 import { mayEdit } from '../readmode'
 import { useEditor } from '../store'
+import { strokeWidth, type ToolStyle } from './toolPrefs'
 import { addOutlineTopics, addPdfTopics } from './topics'
 
 const get = useEditor.getState
@@ -115,9 +116,11 @@ export function markupByPage(all: Record<string, MarkupObject>, sourceId: string
 }
 
 /** Marks the words of a text selection: one rectangle per line, with the words kept (for "make a topic from this"). */
-export function markText(kind: Extract<MarkupKind, 'highlight' | 'underline' | 'strike'>, sel: { sourceId: string; page: number; rects: Rect[]; text: string }, color: string): string | null {
+export function markText(kind: Extract<MarkupKind, 'highlight' | 'underline' | 'strike'>, sel: { sourceId: string; page: number; rects: Rect[]; text: string }, style: string | ToolStyle): string | null {
   if (!sel.rects.length) return null
-  return addMarkup({ sourceId: sel.sourceId, page: sel.page, kind, color, rects: sel.rects, text: topicTexts(sel.text)[0] ?? '' })
+  const s = typeof style === 'string' ? { color: style, size: 0, opacity: 0 } : style
+  const extra = kind === 'highlight' ? (s.opacity ? { opacity: s.opacity } : {}) : s.size ? { width: strokeWidth(s.size) } : {}
+  return addMarkup({ sourceId: sel.sourceId, page: sel.page, kind, color: s.color, rects: sel.rects, text: topicTexts(sel.text)[0] ?? '', ...extra })
 }
 
 /** The words under a piece of markup, or what was typed into it. */

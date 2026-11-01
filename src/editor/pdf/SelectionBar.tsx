@@ -16,7 +16,7 @@ export function SelectionBar({ sourceId, root }: { sourceId: string; root: React
   const edits = useEditor((s) => s.pdf.pageEdits)
   const readOnly = useEditor((s) => s.readOnly)
   const tool = useEditor((s) => s.pdfPanel.tool)
-  const color = useEditor((s) => s.pdfPanel.color)
+  const styles = useEditor((s) => s.pdfPanel.styles)
   const [sel, setSel] = useState<PdfSelection | null>(null)
   const [perLine, setPerLine] = useState(false)
 
@@ -42,17 +42,17 @@ export function SelectionBar({ sourceId, root }: { sourceId: string; root: React
       setTimeout(() => {
         const s = readSelection(el, sourceId, edits)
         if (!s) return
-        markText(tool, s, color)
+        markText(tool, s, styles[tool])
         window.getSelection()?.removeAllRanges()
       }, 0)
     }
     el.addEventListener('pointerup', up)
     return () => el.removeEventListener('pointerup', up)
-  }, [root, readOnly, tool, color, sourceId, edits])
+  }, [root, readOnly, tool, styles, sourceId, edits])
 
   if (!sel || readOnly) return null
   const mark = (kind: 'highlight' | 'underline' | 'strike') => {
-    markText(kind, sel, color)
+    markText(kind, sel, styles[kind])
     window.getSelection()?.removeAllRanges()
     setSel(null)
   }
@@ -67,7 +67,7 @@ export function SelectionBar({ sourceId, root }: { sourceId: string; root: React
       <button type="button" className={act} onClick={() => done('topic')}>Add as topic</button>
       <button type="button" className={act} onClick={() => done('sub')}>Add as sub-topic</button>
       <button type="button" className={act} onClick={() => mark('highlight')}>
-        <span className="mr-1 inline-block h-3 w-3 rounded-full align-middle" style={{ background: color }} />
+        <span className="mr-1 inline-block h-3 w-3 rounded-full align-middle" style={{ background: styles.highlight.color }} />
         Highlight
       </button>
       <button type="button" className={act} onClick={() => mark('underline')}>Underline</button>

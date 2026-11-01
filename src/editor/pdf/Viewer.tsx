@@ -9,6 +9,8 @@ import { setPdfPage, setPdfZoom } from './actions'
 import { PageView, shownPx, type PageBox } from './PageView'
 import { PageLayers } from './layers'
 import { SelectionBar } from './SelectionBar'
+import { FloatingTools } from './FloatingTools'
+import { SelectedMarkup } from './tools'
 import { pagePoint } from './layers'
 import { deleteMarkup, markupAt, markupOfPage, selectMarkup } from './markup'
 
@@ -100,6 +102,25 @@ export function Viewer({ source, handle, showHidden }: { source: PdfSource; hand
     if (e.key === 'Escape') selectMarkup(null)
   }
 
+  // The place in the document (a page and how far down it), so a change of width or zoom keeps the same spot in view.
+  const anchor = useRef<{ n: number; frac: number } | null>(null)
+  const prevScale = useRef(scale)
+  useLayoutEffect(() => {
+    const el = scroller.current
+    const a = anchor.current
+    if (prevScale.current === scale || !el || !a) {
+      prevScale.current = scale
+      return
+    }
+    prevScale.current = scale
+    const i = pages.findIndex((p) => p.n === a.n)
+    if (i < 0) return
+    el.scrollTop = (starts[i] as number) + a.frac * ((starts[i + 1] as number) - (starts[i] as number) - GAP)
+    setScrollTop(el.scrollTop)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scale])
+
+  const readOnly = useEditor((s) => s.readOnly)
   const frame = useRef(0)
   const lastPage = useRef(1)
   const onScroll = () => {
@@ -109,6 +130,9 @@ export function Viewer({ source, handle, showHidden }: { source: PdfSource; hand
       const el = scroller.current
       if (!el) return
       setScrollTop(el.scrollTop)
+      const at = Math.min(pages.length - 1, rowAt(starts, el.scrollTop))
+      const pg = pages[at]
+      if (pg) anchor.current = { n: pg.n, frac: Math.max(0, Math.min(1, (el.scrollTop - (starts[at] as number)) / Math.max(1, (starts[at + 1] as number) - (starts[at] as number) - GAP))) }
       const i = Math.min(pages.length - 1, rowAt(starts, el.scrollTop + viewH / 3))
       const n = pages[i]?.n
       if (n && n !== lastPage.current) {
@@ -186,6 +210,8 @@ export function Viewer({ source, handle, showHidden }: { source: PdfSource; hand
       </div>
     </div>
     <SelectionBar sourceId={source.id} root={scroller} />
+    {!readOnly && <SelectedMarkup />}
+    {!readOnly && <FloatingTools source={source} />}
     </div>
   )
 }

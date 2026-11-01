@@ -50,6 +50,8 @@ export interface MarkupObject {
   kind: MarkupKind
   /** A colour such as "#facc15". */
   color: string
+  /** Highlight: how strongly it shows (0.15 to 0.85); 0.4 when not stored. */
+  opacity?: number
   /** Pen and shape line width, as a fraction of the page width. */
   width?: number
   /** Highlight, underline, strike: one rectangle per line of text. Shapes, whiteout, text box and link: one rectangle. */

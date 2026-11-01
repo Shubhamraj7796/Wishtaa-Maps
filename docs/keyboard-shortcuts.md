@@ -34,7 +34,7 @@ menu) for the browser's own versions.
 
 ## In the PDF panel
 
-Delete (or Backspace) deletes the chosen markup, Escape lets it go. Ctrl + wheel zooms the PDF. The Open or close the PDF panel command has no shortcut.
+Delete (or Backspace) deletes the chosen markup, Escape lets it go (or restores the PDF size). Ctrl + wheel zooms the PDF. With the PDF focused: V H U S P T R W E L choose a tool (see docs/pdf-source-panel.md). The Open or close the PDF panel command has no shortcut.
 
 ## The list
 

@@ -96,12 +96,45 @@ Source menu ▸ **Start an outline from this PDF…**. Two sources, both shown a
 Rename, change the level (L1 to L6), or untick items, then **Add to map**. The tree goes under the selected topic (or the central
 topic) in one undo step, each topic linked to its page.
 
+## Panel size, divider and the Outline drawer
+
+- **Expand** (arrows button in the panel header) cycles **Normal** (the split you set), **Wide** (about 70% of the editor) and **Full
+  screen** (the PDF takes the whole editor area), then back. **Esc** (or the button again) restores Normal. The **chevron** beside it
+  hides the panel to a small tab without closing the PDF; the tab brings it back. Wide is remembered on this device; Full screen is
+  never reopened by itself on a computer. On a tablet or phone a PDF **opens in Full screen when the device is upright (portrait)**,
+  respecting the safe areas.
+- **Divider.** The edge between the PDF and the Outline or Map (the top handle of the bottom sheet) is dragged with a mouse, a
+  finger or a pen, or moved with the **arrow keys** (24 px; Shift for 96 px; Home and End for the smallest and largest). **Double-click**
+  or Enter switches between Normal and Wide. The width is kept per device (`wishtaamaps:pdf-width`, `pdf-height`) and limited so the
+  map always keeps at least 320 px.
+- **Full screen has an Outline drawer.** A floating **Outline** button (on the side away from the tools) slides the Outline over the
+  PDF. Select text or a highlight and press Add as topic, or Make topic, and the new topic appears in the drawer without leaving full
+  screen. Esc closes the drawer first, then restores Normal.
+- Page, zoom and the place in the document are kept when the size changes; with **Fit** the page is fitted to the new width and
+  the same spot stays in view.
+- The PDF panel sits above the settings panel in every size, so its buttons are never covered.
+
 ## Markup (Edit mode only)
 
-The tool row has Select, **Highlight, Underline, Strikethrough, Pen, Text box, Rectangle, Ellipse, Line, Arrow, Whiteout, Link**,
-seven colours, Undo and Redo, and **turn left / turn right / hide** for the page being looked at. On a touch screen every target is
-at least 44 px. A pen (stylus) draws with its full path; once a pen has touched the screen, fingers scroll instead of drawing, so a
-resting hand does nothing. Touch selection of text uses the system handles; the selection bar then marks it.
+**The tools are a narrow vertical toolbar floating over the page** (not in the panel header): Select, Highlight, Underline,
+Strikethrough, Pen, Text box, **Shapes** (one button showing the last shape used; Rectangle, Ellipse, Line and Arrow are in its
+flyout), Whiteout, **Eraser** (touch or drag over markup to delete it), Link, then Undo, Redo, Turn left, Turn right and Hide page.
+The panel header keeps the file name and menu, page number, zoom, Capture area and the Pages and Markup tabs.
+
+- **Moving it.** Drag the grip at its top anywhere: on letting go it **snaps to the nearer left or right edge** of the PDF area. Its
+  place is remembered per device. It starts at the left edge on a computer, and at the bottom of the right edge on a touch screen, away
+  from the thumb and the system gestures. The **chevron** collapses it to one small handle (tap to open, drag to move). **Fade** dims it
+  a moment after the last touch (and wakes on touch or hover), so it never has to cover the page. It scrolls inside when the area is short.
+- **Colours and sizes.** There is no permanent row of colour dots. Each marking tool shows **its own colour** as a bar on its icon.
+  Tapping the active tool, or the small chevron on its corner, opens a **flyout** beside the bar with a palette plus a custom colour,
+  a **thickness** slider (text size for the text box) and a live preview; the highlighter also has a **strength** slider.
+  **Each tool remembers its own colour and size, across sessions, on this device** (for example Pen red, Highlight yellow).
+- **Keys** (while the PDF has the focus, shown in each tooltip): V Select, H Highlight, U Underline, S Strikethrough, P Pen, T Text box,
+  R Shapes, W Whiteout, E Eraser, L Link.
+- 44 px targets on touch (32 px with a mouse). A pen (stylus) draws with its full path; once a pen has touched the screen, fingers
+  scroll and zoom instead of drawing, so a resting hand does nothing. Touch selection of text uses the system handles; the selection bar
+  then marks it.
+- **Read mode has none of it**: the toolbar, the flyouts and the selection bar are gone; only viewing tools remain.
 
 - **Highlight / underline / strike**: with the tool chosen, a mouse or pen selection is marked as soon as it is let go; on touch use
   the bar. One rectangle per line of text; the words are kept.

@@ -8,7 +8,8 @@ import { useEditor, type PdfTool } from '../store'
 import type { PageBox } from './PageView'
 import { captureArea } from './capture'
 import { setPdfPage } from './actions'
-import { addMarkup, boundsOf, markupOfPage, PEN_WIDTH } from './markup'
+import { addMarkup, boundsOf, deleteMarkup, markupAt, markupOfPage } from './markup'
+import { hasStyle, strokeWidth, textSize, type ToolStyle } from './toolPrefs'
 
 /** A point in a pointer event as a fraction of the page as it is READ, given the page element it happened over (which may be turned). */
 export function pagePoint(e: { clientX: number; clientY: number }, pageEl: Element, rotation: PageBox['rotation']): Point {
@@ -32,6 +33,7 @@ export function PageLayers({ source, handle, n, box }: { source: PdfSource; hand
     <>
       {list.length > 0 && <MarkupLayer list={list} box={box} markId={markId} />}
       {!readOnly && tool === 'capture' && <CaptureLayer source={source} handle={handle} n={n} box={box} />}
+      {!readOnly && tool === 'eraser' && list.length > 0 && <EraseLayer list={list} box={box} />}
       {!readOnly && DRAW_TOOLS.includes(tool) && <DrawLayer source={source} n={n} box={box} tool={tool} />}
     </>
   )
@@ -61,15 +63,15 @@ function MarkupLayer({ list, box, markId }: { list: MarkupObject[]; box: PageBox
     <>
       <svg className="pointer-events-none absolute left-0 top-0 overflow-visible" width={W} height={H} data-markup-layer aria-hidden="true">
         {list.map((m) => {
-          const sw = Math.max(1, (m.width ?? PEN_WIDTH) * W)
+          const sw = Math.max(1, (m.width ?? 0.004) * W)
           switch (m.kind) {
             case 'highlight':
-              return m.rects?.map((r, i) => <rect key={`${m.id}${i}`} data-markup={m.id} x={px(r.x, W)} y={px(r.y, H)} width={px(r.w, W)} height={px(r.h, H)} fill={m.color} fillOpacity={0.4} style={{ mixBlendMode: 'multiply' }} />)
+              return m.rects?.map((r, i) => <rect key={`${m.id}${i}`} data-markup={m.id} x={px(r.x, W)} y={px(r.y, H)} width={px(r.w, W)} height={px(r.h, H)} fill={m.color} fillOpacity={m.opacity ?? 0.4} style={{ mixBlendMode: 'multiply' }} />)
             case 'underline':
             case 'strike':
               return m.rects?.map((r, i) => {
                 const y = px(m.kind === 'underline' ? r.y + r.h * 0.92 : r.y + r.h * 0.55, H)
-                return <line key={`${m.id}${i}`} data-markup={m.id} x1={px(r.x, W)} x2={px(r.x + r.w, W)} y1={y} y2={y} stroke={m.color} strokeWidth={Math.max(1.5, r.h * H * 0.08)} />
+                return <line key={`${m.id}${i}`} data-markup={m.id} x1={px(r.x, W)} x2={px(r.x + r.w, W)} y1={y} y2={y} stroke={m.color} strokeWidth={m.width ? Math.max(1, m.width * W) : Math.max(1.5, r.h * H * 0.08)} />
               })
             case 'pen':
               return <polyline key={m.id} data-markup={m.id} points={(m.points ?? []).map((p) => `${p[0] * W},${p[1] * H}`).join(' ')} fill="none" stroke={m.color} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round" />
@@ -120,7 +122,9 @@ function MarkupLayer({ list, box, markId }: { list: MarkupObject[]; box: PageBox
 
 /** The pen and shape tools: the stroke is drawn as the finger or pen moves, and kept as markup when it is lifted. */
 function DrawLayer({ source, n, box, tool }: { source: PdfSource; n: number; box: PageBox; tool: PdfTool }) {
-  const color = useEditor((s) => s.pdfPanel.color)
+  const style = useEditor((s) => (hasStyle(tool) ? s.pdfPanel.styles[tool] : s.pdfPanel.styles.pen))
+  const color = style.color
+  const pen = strokeWidth(style.size)
   const root = useRef<HTMLDivElement>(null)
   const [draft, setDraft] = useState<{ a: Point; b: Point; pts: Point[] } | null>(null)
   const [editor, setEditor] = useState<{ rect: Rect; kind: 'text' | 'link' } | null>(null)
@@ -133,22 +137,23 @@ function DrawLayer({ source, n, box, tool }: { source: PdfSource; n: number; box
 
   const finish = (d: { a: Point; b: Point; pts: Point[] }) => {
     const base = { sourceId: source.id, page: n, color }
+    const stroke = strokeWidth(style.size)
     const rect = rectFrom(d.a, d.b)
     const big = rect.w * W > 6 || rect.h * H > 6
     switch (tool) {
       case 'pen':
-        if (d.pts.length > 1) addMarkup({ ...base, kind: 'pen', points: d.pts, width: PEN_WIDTH })
+        if (d.pts.length > 1) addMarkup({ ...base, kind: 'pen', points: d.pts, width: stroke })
         break
       case 'rect':
       case 'ellipse':
-        if (big) addMarkup({ ...base, kind: tool, rects: [rect], width: PEN_WIDTH })
+        if (big) addMarkup({ ...base, kind: tool, rects: [rect], width: stroke })
         break
       case 'whiteout':
         if (big) addMarkup({ ...base, kind: 'whiteout', color: '#ffffff', rects: [rect] })
         break
       case 'line':
       case 'arrow':
-        if (Math.hypot((d.b[0] - d.a[0]) * W, (d.b[1] - d.a[1]) * H) > 8) addMarkup({ ...base, kind: tool, points: [d.a, d.b], width: PEN_WIDTH })
+        if (Math.hypot((d.b[0] - d.a[0]) * W, (d.b[1] - d.a[1]) * H) > 8) addMarkup({ ...base, kind: tool, points: [d.a, d.b], width: stroke })
         break
       case 'text':
       case 'link': {
@@ -201,30 +206,30 @@ function DrawLayer({ source, n, box, tool }: { source: PdfSource; n: number; box
     >
       {draft && (
         <svg className="pointer-events-none absolute left-0 top-0 overflow-visible" width={W} height={H} aria-hidden="true">
-          {tool === 'pen' && <polyline points={draft.pts.map((p) => `${p[0] * W},${p[1] * H}`).join(' ')} fill="none" stroke={color} strokeWidth={PEN_WIDTH * W} strokeLinecap="round" strokeLinejoin="round" />}
-          {(tool === 'rect' || tool === 'whiteout' || tool === 'text' || tool === 'link') && <DraftRect a={draft.a} b={draft.b} W={W} H={H} tool={tool} color={color} />}
-          {tool === 'ellipse' && <DraftEllipse a={draft.a} b={draft.b} W={W} H={H} color={color} />}
+          {tool === 'pen' && <polyline points={draft.pts.map((p) => `${p[0] * W},${p[1] * H}`).join(' ')} fill="none" stroke={color} strokeWidth={pen * W} strokeLinecap="round" strokeLinejoin="round" />}
+          {(tool === 'rect' || tool === 'whiteout' || tool === 'text' || tool === 'link') && <DraftRect a={draft.a} b={draft.b} W={W} H={H} tool={tool} color={color} pen={pen} />}
+          {tool === 'ellipse' && <DraftEllipse a={draft.a} b={draft.b} W={W} H={H} color={color} pen={pen} />}
           {(tool === 'line' || tool === 'arrow') && (
             <>
-              <line x1={draft.a[0] * W} y1={draft.a[1] * H} x2={draft.b[0] * W} y2={draft.b[1] * H} stroke={color} strokeWidth={PEN_WIDTH * W} strokeLinecap="round" />
-              {tool === 'arrow' && <polygon points={arrowHead(draft.a, draft.b, W, H, Math.max(8, PEN_WIDTH * W * 4))} fill={color} />}
+              <line x1={draft.a[0] * W} y1={draft.a[1] * H} x2={draft.b[0] * W} y2={draft.b[1] * H} stroke={color} strokeWidth={pen * W} strokeLinecap="round" />
+              {tool === 'arrow' && <polygon points={arrowHead(draft.a, draft.b, W, H, Math.max(8, pen * W * 4))} fill={color} />}
             </>
           )}
         </svg>
       )}
-      {editor && <InlineEditor source={source} n={n} box={box} rect={editor.rect} kind={editor.kind} color={color} done={() => setEditor(null)} />}
+      {editor && <InlineEditor source={source} n={n} box={box} rect={editor.rect} kind={editor.kind} style={style} done={() => setEditor(null)} />}
     </div>
   )
 }
 
-function DraftRect({ a, b, W, H, tool, color }: { a: Point; b: Point; W: number; H: number; tool: PdfTool; color: string }) {
+function DraftRect({ a, b, W, H, tool, color, pen }: { a: Point; b: Point; W: number; H: number; tool: PdfTool; color: string; pen: number }) {
   const r = rectFrom(a, b)
-  return <rect x={r.x * W} y={r.y * H} width={r.w * W} height={r.h * H} fill={tool === 'whiteout' ? '#fff' : 'none'} stroke={tool === 'whiteout' ? '#9ca3af' : color} strokeWidth={tool === 'rect' ? PEN_WIDTH * W : 1.5} strokeDasharray={tool === 'text' || tool === 'link' ? '4 3' : undefined} />
+  return <rect x={r.x * W} y={r.y * H} width={r.w * W} height={r.h * H} fill={tool === 'whiteout' ? '#fff' : 'none'} stroke={tool === 'whiteout' ? '#9ca3af' : color} strokeWidth={tool === 'rect' ? pen * W : 1.5} strokeDasharray={tool === 'text' || tool === 'link' ? '4 3' : undefined} />
 }
 
-function DraftEllipse({ a, b, W, H, color }: { a: Point; b: Point; W: number; H: number; color: string }) {
+function DraftEllipse({ a, b, W, H, color, pen }: { a: Point; b: Point; W: number; H: number; color: string; pen: number }) {
   const r = rectFrom(a, b)
-  return <ellipse cx={(r.x + r.w / 2) * W} cy={(r.y + r.h / 2) * H} rx={(r.w / 2) * W} ry={(r.h / 2) * H} fill="none" stroke={color} strokeWidth={PEN_WIDTH * W} />
+  return <ellipse cx={(r.x + r.w / 2) * W} cy={(r.y + r.h / 2) * H} rx={(r.w / 2) * W} ry={(r.h / 2) * H} fill="none" stroke={color} strokeWidth={pen * W} />
 }
 
 /** A link goes to a page of this PDF (a number) or a web address; anything else is refused. */
@@ -243,7 +248,7 @@ export function parseLink(input: string, pages: number): { page: number } | { ur
 }
 
 /** The small box for typing a text box's words or a link's target, right on the page. */
-function InlineEditor({ source, n, box, rect, kind, color, done }: { source: PdfSource; n: number; box: PageBox; rect: Rect; kind: 'text' | 'link'; color: string; done: () => void }) {
+function InlineEditor({ source, n, box, rect, kind, style, done }: { source: PdfSource; n: number; box: PageBox; rect: Rect; kind: 'text' | 'link'; style: ToolStyle; done: () => void }) {
   const W = box.w * box.scale
   const H = box.h * box.scale
   const [value, setValue] = useState('')
@@ -253,7 +258,7 @@ function InlineEditor({ source, n, box, rect, kind, color, done }: { source: Pdf
     const text = value.trim()
     if (!text) return done()
     if (kind === 'text') {
-      addMarkup({ sourceId: source.id, page: n, kind: 'text', color, rects: [rect], text, fontSize: 0.02 })
+      addMarkup({ sourceId: source.id, page: n, kind: 'text', color: style.color, rects: [rect], text, fontSize: textSize(style.size) })
     } else {
       const link = parseLink(text, source.pages)
       if (!link) {
@@ -281,7 +286,7 @@ function InlineEditor({ source, n, box, rect, kind, color, done }: { source: Pdf
           }
         }}
         className="w-full resize rounded border border-brand bg-white p-1 text-black shadow"
-        style={{ fontSize: Math.max(12, 0.02 * H) }}
+        style={{ fontSize: Math.max(12, textSize(style.size) * H) }}
       />
       <div className="mt-1 flex gap-1 text-xs">
         <button type="button" className="rounded bg-brand px-2 py-1 font-semibold text-brand-ink [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:px-3" onClick={commit}>
@@ -326,5 +331,33 @@ function CaptureLayer({ handle, n, box, source }: { source: PdfSource; handle: P
     >
       {rect && <div className="pointer-events-none absolute border-2 border-brand bg-brand/20" style={{ left: rect.x * box.w * box.scale, top: rect.y * box.h * box.scale, width: rect.w * box.w * box.scale, height: rect.h * box.h * box.scale }} />}
     </div>
+  )
+}
+
+/** The eraser: touch (or drag across) a piece of markup to delete it. Each piece deleted is one undo step. */
+function EraseLayer({ list, box }: { list: MarkupObject[]; box: PageBox }) {
+  const root = useRef<HTMLDivElement>(null)
+  const down = useRef(false)
+  const erase = (e: React.PointerEvent) => {
+    const el = root.current?.closest('[data-page]')
+    if (!el) return
+    const hit = markupAt(list, pagePoint(e, el, box.rotation), 0.01)
+    if (hit) deleteMarkup(hit.id)
+  }
+  return (
+    <div
+      ref={root}
+      data-erase-layer
+      className="absolute inset-0 cursor-cell touch-none"
+      onPointerDown={(e) => {
+        if (e.pointerType === 'touch' && penSeen) return
+        down.current = true
+        e.currentTarget.setPointerCapture(e.pointerId)
+        erase(e)
+      }}
+      onPointerMove={(e) => down.current && erase(e)}
+      onPointerUp={() => (down.current = false)}
+      onPointerCancel={() => (down.current = false)}
+    />
   )
 }

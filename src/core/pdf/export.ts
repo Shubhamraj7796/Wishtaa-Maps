@@ -90,13 +90,13 @@ export async function exportMarkedPdf(original: Uint8Array, opts: ExportOptions)
       }
       switch (m.kind) {
         case 'highlight':
-          for (const r of m.rects ?? []) page.drawRectangle({ ...box(r), color, opacity: 0.4, blendMode: BlendMode.Multiply })
+          for (const r of m.rects ?? []) page.drawRectangle({ ...box(r), color, opacity: m.opacity ?? 0.4, blendMode: BlendMode.Multiply })
           break
         case 'underline':
         case 'strike':
           for (const r of m.rects ?? []) {
             const yy = r.y + r.h * (m.kind === 'underline' ? 0.92 : 0.55)
-            page.drawLine({ start: at([r.x, yy]), end: at([r.x + r.w, yy]), thickness: Math.max(0.6, r.h * g.read.h * 0.08), color })
+            page.drawLine({ start: at([r.x, yy]), end: at([r.x + r.w, yy]), thickness: m.width ? Math.max(0.5, m.width * g.read.w) : Math.max(0.6, r.h * g.read.h * 0.08), color })
           }
           break
         case 'pen': {

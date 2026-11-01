@@ -8,7 +8,7 @@ import {
   MessageSquare, Minimize, Minus, Moon, MousePointer2, Music, Network, Notebook, Paintbrush, Palette, PanelRight, Paperclip,
   Pencil, Phone, Pin, Plus, Quote, Redo2, RefreshCw, Rocket, RotateCcw, ScanText, Search, Settings, Shapes, Shield,
   Sigma, Smile, SquareDashed, Star, StickyNote, Strikethrough, Sun, Table, Tag, Target, ThumbsDown, ThumbsUp, Trash2, Trophy,
-  FileText, Highlighter, Square, Circle, RotateCw, EyeOff, Type, Underline, Undo2, Unlink, Unlock, User, Users, X, XCircle, Zap, ZoomIn, ZoomOut, SlidersHorizontal, Share2, Info as InfoIcon,
+  FileText, ChevronLeft, Maximize2, Minimize2, Highlighter, Square, Circle, RotateCw, EyeOff, Type, Underline, Undo2, Unlink, Unlock, User, Users, X, XCircle, Zap, ZoomIn, ZoomOut, SlidersHorizontal, Share2, Info as InfoIcon,
 } from 'lucide-react'
 import type { Shape } from '@/core/model/types'
 import { shapeGeometry } from '@/core/shapes'
@@ -26,7 +26,7 @@ export const ICONS = {
   notes: StickyNote, inlineNote: AlignLeft, tag: Tag, task: ListChecks, taskDone: CheckSquare, link: Link2, unlink: Unlink,
   attachment: Paperclip, latex: Sigma, table: Table, numbering: ListOrdered, image: ImageIcon, imageAdd: ImagePlus, camera: Camera, pdf: FileText, highlighter: Highlighter, square: Square, circle: Circle, rotateCw: RotateCw, eyeOff: EyeOff, arrowUpRight: ArrowUpRight,
   mark: Smile, clipart: Shapes, details: Layers, layout: LayoutGrid, theme: Palette, style: Brush, outline: List, map: Network,
-  chevronRight: ChevronRight, chevronDown: ChevronDown, zoomIn: ZoomIn, zoomOut: ZoomOut, fit: Locate, fullscreen: Maximize,
+  chevronRight: ChevronRight, chevronLeft: ChevronLeft, expand: Maximize2, shrink: Minimize2, chevronDown: ChevronDown, zoomIn: ZoomIn, zoomOut: ZoomOut, fit: Locate, fullscreen: Maximize,
   exitFullscreen: Minimize, bold: Bold, italic: Italic, underline: Underline, strike: Strikethrough, h1: Heading1, h2: Heading2,
   bulletList: List, orderedList: ListOrdered, quote: Quote, code: Code, ocr: ScanText, download: Download, preview: Eye,
   replace: RefreshCw, reset: RotateCcw, eraser: Eraser, panel: PanelRight, notebook: Notebook, type: Type, pin: Pin,
