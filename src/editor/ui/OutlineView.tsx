@@ -64,6 +64,9 @@ interface RowProps {
   onKey: (e: React.KeyboardEvent<HTMLInputElement>, row: Row) => void
 }
 
+/** The last tap on an Outline picture, to tell a double tap from a single one. */
+let lastTap: { id: string | null; t: number } = { id: null, t: 0 }
+
 /** The picture under a topic: the small version first, the full one only when it is shown large and the list is still. */
 function OutlinePicture({ topicId, image, box, label, selected, readOnly, zoom }: { topicId: string; image: TopicImage; box: PictureBox; label: string; selected: boolean; readOnly: boolean; zoom: number }) {
   const moving = useViewMoving()
@@ -80,11 +83,16 @@ function OutlinePicture({ topicId, image, box, label, selected, readOnly, zoom }
       <button
         type="button"
         aria-label={`Open picture: ${label}`}
-        title="Open the picture larger"
+        title="Click to select the topic; double-click to select the picture"
         onClick={() => {
+          const now = performance.now()
+          const double = lastTap.id === topicId && now - lastTap.t < 350
+          lastTap = double ? { id: null, t: 0 } : { id: topicId, t: now }
           selectOnly(topicId)
-          useEditor.setState({ imageSelected: topicId })
-          showPreview(image.imageId)
+          if (!double) return useEditor.setState({ imageSelected: useEditor.getState().imageSelected === topicId && !readOnly ? topicId : null })
+          // Double click or tap on the picture: select the picture; in Read mode open it large (nothing can be edited).
+          if (readOnly) showPreview(image.imageId)
+          else useEditor.setState({ imageSelected: topicId })
         }}
         className="block h-full w-full overflow-hidden rounded-md border border-line"
         style={{ backgroundColor: color ?? 'rgba(128,128,128,0.2)', contain: 'layout paint' }}
@@ -97,6 +105,9 @@ function OutlinePicture({ topicId, image, box, label, selected, readOnly, zoom }
       </button>
       {selected && !readOnly && (
         <div className="absolute right-1 top-1 flex gap-1">
+          <button type="button" aria-label="View the picture larger" title="View the picture larger (rotate, mark up)" onClick={() => showPreview(image.imageId)} className="grid h-7 w-7 place-items-center rounded-full bg-surface text-ink shadow">
+            <Icon name="fullscreen" size={14} />
+          </button>
           <button type="button" aria-label="Replace the picture" title="Replace the picture" onClick={() => void replaceImage(topicId)} className="grid h-7 w-7 place-items-center rounded-full bg-surface text-ink shadow">
             <Icon name="replace" size={14} />
           </button>

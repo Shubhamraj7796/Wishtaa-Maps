@@ -58,7 +58,7 @@ export function selectAll() {
   set({ selected: getScene().order, selectedObject: null })
 }
 export function clearSelection() {
-  set({ selected: [], selectedObject: null })
+  set({ selected: [], selectedObject: null, imageSelected: null })
 }
 
 // ---------- viewport ----------

@@ -47,3 +47,29 @@ The line next to "Saved" says how many pictures are waiting to go up to Google D
 | Data saver is on and "pause on data saver" is chosen | paused because data saver is on | **Sync now** | No |
 
 "Only when I tap Sync" is not a pause: the pictures wait, and **Sync now** sends them. A connection that drops only delays them (they retry with growing waits); that never counts as a pause. **Resume** also makes the ones that failed try again at once instead of waiting.
+
+## Selecting a topic and selecting its picture
+
+A topic with a picture has two things that can be selected, and a click chooses between them on purpose:
+
+| Do this | What is selected |
+|---|---|
+| Single click or tap anywhere on the topic (its picture or its text) | **Only the topic.** The topic toolbar and Style tab show; the picture has no frame or handles. This holds for the central topic, topics and sub-topics. |
+| Double click or double tap **on the picture** | **The picture**: picture toolbar, Picture tab, selection frame and resize handles. |
+| Double click or double tap on the **text** | Edits the text (as before). |
+| Click or tap empty canvas | Nothing is selected. |
+| **Esc** | From the picture back to its topic; Esc again clears the selection. |
+| **I** (keyboard) | Selects the picture of the selected topic (Esc goes back). |
+
+A picture can be resized only once it is selected, so panning on a tablet with a finger on a picture never resizes it. Dragging a topic
+by its picture while only the topic is selected moves the **topic**. A click on a picture that is already selected keeps it selected;
+a click on the text goes back to the topic alone.
+
+The Outline works the same way: a single click on a row's picture selects the row; a double click selects the picture, which then shows
+**View the picture larger** (rotate and mark up in the viewer), Replace and Delete.
+
+**Read mode:** a single tap selects the topic; a double tap on a picture opens it full screen; nothing can be edited (a double tap on
+text does not edit).
+
+Double clicks are told from single ones by time (350 ms between presses on the same topic), which also covers touch screens where
+the browser does not send a double-click event. Tested (fake timers and a real browser at desktop and tablet size): `src/editor/pictureSelection.test.tsx`.

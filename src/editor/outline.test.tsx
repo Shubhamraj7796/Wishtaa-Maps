@@ -293,6 +293,13 @@ describe('a map with 500 pictures', () => {
   })
 })
 
+const openPicture = (name: RegExp = /Open picture: Chart/) => {
+  const b = screen.getByRole('button', { name })
+  fireEvent.click(b)
+  fireEvent.click(b) // a double click or tap
+}
+const viewLarger = () => fireEvent.click(screen.getByRole('button', { name: 'View the picture larger' }))
+
 describe('doing things to a picture from the outline', () => {
   async function withPicture() {
     await put('pic-c')
@@ -304,7 +311,7 @@ describe('doing things to a picture from the outline', () => {
     return id
   }
 
-  it('clicking the picture selects the topic and opens a larger preview (Esc closes it)', async () => {
+  it('a single click selects only the topic; a double click selects the picture, which can then be viewed large (Esc closes it)', async () => {
     const id = await withPicture()
     render(
       <>
@@ -315,6 +322,13 @@ describe('doing things to a picture from the outline', () => {
     fireEvent.click(screen.getByRole('button', { name: /Open picture: Chart/ }))
     await settle()
     expect(st().selected).toEqual([id])
+    expect(st().imageSelected).toBeNull() // the topic only
+    expect(st().lightbox).toBeNull()
+    openPicture()
+    await settle()
+    expect(st().imageSelected).toBe(id) // now the picture
+    viewLarger()
+    await settle()
     expect(st().lightbox).toBe('pic-c')
     const dialog = screen.getByRole('dialog', { name: 'Picture preview' })
     fireEvent.keyDown(dialog, { key: 'Escape' })
@@ -329,7 +343,8 @@ describe('doing things to a picture from the outline', () => {
         <Lightbox />
       </>
     )
-    fireEvent.click(screen.getByRole('button', { name: /Open picture: Chart/ }))
+    openPicture()
+    viewLarger()
     await settle()
     const tools = screen.getByRole('toolbar', { name: 'Picture actions' })
     expect(within(tools).getByRole('button', { name: 'Replace' })).toBeTruthy()
@@ -352,7 +367,8 @@ describe('doing things to a picture from the outline', () => {
         <Lightbox />
       </>
     )
-    fireEvent.click(screen.getByRole('button', { name: /Open picture: Chart/ }))
+    openPicture()
+    viewLarger()
     await settle()
     fireEvent.click(within(screen.getByRole('toolbar', { name: 'Picture actions' })).getByRole('button', { name: 'Replace' }))
     await settle()
@@ -398,6 +414,9 @@ describe('Read mode', () => {
     expect(screen.queryByRole('button', { name: /Add picture|Replace picture/ })).toBeNull()
     expect(screen.queryByRole('button', { name: /Delete the picture|Replace the picture/ })).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: /Open picture: Chart/ }))
+    await settle()
+    expect(screen.queryByRole('dialog', { name: 'Picture preview' })).toBeNull() // one click only selects the topic
+    openPicture()
     await settle()
     expect(screen.getByRole('dialog', { name: 'Picture preview' })).toBeTruthy()
     expect(screen.queryByRole('toolbar', { name: 'Picture actions' })).toBeNull() // viewing only

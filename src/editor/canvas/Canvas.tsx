@@ -21,7 +21,7 @@ import {
 } from '../actions'
 import { accumulate, clampZoom, emptyPending, flingStep, flingVelocity, flush, wheelAction, wheelBelongsElsewhere, type Sample } from '../navigation'
 import { useSettings } from '@/stores/settings'
-import { addImageToTopic, firstImageFile, hasFiles, resetImageSize, selectImage } from '../images'
+import { addImageToTopic, firstImageFile, hasFiles, selectImage } from '../images'
 import { spaceDown } from '../keyboard'
 import { showNotice } from '../notice'
 import { useScene, useTheme } from '../scene'
@@ -237,21 +237,25 @@ export function Canvas() {
       const now = performance.now()
       if (lastDown.current.id === id && now - lastDown.current.t < 350) {
         lastDown.current = { id: null, t: 0 }
-        if (st.readOnly) return // Read mode: a double click or double tap opens nothing for editing
-        if (onImage) {
-          selectImage(id)
-          void resetImageSize(id) // double-click an image: back to its original size
-        } else beginEdit(id)
+        const pic = st.topics[id]?.image
+        // Read mode: a double click or double tap on a picture opens it large; nothing can be edited.
+        if (st.readOnly) {
+          if (onImage && pic) showPreview(pic.imageId)
+          return
+        }
+        // Double click or tap ON THE PICTURE selects the picture (its toolbar, panel and handles); on the text it edits the text.
+        if (onImage && pic) selectImage(id)
+        else beginEdit(id)
         return
       }
       lastDown.current = { id, t: now }
       if (additive) toggleSelect(id)
       else if (!st.selected.includes(id)) selectOnly(id)
-      // Clicking the picture selects it (resize handles); clicking the text selects just the topic.
-      // In Read mode it opens the picture full screen instead: there is nothing to resize.
+      // A single click or tap selects only the TOPIC, wherever on it (picture or text). The picture is selected by a double click or tap on
+      // it. A picture that is already selected stays selected when it is clicked again, so it can be worked on.
       const picture = st.topics[id]?.image
-      if (st.readOnly && onImage && picture) showPreview(picture.imageId)
-      useEditor.setState({ imageSelected: !st.readOnly && onImage && !additive && picture ? id : null })
+      const keep = !st.readOnly && onImage && !additive && !!picture && st.imageSelected === id
+      useEditor.setState({ imageSelected: keep ? id : null })
       const ids = topLevelOnly(st.topics, useEditor.getState().selected.filter((x) => x !== st.rootId))
       const idx = buildIndex(st.topics)
       const exclude = new Set(ids)
