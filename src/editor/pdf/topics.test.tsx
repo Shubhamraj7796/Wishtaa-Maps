@@ -19,7 +19,8 @@ import { SOURCE_DRAG } from './SelectionBar'
 let t = 1_700_000_000_000
 const st = () => useEditor.getState()
 const undoSteps = () => mapDoc.undo.undoStack.length
-const sel = (text: string, page = 3) => ({ sourceId: 's1', page, rect: { x: 0.1, y: 0.2, w: 0.5, h: 0.05 }, text })
+const R = { x: 0.1, y: 0.2, w: 0.5, h: 0.05 }
+const sel = (text: string, page = 3) => ({ sourceId: 's1', page, rect: R, rects: [R], text })
 const kids = (id: string) => Object.values(st().topics).filter((x) => x.parentId === id).sort((a, b) => a.order - b.order)
 
 beforeEach(async () => {

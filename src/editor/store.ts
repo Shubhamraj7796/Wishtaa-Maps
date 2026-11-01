@@ -41,9 +41,11 @@ export interface PdfPanelState {
   zoom: number | null
   /** A passage to show and mark (a source link was clicked, or a topic with one was selected). `at` makes the same place show again. */
   focus: { sourceId: string; page: number; rect?: Rect; at: number } | null
+  /** The markup chosen on the page (it shows its own small bar). */
+  markId: string | null
 }
 
-export const closedPdfPanel = (): PdfPanelState => ({ open: false, sourceId: null, page: 1, tab: 'pages', tool: 'select', color: '#facc15', zoom: null, focus: null })
+export const closedPdfPanel = (): PdfPanelState => ({ open: false, sourceId: null, page: 1, tab: 'pages', tool: 'select', color: '#facc15', zoom: null, focus: null, markId: null })
 
 export type PictureSource = 'upload' | 'camera' | 'gallery' | 'paste' | 'capture' | 'drop'
 

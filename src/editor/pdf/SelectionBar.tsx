@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useEditor } from '../store'
 import { readSelection, type PdfSelection } from './selection'
+import { markText } from './markup'
 import { addPdfTopics } from './topics'
 
 export const SOURCE_DRAG = 'application/x-wishtaa-source'
@@ -14,6 +15,8 @@ const act = 'h-9 rounded-ui border border-line bg-surface px-2.5 text-sm font-me
 export function SelectionBar({ sourceId, root }: { sourceId: string; root: React.RefObject<HTMLElement> }) {
   const edits = useEditor((s) => s.pdf.pageEdits)
   const readOnly = useEditor((s) => s.readOnly)
+  const tool = useEditor((s) => s.pdfPanel.tool)
+  const color = useEditor((s) => s.pdfPanel.color)
   const [sel, setSel] = useState<PdfSelection | null>(null)
   const [perLine, setPerLine] = useState(false)
 
@@ -30,7 +33,29 @@ export function SelectionBar({ sourceId, root }: { sourceId: string; root: React
     }
   }, [root, sourceId, edits])
 
+  // With a text-marking tool chosen, a selection made with the mouse or a pen is marked as soon as it is let go.
+  useEffect(() => {
+    const el = root.current
+    if (!el || readOnly || (tool !== 'highlight' && tool !== 'underline' && tool !== 'strike')) return
+    const up = (e: PointerEvent) => {
+      if (e.pointerType === 'touch') return
+      setTimeout(() => {
+        const s = readSelection(el, sourceId, edits)
+        if (!s) return
+        markText(tool, s, color)
+        window.getSelection()?.removeAllRanges()
+      }, 0)
+    }
+    el.addEventListener('pointerup', up)
+    return () => el.removeEventListener('pointerup', up)
+  }, [root, readOnly, tool, color, sourceId, edits])
+
   if (!sel || readOnly) return null
+  const mark = (kind: 'highlight' | 'underline' | 'strike') => {
+    markText(kind, sel, color)
+    window.getSelection()?.removeAllRanges()
+    setSel(null)
+  }
   const done = (place: 'topic' | 'sub') => {
     addPdfTopics(sel, place, { perLine })
     window.getSelection()?.removeAllRanges()
@@ -41,6 +66,12 @@ export function SelectionBar({ sourceId, root }: { sourceId: string; root: React
     <div role="toolbar" aria-label="Use the selected text" className="absolute inset-x-2 bottom-2 z-10 flex flex-wrap items-center gap-1.5 rounded-ui border border-line bg-surface p-1.5 shadow-lg" onMouseDown={keep} onPointerDown={(e) => e.pointerType === 'mouse' && keep(e)}>
       <button type="button" className={act} onClick={() => done('topic')}>Add as topic</button>
       <button type="button" className={act} onClick={() => done('sub')}>Add as sub-topic</button>
+      <button type="button" className={act} onClick={() => mark('highlight')}>
+        <span className="mr-1 inline-block h-3 w-3 rounded-full align-middle" style={{ background: color }} />
+        Highlight
+      </button>
+      <button type="button" className={act} onClick={() => mark('underline')}>Underline</button>
+      <button type="button" className={act} onClick={() => mark('strike')}>Strike</button>
       <label className="flex items-center gap-1 px-1 text-xs text-muted" title="Make a topic from each line of the selection">
         <input type="checkbox" checked={perLine} onChange={(e) => setPerLine(e.target.checked)} />
         One per line

@@ -9,6 +9,8 @@ import { setPdfPage, setPdfZoom } from './actions'
 import { PageView, shownPx, type PageBox } from './PageView'
 import { PageLayers } from './layers'
 import { SelectionBar } from './SelectionBar'
+import { pagePoint } from './layers'
+import { deleteMarkup, markupAt, markupOfPage, selectMarkup } from './markup'
 
 const GUTTER = 12
 const GAP = 14
@@ -89,6 +91,15 @@ export function Viewer({ source, handle, showHidden }: { source: PdfSource; hand
   const total = starts[starts.length - 1] as number
   const { start, end } = windowFor(starts, scrollTop, viewH, viewH)
 
+  const onKeyDown = (e: React.KeyboardEvent) => {
+    const id = useEditor.getState().pdfPanel.markId
+    if (id && (e.key === 'Delete' || e.key === 'Backspace') && !(e.target as HTMLElement).closest('textarea,input')) {
+      e.preventDefault()
+      deleteMarkup(id)
+    }
+    if (e.key === 'Escape') selectMarkup(null)
+  }
+
   const frame = useRef(0)
   const lastPage = useRef(1)
   const onScroll = () => {
@@ -161,7 +172,7 @@ export function Viewer({ source, handle, showHidden }: { source: PdfSource; hand
         This PDF has no text to select (it looks scanned or handwritten). Use <b>Capture area</b> to take a part of a page as a picture.
       </p>
     )}
-    <div ref={scroller} onScroll={onScroll} className="min-h-0 flex-1 overflow-auto bg-neutral-200 dark:bg-neutral-800" data-pdf-scroller aria-label={`${source.name}, ${handle.pages} pages`}>
+    <div ref={scroller} onScroll={onScroll} className="min-h-0 flex-1 overflow-auto bg-neutral-200 dark:bg-neutral-800" data-pdf-scroller tabIndex={0} onKeyDown={onKeyDown} aria-label={`${source.name}, ${handle.pages} pages`}>
       <div className="relative" style={{ height: total + GAP, width: Math.max(viewW, ...pages.map((p) => shownPx(p.box).w + GUTTER * 2).slice(start, end)) }}>
         {pages.slice(start, end).map((p, k) => {
           const i = start + k
@@ -189,8 +200,17 @@ function Slot({ source, handle, n, box, marked, tool, dim }: { source: PdfSource
       live = false
     }
   }, [handle, n])
+  const all = useEditor((s) => s.pdf.markup)
+  // Clicking a piece of markup (with the Select tool) chooses it; clicking elsewhere lets it go.
+  const choose = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (tool !== 'select' || !window.getSelection()?.isCollapsed) return
+    const el = e.currentTarget.querySelector('[data-page]')
+    if (!el || (e.target as Element).closest('[data-link],button,textarea,input')) return
+    const hit = markupAt(markupOfPage(all, source.id, n), pagePoint(e, el, box.rotation))
+    selectMarkup(hit?.id ?? null)
+  }
   return (
-    <div className={dim ? 'opacity-40' : ''}>
+    <div className={dim ? 'opacity-40' : ''} onClick={choose}>
       <PageView handle={handle} n={n} box={box} lines={lines} selectable={tool === 'select' || tool === 'highlight' || tool === 'underline' || tool === 'strike'} focus={marked}>
         <PageLayers source={source} handle={handle} n={n} box={box} lines={lines} />
       </PageView>

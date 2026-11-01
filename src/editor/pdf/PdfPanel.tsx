@@ -35,6 +35,10 @@ export default function PdfPanel({ mode }: { mode: 'side' | 'sheet' }) {
   const [menu, setMenu] = useState<'open' | 'source' | null>(null)
   const [showHidden, setShowHidden] = useState(false)
   const [outline, setOutline] = useState(false)
+  // Read mode shows the markup but has no tools.
+  useEffect(() => {
+    if (readOnly && panel.tool !== 'select') setPdfTool('select')
+  }, [readOnly, panel.tool])
   // Choosing a topic that came from a PDF shows its passage.
   const lastSelected = useEditor((s) => s.selected[s.selected.length - 1])
   const linked = useEditor((s) => (lastSelected ? s.topics[lastSelected]?.source ?? null : null))

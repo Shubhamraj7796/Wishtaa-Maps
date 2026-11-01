@@ -6,7 +6,25 @@ export interface PdfSelection {
   sourceId: string
   page: number
   rect: Rect
+  /** One rectangle per line of text, for marking it. */
+  rects: Rect[]
   text: string
+}
+
+/** The pieces a browser reports for a selection (often several per line, some nested) as one rectangle per line. */
+export function lines(rects: readonly Rect[]): Rect[] {
+  const sorted = [...rects].sort((a, b) => a.y - b.y || a.x - b.x)
+  const out: Rect[] = []
+  for (const r of sorted) {
+    const last = out[out.length - 1]
+    const overlap = last ? Math.min(last.y + last.h, r.y + r.h) - Math.max(last.y, r.y) : 0
+    if (last && overlap > 0.5 * Math.min(last.h, r.h)) {
+      const x = Math.min(last.x, r.x)
+      const y = Math.min(last.y, r.y)
+      out[out.length - 1] = { x, y, w: Math.max(last.x + last.w, r.x + r.w) - x, h: Math.max(last.y + last.h, r.y + r.h) - y }
+    } else out.push({ ...r })
+  }
+  return out
 }
 
 const pageOf = (node: Node | null): HTMLElement | null => (node instanceof Element ? node : node?.parentElement ?? null)?.closest<HTMLElement>('[data-page]') ?? null
@@ -38,5 +56,5 @@ export function readSelection(root: HTMLElement | null, sourceId: string, edits:
   const shown = unionRect(rects)
   if (!shown) return null
   const turn = (edits[editKey(sourceId, page)] ?? NO_EDIT).rotation
-  return { sourceId, page, rect: rectFromShown(shown, turn), text }
+  return { sourceId, page, rect: rectFromShown(shown, turn), rects: lines(rects).map((r) => rectFromShown(r, turn)), text }
 }
