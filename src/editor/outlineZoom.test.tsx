@@ -54,7 +54,8 @@ describe('zoom in the Outline (the bottom bar, the shortcuts and the percentage 
     expect(st().outlineZoom).toBe(1.5)
   })
 
-  it('stays between 50% and 300%', () => {
+  it('stays between 25% and 400%, like a document viewer', () => {
+    expect([OUTLINE_MIN_ZOOM, OUTLINE_MAX_ZOOM]).toEqual([0.25, 4])
     for (let i = 0; i < 20; i++) act(() => A.zoomBy(1.25))
     expect(st().outlineZoom).toBe(OUTLINE_MAX_ZOOM)
     for (let i = 0; i < 30; i++) act(() => A.zoomBy(0.8))
@@ -188,8 +189,76 @@ describe('the outline draws bigger', () => {
     expect(st().outlineZoom).toBe(1)
   })
 
-  it('a single finger still scrolls (only vertical panning is left to the browser)', () => {
+  it('a single finger still scrolls, up and down and (when the page is wider than the screen) sideways', () => {
     const view = render(<OutlineView />)
-    expect((view.container.querySelector('[role="region"]') as HTMLElement).style.touchAction).toBe('pan-y')
+    expect((view.container.querySelector('[role="region"]') as HTMLElement).style.touchAction).toBe('pan-x pan-y')
+  })
+
+  it('the whole page scales, like a PDF: the page is wider at 200% (so you scroll sideways), not the same width with bigger things inside it', async () => {
+    const id = await withPicture()
+    const view = render(<OutlineView />)
+    const page = () => (view.container.querySelector('ul[role="tree"]') as HTMLElement).parentElement as HTMLElement
+    const scroller = view.container.querySelector('[role="region"]') as HTMLElement
+    expect(page().style.width).toBe('768px')
+    act(() => A.setZoomPercent(200))
+    await settle()
+    expect(page().style.width).toBe('1536px') // twice as wide
+    expect((page().parentElement as HTMLElement).style.width).toBe('1568px') // the window area grows to hold it, so there is something to scroll
+    expect(scroller.className).toMatch(/overflow-auto/) // both ways
+    // The picture is not squeezed by the zoom: it is laid out on the page at its normal size and the page is scaled.
+    expect(pic(id).style.width).toBe('320px')
+    expect(parseFloat(row(id).style.width || '0') || 1536).toBe(1536)
+    act(() => A.setZoomPercent(25))
+    await settle()
+    expect(page().style.width).toBe('192px') // a small page, centred
+    expect(page().style.margin).toMatch(/auto/)
+  })
+
+  it('on a phone the page is the width of the screen, and zooming still scales the page', async () => {
+    Object.defineProperty(HTMLElement.prototype, 'clientWidth', { configurable: true, get: () => 390 })
+    try {
+      const view = render(<OutlineView />)
+      const page = () => (view.container.querySelector('ul[role="tree"]') as HTMLElement).parentElement as HTMLElement
+      expect(page().style.width).toBe('358px') // 390 minus the margins
+      act(() => A.setZoomPercent(300))
+      await settle()
+      expect(page().style.width).toBe(`${358 * 3}px`)
+    } finally {
+      delete (HTMLElement.prototype as { clientWidth?: number }).clientWidth
+    }
+  })
+
+  it('zooming with the wheel keeps the point under the cursor where it is (sideways too)', async () => {
+    for (let i = 0; i < 100; i++) addChild(mapDoc, st().rootId, `T${i}`)
+    await settle()
+    const view = render(<OutlineView />)
+    const scroller = view.container.querySelector('[role="region"]') as HTMLElement
+    scroller.scrollTop = 600
+    scroller.scrollLeft = 100
+    fireEvent.scroll(scroller)
+    await settle()
+    scroller.dispatchEvent(new WheelEvent('wheel', { deltaY: -120, ctrlKey: true, clientX: 50, clientY: 40, cancelable: true, bubbles: true }))
+    await settle()
+    const f = st().outlineZoom // it was 1
+    expect(f).toBeGreaterThan(1)
+    expect(scroller.scrollTop).toBeCloseTo((600 + 40) * f - 40, 0)
+    expect(scroller.scrollLeft).toBeCloseTo((100 + 50 - 16) * f + 16 - 50, 0) // 16 = the page's left margin
+  })
+
+  it('a pinch zooms around the middle of the two fingers', async () => {
+    for (let i = 0; i < 60; i++) addChild(mapDoc, st().rootId, `T${i}`)
+    await settle()
+    const view = render(<OutlineView />)
+    const scroller = view.container.querySelector('[role="region"]') as HTMLElement
+    scroller.scrollTop = 300
+    const two = (gap: number) => [
+      { clientX: 100, clientY: 200, identifier: 1 },
+      { clientX: 100 + gap, clientY: 200, identifier: 2 },
+    ]
+    fireEvent.touchStart(scroller, { touches: two(100) })
+    fireEvent.touchMove(scroller, { touches: two(200) }) // the middle is at x 150, y 200
+    await settle()
+    expect(st().outlineZoom).toBe(2)
+    expect(scroller.scrollTop).toBeCloseTo((300 + 200) * 2 - 200, 0)
   })
 })

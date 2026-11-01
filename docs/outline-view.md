@@ -10,8 +10,12 @@ The Outline is the same map as an indented list. It is **a second view of the sa
 - A topic holds **one picture** (that is how the map is stored). To show several pictures, add them as topics: adding several at once already makes one subtopic for each.
 - A line break inside a topic (for example the central topic of IND AS 116, "IND AS 116" and "Leases") is shown here as a space: "IND AS 116 Leases". The box has one line, and looking at a topic never changes its stored text.
 
-## Zoom
-The Outline has its own zoom, **50% to 300%**, for the text and the pictures together. While the Outline is showing, the controls at the bottom (the zoom out and zoom in buttons, the percentage, and the fit button, which puts it back to 100%) and the shortcuts **Ctrl+=**, **Ctrl+-**, **Alt+Z** (100%) and **Ctrl+0** work on the Outline instead of the map. The percentage box says "Outline zoom". **Ctrl + wheel** (and a trackpad pinch) zooms, and on a touch screen **two fingers** pinch to zoom; one finger still scrolls. Zooming keeps the same place on screen. The Outline zoom is remembered on the device, and the map keeps its own zoom. It works in Read mode too.
+## Zoom (like a document viewer)
+Zooming scales the **whole page**, as in a PDF viewer: text, pictures and the page itself grow together, **25% to 400%**. The page is 768 px wide at 100% (the width of the screen on a phone). When it becomes wider than the window you **scroll sideways**; when it is narrower it stays in the middle. The picture is laid out on the page at its normal size, so zooming never squeezes or clips it.
+
+Zooming keeps one point still, as an Adobe viewer does: **under the cursor** with Ctrl + wheel (and a trackpad pinch), **between the two fingers** when you pinch on a touch screen, and the **middle of the window** with the buttons and keys.
+
+While the Outline is showing, the controls at the bottom (zoom out, zoom in, the percentage you can type, and fit, which puts the page back to 100%, "fit width") and the shortcuts **Ctrl+=**, **Ctrl+-**, **Alt+Z** (100%) and **Ctrl+0** work on the Outline instead of the map. The percentage box says "Outline zoom". One finger or the wheel scrolls. The Outline zoom is remembered on the device, the map keeps its own, and it works in Read mode too.
 
 ## Pictures use the same pipeline as the map
 - Small version first (about 256 px); the full picture only when it is shown large (over about 300 px of screen), and only once the list has stopped moving, a few at a time.

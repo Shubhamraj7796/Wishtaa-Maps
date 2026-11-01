@@ -208,13 +208,16 @@ export function OutlineView() {
     return () => ro.disconnect()
   }, [])
   const viewH = view.h || 800
-  const listW = view.w || 800
+  // The "page": 768 px wide at 100% (less on a phone: the width of the screen). Zooming scales the whole page, like a document viewer;
+  // when it is wider than the window you scroll sideways, and when it is narrower it stays centred.
+  const pageW = Math.min(768, Math.max(240, (view.w || 800) - 32))
+  const contentW = Math.max(view.w || 0, pageW * zoom + 32)
 
   // Every row's height, and where each row starts. A picture row is as tall as its picture.
   const boxes = useMemo(() => rows.map((r) => {
     const image = topics[r.id]?.image
-    return image ? pictureBox(image, listW / zoom, r.depth) : null // laid out at 100%, then scaled
-  }), [rows, topics, listW, zoom])
+    return image ? pictureBox(image, pageW, r.depth) : null // laid out at 100% on the page, then the page is scaled
+  }), [rows, topics, pageW])
   const starts = useMemo(() => offsets(boxes.map((b) => rowHeight(b) * zoom)), [boxes, zoom])
   const total = starts[starts.length - 1] as number
   const listTop = list.current?.offsetTop ?? 0
@@ -236,14 +239,23 @@ export function OutlineView() {
   }
   useEffect(() => () => cancelAnimationFrame(frame.current), [])
 
-  // Zooming keeps the same place on screen: the scroll position grows or shrinks with the zoom.
+  // Zooming keeps the point under the cursor (or between two fingers, or the middle of the window) where it is, like a document viewer.
   const lastZoom = useRef(zoom)
+  const anchor = useRef<{ x: number; y: number } | null>(null)
   useLayoutEffect(() => {
     const el = scroller.current
     const was = lastZoom.current
     lastZoom.current = zoom
     if (!el || was === zoom) return
-    el.scrollTop = Math.max(0, ((el.scrollTop - listTop) * zoom) / was + listTop)
+    const f = zoom / was
+    const rect = el.getBoundingClientRect()
+    const ax = anchor.current ? anchor.current.x - rect.left : el.clientWidth / 2
+    const ay = anchor.current ? anchor.current.y - rect.top : el.clientHeight / 2
+    anchor.current = null
+    const viewW = el.clientWidth || view.w || 0
+    const leftOf = (z: number) => (Math.max(viewW, pageW * z + 32) - pageW * z) / 2 // where the page starts (it is centred when narrower)
+    el.scrollTop = Math.max(0, (el.scrollTop + ay - listTop) * f + listTop - ay)
+    el.scrollLeft = Math.max(0, (el.scrollLeft + ax - leftOf(was)) * f + leftOf(zoom) - ax)
     setScrollTop(el.scrollTop)
     scrolled.set(fileId, el.scrollTop)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -256,6 +268,7 @@ export function OutlineView() {
     const onWheel = (e: WheelEvent) => {
       if (!e.ctrlKey && !e.metaKey) return
       e.preventDefault()
+      anchor.current = { x: e.clientX, y: e.clientY }
       setOutlineZoom(useEditor.getState().outlineZoom * Math.exp(-e.deltaY * (e.deltaMode === 1 ? 0.04 : 0.0025)))
     }
     el.addEventListener('wheel', onWheel, { passive: false })
@@ -270,6 +283,7 @@ export function OutlineView() {
   }
   const onTouchMove = (e: React.TouchEvent) => {
     if (e.touches.length !== 2 || !pinch.current || pinch.current.d < 1) return
+    anchor.current = { x: ((e.touches[0]?.clientX ?? 0) + (e.touches[1]?.clientX ?? 0)) / 2, y: ((e.touches[0]?.clientY ?? 0) + (e.touches[1]?.clientY ?? 0)) / 2 }
     setOutlineZoom((pinch.current.z * distance(e.touches)) / pinch.current.d)
   }
   const onTouchEnd = (e: React.TouchEvent) => {
@@ -404,8 +418,9 @@ export function OutlineView() {
 
   const sel = new Set(selected)
   return (
-    <div ref={scroller} onScroll={onScroll} onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd} onTouchCancel={onTouchEnd} className="absolute inset-0 overflow-y-auto bg-bg" style={{ touchAction: 'pan-y' }} role="region" aria-label="Outline view">
-      <div className="mx-auto max-w-3xl px-4 py-5">
+    <div ref={scroller} onScroll={onScroll} onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd} onTouchCancel={onTouchEnd} className="absolute inset-0 overflow-auto bg-bg" style={{ touchAction: 'pan-x pan-y' }} role="region" aria-label="Outline view">
+      <div style={{ width: contentW, padding: '20px 16px' }}>
+      <div style={{ width: pageW * zoom, margin: '0 auto' }}>
         <p className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted">
           {readOnly ? (
             <>
@@ -449,6 +464,7 @@ export function OutlineView() {
             )
           })}
         </ul>
+      </div>
       </div>
     </div>
   )

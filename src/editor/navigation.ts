@@ -6,9 +6,9 @@ export const MAX_ZOOM = 4
 
 export const clampZoom = (k: number) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, k))
 
-/** The Outline has its own zoom (text and pictures together): 50% to 300%. It is remembered on this device. */
-export const OUTLINE_MIN_ZOOM = 0.5
-export const OUTLINE_MAX_ZOOM = 3
+/** The Outline has its own zoom, like a document viewer: the whole page scales (text and pictures together), 25% to 400%. It is remembered on this device. */
+export const OUTLINE_MIN_ZOOM = 0.25
+export const OUTLINE_MAX_ZOOM = 4
 export const OUTLINE_ZOOM_KEY = 'wishtaamaps:outline-zoom'
 export const clampOutlineZoom = (z: number) => (Number.isFinite(z) ? Math.min(OUTLINE_MAX_ZOOM, Math.max(OUTLINE_MIN_ZOOM, Math.round(z * 100) / 100)) : 1)
 
