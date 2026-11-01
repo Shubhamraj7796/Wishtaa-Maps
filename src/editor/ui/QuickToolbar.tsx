@@ -170,6 +170,9 @@ export function QuickToolbar() {
       <button type="button" aria-pressed={look.fontWeight >= 700} aria-label="Bold" title="Bold" onClick={() => toggle(look.fontWeight >= 700, { fontWeight: 700 })} className={`${tap} font-bold ${look.fontWeight >= 700 ? on : off}`}>
         B
       </button>
+      <button type="button" aria-label="Add picture" title="Add a picture to this topic: take a photo, choose from Photos, paste or capture the screen" onClick={() => void cmdAddImage(primary)} className={`${tap} ${off}`}>
+        <Icon name="camera" size={17} />
+      </button>
       <button type="button" aria-pressed={look.italic} aria-label="Italic" title="Italic" onClick={() => toggle(look.italic, { italic: true })} className={`${tap} italic ${look.italic ? on : off}`}>
         I
       </button>

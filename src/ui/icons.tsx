@@ -24,7 +24,7 @@ export const ICONS = {
   painter: Paintbrush, search: Search, focus: Focus, command: Command, help: CircleHelp, moon: Moon, sun: Sun,
   relationship: Share2, callout: MessageSquare, boundary: SquareDashed, summary: Braces, insert: Plus,
   notes: StickyNote, inlineNote: AlignLeft, tag: Tag, task: ListChecks, taskDone: CheckSquare, link: Link2, unlink: Unlink,
-  attachment: Paperclip, latex: Sigma, table: Table, numbering: ListOrdered, image: ImageIcon, imageAdd: ImagePlus,
+  attachment: Paperclip, latex: Sigma, table: Table, numbering: ListOrdered, image: ImageIcon, imageAdd: ImagePlus, camera: Camera,
   mark: Smile, clipart: Shapes, details: Layers, layout: LayoutGrid, theme: Palette, style: Brush, outline: List, map: Network,
   chevronRight: ChevronRight, chevronDown: ChevronDown, zoomIn: ZoomIn, zoomOut: ZoomOut, fit: Locate, fullscreen: Maximize,
   exitFullscreen: Minimize, bold: Bold, italic: Italic, underline: Underline, strike: Strikethrough, h1: Heading1, h2: Heading2,
