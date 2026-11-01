@@ -1,3 +1,4 @@
+import { openRecover } from '../app/RecoverDialog'
 import { LAYOUTS } from '@/core/layout/catalog'
 import { THEMES } from '@/core/theme/themes'
 import { requestCreate, requestOpenFromDrive } from '../app/createBus'
@@ -65,6 +66,7 @@ export const COMMANDS: Cmd[] = [
   { id: 'addImage', label: 'Add picture to topic…', group: 'Insert', keys: ['Alt+Shift+P'], run: () => void cmdAddImage() },
   { id: 'insertPdf', label: 'Insert PDF from this device…', group: 'Insert', run: () => pickPdfFromDevice() },
   { id: 'insertPdfDrive', label: 'Insert PDF from Google Drive…', group: 'Insert', run: () => void openPdfFromDrive() },
+  { id: 'recoverVersion', label: 'Recover earlier version…', group: 'Tools', run: () => { const id = st().fileId; if (id) openRecover(id) } },
   { id: 'pdfPanel', label: 'Open or close the PDF panel', group: 'Insert', run: () => togglePdfPanel() },
   { id: 'captureScreen', label: 'Capture screen as a picture', group: 'Insert', keys: ['Alt+Shift+Q'], run: () => void captureToPicture() },
   { id: 'removeImage', label: 'Remove image from topic', group: 'Edit', run: () => removeImage() },

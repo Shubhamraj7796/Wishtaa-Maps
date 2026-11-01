@@ -94,8 +94,11 @@ reached, the new file is kept in this browser and you can retry or keep it there
   if Drive is slow or offline.
 - **Tokens** are held in memory only and renewed silently. Only "a Google account is linked" is remembered, never a
   token. We do not store any Google token in our database.
-- **Conflicts.** Before each upload the file's version in Drive is compared with the last one seen. If it changed
-  elsewhere, nothing is overwritten and you choose: *Keep mine*, *Keep Drive's*, or *Save a copy*.
+- **Other devices.** A map is checked against Drive when it opens, when the tab is shown or focused, when the connection
+  returns, and every minute while it is visible. Changes from another device come in quietly ("Updated from another device").
+  If both devices changed the map, the two are **merged by topic** and nothing is overwritten ("Merged changes from another
+  device"); a clash on the same field keeps the newer and saves the other under *Recover earlier version*. Only content that
+  cannot be merged shows the *Keep mine*, *Keep Drive's*, *Save a copy* choice. See `docs/drive-sync-merge.md`.
 - **Sign-in lapses or access is removed.** A bar asks you to reconnect; local copies stay safe. Disconnecting revokes
   the token with Google.
 - **Drive full.** The status shows "Not saved" with the reason; the local copy is kept.

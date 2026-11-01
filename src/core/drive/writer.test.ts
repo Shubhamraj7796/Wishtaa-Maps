@@ -33,17 +33,19 @@ describe('the writer marker', () => {
   })
 
   it('the revision we last wrote is not a change, whatever the clocks or version say', () => {
-    expect(classify(base, remote({ modifiedTime: '2099-01-01T00:00:00.000Z' }))).toBe('same')
-    expect(classify(base, remote({ modifiedTime: '1999-01-01T00:00:00.000Z' }))).toBe('same')
+    expect(classify(base, remote({ modifiedTime: '2099-01-01T00:00:00.000Z' }), 'A')).toBe('same')
+    expect(classify(base, remote({ modifiedTime: '1999-01-01T00:00:00.000Z' }), 'A')).toBe('same')
   })
 
-  it('a newer revision carrying our marker is our own write (for example one whose reply was lost)', () => {
-    expect(classify(base, remote({ headRevisionId: 'r2', md5Checksum: 'm2', appProperties: { editorSessionId: 'A', writeCounter: '5' } }))).toBe('ours')
+  it('a newer revision carrying THIS tab’s marker is our own write (for example one whose reply was lost)', () => {
+    expect(classify(base, remote({ headRevisionId: 'r2', md5Checksum: 'm2', appProperties: { editorSessionId: 'A', writeCounter: '5' } }), 'A')).toBe('ours')
   })
 
   it('a newer revision with another session, or no marker, is another writer', () => {
-    expect(classify(base, remote({ headRevisionId: 'r2', md5Checksum: 'm2', appProperties: { editorSessionId: 'B', writeCounter: '1' } }))).toBe('external')
-    expect(classify(base, remote({ headRevisionId: 'r2', md5Checksum: 'm2' }))).toBe('external')
+    expect(classify(base, remote({ headRevisionId: 'r2', md5Checksum: 'm2', appProperties: { editorSessionId: 'B', writeCounter: '1' } }), 'A')).toBe('external')
+    expect(classify(base, remote({ headRevisionId: 'r2', md5Checksum: 'm2' }), 'A')).toBe('external')
+    // The same session as the base is not enough: the base was adopted from the other writer, so a later write of theirs is not ours.
+    expect(classify({ ...base, session: 'B', counter: 1 }, remote({ headRevisionId: 'r2', md5Checksum: 'm2', appProperties: { editorSessionId: 'B', writeCounter: '2' } }), 'A')).toBe('external')
   })
 
   it('says in plain words who wrote it', () => {

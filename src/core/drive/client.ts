@@ -30,6 +30,8 @@ export interface DriveFileMeta {
 export interface DriveApi {
   /** True when Drive can be used right now without asking the user anything (connected, with a live token). */
   available(): boolean
+  /** True when a check is worth trying: linked to a Google account, even if the access token has to be renewed first. */
+  canCheck?(): boolean
   /** Creates the "Wishtaa Maps" folder on first use and returns its id. */
   ensureAppFolder(): Promise<string>
   meta(id: string): Promise<DriveFileMeta>
@@ -61,6 +63,8 @@ export interface TokenProvider {
   refresh(): Promise<string>
   /** Linked to a Google account, with a token ready to use (no sign-in prompt needed). */
   ready(): boolean
+  /** Linked to a Google account (the token may still need renewing, which happens silently). */
+  connected?(): boolean
 }
 
 export interface FolderCache {
@@ -107,11 +111,17 @@ export class DriveClient implements DriveApi {
     return this.tokens.ready()
   }
 
+  /** A page that has just loaded has no access token yet (they live in memory only), but it can get one silently, so a check is still worth trying. */
+  canCheck() {
+    return this.tokens.connected ? this.tokens.connected() : this.tokens.ready()
+  }
+
   private async request(url: string, init: RequestInit = {}, retried = false): Promise<Response> {
     const token = await this.tokens.getToken()
     let res: Response
     try {
-      res = await this.fetchImpl(url, { ...init, headers: { ...(init.headers as Record<string, string>), Authorization: `Bearer ${token}` } })
+      // Never from a cache: a stale answer from Drive would show an old map or accept an old revision.
+      res = await this.fetchImpl(url, { cache: 'no-store', ...init, headers: { ...(init.headers as Record<string, string>), Authorization: `Bearer ${token}` } })
     } catch {
       throw new DriveError('offline', 'No connection to Google Drive. Changes are kept here and will sync when you are back online.')
     }

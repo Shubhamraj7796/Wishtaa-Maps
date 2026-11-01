@@ -12,6 +12,7 @@ const resumePictureUploads = vi.hoisted(() => vi.fn(async () => undefined))
 vi.mock('@/app/repo', () => ({
   pictureSync: { subscribe: (fn: () => void) => (listeners.add(fn), () => void listeners.delete(fn)), getStatus: () => status },
   resumePictureUploads,
+  driveRepository: { subscribeSync: () => () => undefined, syncInfoOf: () => ({ state: 'idle', syncedAt: null }) },
 }))
 import { SaveStatus } from './SaveStatus'
 

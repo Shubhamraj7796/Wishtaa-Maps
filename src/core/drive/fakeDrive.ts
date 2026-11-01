@@ -51,6 +51,10 @@ export class FakeDrive implements DriveApi {
     return this.isConnected
   }
 
+  canCheck() {
+    return this.isConnected
+  }
+
   private store(name: string, mimeType: string, parents: string[], body: string, appProperties?: Record<string, string>): DriveFileMeta {
     const id = `drive-${++this.n}`
     const meta: DriveFileMeta = { id, name, mimeType, modifiedTime: this.tick(), version: '1', parents, md5Checksum: checksum(body), headRevisionId: `rev-${id}-1`, ...(appProperties ? { appProperties: { ...appProperties } } : {}) }

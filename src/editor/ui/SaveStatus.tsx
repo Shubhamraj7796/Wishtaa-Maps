@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react'
 import { Icon } from '@/ui/icons'
-import { pictureSync, resumePictureUploads } from '@/app/repo'
+import { driveRepository, pictureSync, resumePictureUploads } from '@/app/repo'
 import { PAUSE_TEXT, resumeLabel } from '@/core/drive/pictures'
 import { uploadingText } from '@/core/drive/progress'
 import { retrySave } from '../session'
@@ -43,6 +43,8 @@ function CloudOff() {
   )
 }
 
+const NONE = { state: 'idle', syncedAt: null } as const
+
 /** The single source of truth for save status (header, next to the map name). */
 export function SaveStatus() {
   const status = useEditor((s) => s.save.status)
@@ -53,6 +55,8 @@ export function SaveStatus() {
   const readOnly = useEditor((s) => s.readOnly)
   const up = useSyncExternalStore(pictureSync.subscribe, pictureSync.getStatus, pictureSync.getStatus)
 
+  const fileId = useEditor((s) => s.fileId)
+  const sync = useSyncExternalStore(driveRepository.subscribeSync, () => (fileId ? driveRepository.syncInfoOf(fileId) : NONE), () => NONE)
   const time = savedAt ? new Date(savedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : null
   const label =
     status === 'saving' ? 'Saving...' : status === 'saved' ? 'Saved' : status === 'error' ? 'Not saved - retry' : 'Offline - will sync'
@@ -113,6 +117,21 @@ export function SaveStatus() {
       {up.pictures > 0 && !up.pausedReason && (
         <span data-testid="pictures-uploading" title="The map itself is saved. Pictures (in all your maps) go up in the background and never hold up your editing." className="mt-0.5 hidden max-w-[16rem] truncate text-[11px] text-muted sm:block">
           {up.mode === 'manual' && up.active === 0 ? `${up.pictures} picture${up.pictures === 1 ? '' : 's'} waiting for Sync` : uploadingText(up)}
+        </span>
+      )}
+      {sync.state === 'checking' && (
+        <span data-testid="sync-checking" className="mt-0.5 max-w-[16rem] truncate text-[11px] text-muted">
+          Checking for the latest version...
+        </span>
+      )}
+      {sync.state === 'offline' && (
+        <span data-testid="sync-offline" title="Google Drive could not be reached. This is the copy kept on this device; it is checked again when the connection returns." className="mt-0.5 max-w-[16rem] truncate text-[11px] text-warn">
+          Offline: may be out of date
+        </span>
+      )}
+      {sync.state === 'latest' && sync.syncedAt !== null && (
+        <span data-testid="sync-latest" className="mt-0.5 hidden max-w-[16rem] truncate text-[11px] text-muted sm:block">
+          Last synced: {new Date(sync.syncedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
         </span>
       )}
       {otherTab && (

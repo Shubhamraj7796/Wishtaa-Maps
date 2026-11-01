@@ -1,3 +1,4 @@
+import { openRecover } from './RecoverDialog'
 import { useEffect, useRef, useState, type DragEvent } from 'react'
 import type { FileRecord } from '@/core/files/types'
 import { useFiles } from './FilesContext'
@@ -107,6 +108,7 @@ function Menu({ file, onClose }: { file: FileRecord; onClose: () => void }) {
             {file.type !== 'folder' && item('Share a copy', <Share2 size={15} aria-hidden="true" />, () => void f.shareCopy(file))}
             {file.type !== 'folder' && file.storage === 'local' && drive.configured && item('Move to Google Drive', <Cloud size={15} aria-hidden="true" />, () => void drive.moveToDrive(file))}
             {file.type !== 'folder' && file.storage === 'drive' && item('Move to this browser', <HardDrive size={15} aria-hidden="true" />, () => f.setDialog({ kind: 'moveLocal', file}))}
+            {file.type !== 'folder' && file.storage === 'drive' && item('Recover earlier version…', <Download size={15} aria-hidden="true" />, () => openRecover(file.id))}
             {file.type !== 'folder' && file.storage === 'drive' && item('Stop syncing with Drive', <Cloud size={15} aria-hidden="true" />, () => void drive.keepLocal(file))}
             {item(file.starred ? 'Remove star' : 'Star', <Star size={15} aria-hidden="true" />, () => void f.toggleStar(file))}
             {item('Move to bin', <Trash2 size={15} aria-hidden="true" />, () => void f.trash([file.id]), true)}

@@ -1,3 +1,4 @@
+import { RecoverHost } from './RecoverDialog'
 import { createContext, useContext, useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { NavLink, Outlet, useLocation, useMatch, useNavigate, useSearchParams } from 'react-router-dom'
 import { useSettings } from '@/stores/settings'
@@ -226,6 +227,7 @@ export function Shell(): ReactNode {
           <UpdateBar />
           <DriveBanner />
           <ConflictPrompt />
+          <RecoverHost />
           <div className={`min-h-0 flex-1 ${immersive ? "overflow-hidden" : "overflow-y-auto"}`}>
             <Outlet />
           </div>

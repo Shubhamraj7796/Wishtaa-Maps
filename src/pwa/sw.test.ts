@@ -111,6 +111,8 @@ describe('what the worker touches', () => {
   it('never touches Google Drive, Google sign-in or any other address that is not this site', async () => {
     for (const url of [
       'https://www.googleapis.com/drive/v3/files?q=x',
+      'https://www.googleapis.com/drive/v3/files/abc123?fields=id,headRevisionId,md5Checksum,modifiedTime,appProperties',
+      'https://www.googleapis.com/drive/v3/files/abc123?alt=media',
       'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',
       'https://accounts.google.com/gsi/client',
       'https://apis.google.com/js/api.js',

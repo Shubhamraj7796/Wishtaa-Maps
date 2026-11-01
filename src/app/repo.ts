@@ -1,4 +1,5 @@
 import { DriveRepository, type PicturesIntegration } from '@/core/drive/repository'
+import { IndexedDbSyncStore } from '@/core/drive/syncStore'
 import type { BlobStores } from '@/core/drive/format'
 import { IndexedDbLedger, PictureFetcher, PictureSync, type PictureKind, type PictureSource } from '@/core/drive/pictures'
 import { createLocalRepository } from '@/core/files/idb'
@@ -99,7 +100,7 @@ const pictures: PicturesIntegration = {
  * Files kept in this browser (IndexedDB), with Google Drive layered on top for files that live there.
  * Our own cloud will implement the same interface and can be swapped in without touching the screens.
  */
-export const driveRepository = new DriveRepository(createLocalRepository(), driveClient, { blobs: () => blobs, storage: storage(), pictures })
+export const driveRepository = new DriveRepository(createLocalRepository(), driveClient, { blobs: () => blobs, storage: storage(), pictures, syncStore: new IndexedDbSyncStore() })
 
 /** The file repository the whole app uses. */
 export const repository: FileRepository = driveRepository

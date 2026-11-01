@@ -11,6 +11,8 @@ import { sha256Hex } from '../images/sha256'
 import type { PictureRef } from './format'
 import type { PictureSync } from './pictures'
 import type { DriveMeta } from '../files/types'
+import { mergeMaps, type FieldConflict } from './merge'
+import type { SyncStore } from './syncStore'
 
 export interface DriveConflict {
   fileId: string
@@ -33,6 +35,27 @@ export interface DriveRepositoryOptions {
    * Pictures as separate Drive files. Without it a map file carries its pictures inside (the older way, still used by tests of it).
    */
   pictures?: PicturesIntegration
+  /** Keeps the last version both sides had (the base of a merge) and earlier versions that lost a clash. */
+  syncStore?: SyncStore
+  /** The clock (tests set it). */
+  now?: () => number
+}
+
+/** What is known about how a Drive map stands with Drive, for the status line. */
+export interface SyncInfo {
+  state: 'idle' | 'checking' | 'latest' | 'offline'
+  /** When Drive was last reached and the map matched it (milliseconds), or null. */
+  syncedAt: number | null
+}
+
+/** A change that came from another device and is now in this device's copy. */
+export interface RemoteChange {
+  fileId: string
+  kind: 'updated' | 'merged'
+  /** The copy here before the other device's changes came in, and after: the difference is what to show. */
+  before: Uint8Array | null
+  content: Uint8Array
+  conflicts: FieldConflict[]
 }
 
 export interface PicturesIntegration {
@@ -51,6 +74,9 @@ export function withExtras(prev: DriveMeta | null | undefined, next: DriveMeta, 
   return { ...out, ...extra }
 }
 
+/** How long opening a map waits for Drive before showing the copy kept here. */
+export const OPEN_WAIT_MS = 8000
+const IDLE: SyncInfo = { state: 'idle', syncedAt: null }
 const DIRTY_KEY = 'wishtaamaps:drive-unsynced'
 /** The Drive property that carries a file's "open in Read mode by default" protection. */
 export const READ_ONLY_PROP = 'wishtaaReadOnly'
@@ -69,6 +95,8 @@ const chains = new Map<string, Promise<unknown>>()
  * if it moved, someone changed the file elsewhere, and the user chooses which version to keep.
  */
 export class DriveRepository implements FileRepository {
+  private infoMap = new Map<string, SyncInfo>()
+  private changeListeners = new Set<(c: RemoteChange) => void>()
   private conflictMap = new Map<string, DriveConflict>()
   private conflictList: DriveConflict[] = []
   private syncListeners = new Set<() => void>()
@@ -141,13 +169,13 @@ export class DriveRepository implements FileRepository {
    */
   async refresh(id: string): Promise<'updated' | 'same' | 'skipped'> {
     const f = await this.local.get(id)
-    if (!this.isDrive(f) || !this.api.available()) return 'skipped'
+    if (!this.isDrive(f) || !this.reachable()) return 'skipped'
     try {
       return await this.lock(id, async () => {
         const remote = await this.api.meta(f.contentRef)
         if (remote.trashed) return 'skipped'
         await this.adoptProtection(f, remote)
-        if (classify(f.driveMeta, remote) !== 'external') return 'same'
+        if (classify(f.driveMeta, remote, this.session) !== 'external') return 'same'
         if (this.unsynced.has(id)) return 'skipped' // edits made here are not sent yet: leave them for Edit mode to sort out
         await this.pull(f, remote)
         return 'updated'
@@ -282,7 +310,180 @@ export class DriveRepository implements FileRepository {
     await this.local.update(f.id, { driveMeta: withExtras(f.driveMeta, baseOf(remote), this.remoteExtras(un, remote)), ...(un.version >= 2 ? { imageIds: un.pictureRefs.map((p) => p.id) } : {}) })
     driveLog('pulled', { file: f.name, stored: baseOf(remote) })
     this.markUnsynced(f.id, false)
+    await this.rememberBase(f.id, un.content)
     return un.content
+  }
+
+  // ---- checking Drive and merging ------------------------------------------------------------------------
+
+  private get clock() {
+    return this.opts.now ?? Date.now
+  }
+
+  /** Worth asking Drive: linked to a Google account (a missing access token is renewed silently by the request itself). */
+  private reachable() {
+    return this.api.canCheck ? this.api.canCheck() : this.api.available()
+  }
+
+  /** How a Drive map stands with Drive, for the status line. */
+  syncInfoOf = (id: string): SyncInfo => this.infoMap.get(id) ?? IDLE
+
+  private setInfo(id: string, patch: Partial<SyncInfo>) {
+    const cur = this.syncInfoOf(id)
+    const next = { ...cur, ...patch }
+    if (next.state === cur.state && next.syncedAt === cur.syncedAt) return
+    this.infoMap.set(id, next)
+    this.emitSync()
+  }
+
+  /** Drive was reached and holds what we hold. */
+  private matched(id: string) {
+    this.setInfo(id, { state: 'latest', syncedAt: this.clock() })
+  }
+
+  /** Called with every change that came in from another device and was put into this device's copy. */
+  onRemoteChange(fn: (c: RemoteChange) => void): () => void {
+    this.changeListeners.add(fn)
+    return () => void this.changeListeners.delete(fn)
+  }
+
+  private emitChange(c: RemoteChange) {
+    this.changeListeners.forEach((l) => l(c))
+  }
+
+  /** The earlier versions kept from merges (what lost a clash), newest first. */
+  async recoverable(id: string) {
+    return (await this.opts.syncStore?.listRecoverable(id)) ?? []
+  }
+
+  async recoverableDelete(id: string, key: string) {
+    await this.opts.syncStore?.deleteRecoverable(id, key)
+  }
+
+  /** Puts a kept earlier version back as the current one (it is saved and sent like any edit). Returns its content. */
+  async recoverVersion(id: string, key: string): Promise<Uint8Array | null> {
+    const v = (await this.recoverable(id)).find((x) => x.key === key)
+    if (!v) return null
+    await this.saveContent(id, v.content, saveMetaFromContent(id, v.content))
+    return v.content
+  }
+
+  /** Remembers the content both sides now have, the starting point of the next merge. */
+  private async rememberBase(id: string, content: Uint8Array) {
+    try {
+      await this.opts.syncStore?.putBase(id, content)
+    } catch {
+      /* a merge without a base still works, it just cannot see deletions */
+    }
+  }
+
+  /** A file that matches Drive but has no base yet (saved by an older version of the app): its content is the base. */
+  private async ensureBase(f: FileRecord) {
+    const store = this.opts.syncStore
+    if (!store || this.unsynced.has(f.id)) return
+    if (await store.getBase(f.id)) return
+    const mine = await this.local.loadContent(f.id)
+    if (mine) await this.rememberBase(f.id, mine)
+  }
+
+  /**
+   * Both this device and Drive changed the map since they last matched: combine them by topic (see merge.ts), keep what lost a clash
+   * as a recoverable version, store the result here and make Drive's revision the new base. The result is NOT yet in Drive: it
+   * stays unsynced and the caller uploads it (which checks the revision again first). Null when the two cannot be read or merged.
+   */
+  private async mergeLocked(f: FileRecord & { contentRef: string }, remote: DriveFileMeta): Promise<Uint8Array | null> {
+    if (!this.opts.syncStore) return null // nowhere to keep the base and the earlier versions: ask the person instead
+    try {
+      const un = unpackFile(await this.api.download(f.contentRef))
+      if (!isReadableContent(un.content)) return null
+      await restoreBlobs(un, this.opts.blobs?.())
+      const mine = await this.local.loadContent(f.id)
+      if (!mine) return null
+      const base = (await this.opts.syncStore?.getBase(f.id)) ?? null
+      const result = mergeMaps(base, mine, un.content, { localAt: f.modifiedAt, remoteAt: Date.parse(remote.modifiedTime) || 0 })
+      const at = this.clock()
+      const store = this.opts.syncStore
+      if (store && result.conflicts.length) {
+        const fields = result.conflicts.slice(0, 6).map((c) => c.label)
+        const lostHere = result.conflicts.some((c) => c.kept === 'remote')
+        const lostThere = result.conflicts.some((c) => c.kept === 'local')
+        if (lostHere) await store.addRecoverable(f.id, { key: `${at}-here`, at, from: 'local', note: 'Your version on this device, before it was merged with a newer change from another device', fields, content: mine })
+        if (lostThere) await store.addRecoverable(f.id, { key: `${at}-there`, at, from: 'remote', note: 'The version from the other device, before it was merged with newer changes made here', fields, content: un.content })
+      }
+      await this.local.saveContent(f.id, result.content, saveMetaFromContent(f.id, result.content))
+      await this.local.update(f.id, { driveMeta: withExtras(f.driveMeta, baseOf(remote), this.remoteExtras(un, remote)) })
+      await this.rememberBase(f.id, un.content)
+      this.markUnsynced(f.id, true)
+      driveLog('merged', { file: f.name, conflicts: result.conflicts.length, fromRemote: result.fromRemote, fromLocal: result.fromLocal })
+      this.emitChange({ fileId: f.id, kind: 'merged', before: mine, content: result.content, conflicts: result.conflicts })
+      return result.content
+    } catch {
+      return null
+    }
+  }
+
+  /**
+   * Compares the file with Drive (metadata only) and brings its copy here up to date: nothing to do, a newer version taken as it is
+   * (no edits here), or both merged and sent. Used when a map opens and, while it is open, when the tab is shown, gets the focus,
+   * the connection returns, and every minute. Returns what happened.
+   */
+  async checkRemote(id: string): Promise<'same' | 'updated' | 'merged' | 'unavailable'> {
+    const f = await this.local.get(id)
+    if (!this.isDrive(f)) return 'same'
+    if (!this.reachable()) {
+      this.setInfo(id, { state: 'offline' })
+      return 'unavailable'
+    }
+    this.setInfo(id, { state: 'checking' })
+    try {
+      return await this.lock(id, async () => (await this.reconcile(f)).kind)
+    } catch {
+      this.setInfo(id, { state: 'offline' })
+      return 'unavailable'
+    }
+  }
+
+  /** Must run inside lock(id). */
+  private async reconcile(f: FileRecord & { contentRef: string }): Promise<{ kind: 'same' | 'updated' | 'merged'; content: Uint8Array | null }> {
+    const id = f.id
+    const remote = await this.api.meta(f.contentRef)
+    if (remote.trashed) {
+      this.matched(id)
+      return { kind: 'same', content: await this.local.loadContent(id) }
+    }
+    await this.adoptProtection(f, remote)
+    if (classify(f.driveMeta, remote, this.session) !== 'external') {
+      await this.ensureBase(f)
+      this.matched(id)
+      return { kind: 'same', content: await this.local.loadContent(id) }
+    }
+    if (!this.unsynced.has(id)) {
+      const before = await this.local.loadContent(id)
+      const content = await this.pull(f, remote)
+      this.matched(id)
+      this.emitChange({ fileId: id, kind: 'updated', before, content, conflicts: [] })
+      return { kind: 'updated', content }
+    }
+    if (await this.sameContent(f)) {
+      await this.local.update(id, { driveMeta: withExtras(f.driveMeta, baseOf(remote)) }) // identical: nothing to choose, adopt silently
+      this.markUnsynced(id, false)
+      this.clearConflict(id)
+      this.matched(id)
+      return { kind: 'same', content: await this.local.loadContent(id) }
+    }
+    // Edits here that are not in Drive yet AND a newer version in Drive: merge them, then send the result.
+    const merged = await this.mergeLocked(f, remote)
+    if (!merged) {
+      this.setConflict(id, remote)
+      return { kind: 'same', content: await this.local.loadContent(id) }
+    }
+    try {
+      await this.pushLocked(id)
+      this.matched(id)
+    } catch {
+      /* offline or Drive busy: the merged copy is kept here, unsynced, and goes up with the next save */
+    }
+    return { kind: 'merged', content: await this.local.loadContent(id) }
   }
 
   // ---- uploading -----------------------------------------------------------------------------------------
@@ -296,7 +497,7 @@ export class DriveRepository implements FileRepository {
    * The upload itself. Must run inside `lock(id)`, which serializes everything that writes this file's record or its Drive
    * copy: a save never starts before the previous one has stored its new base.
    */
-  private async pushLocked(id: string): Promise<void> {
+  private async pushLocked(id: string, attempt = 0): Promise<void> {
     const f = await this.local.get(id) // fresh: the record is the single source of the base (shared by tabs of this browser)
     if (!this.isDrive(f)) return
     let remote: DriveFileMeta
@@ -310,7 +511,7 @@ export class DriveRepository implements FileRepository {
       throw e
     }
     if (remote.trashed) throw new DriveError('notfound', 'This file was moved to the Google Drive bin. Restore it there, or keep it in this browser.')
-    const state = classify(f.driveMeta, remote)
+    const state = classify(f.driveMeta, remote, this.session)
     const external = state === 'external'
     driveLog('check', {
       file: f.name,
@@ -329,6 +530,9 @@ export class DriveRepository implements FileRepository {
         this.clearConflict(id)
         return
       }
+      // Someone else saved a newer version: never overwrite it. Combine the two by topic and send the combination.
+      const merged = attempt < 4 ? await this.mergeLocked(f, remote) : null
+      if (merged) return this.pushLocked(id, attempt + 1) // looks at Drive again right before uploading
       this.setConflict(id, remote)
       throw new DriveConflictError(`This file was changed in Google Drive. ${describeWriter(remote, { session: this.session, origin: this.origin })} Choose which version to keep.`)
     }
@@ -353,6 +557,7 @@ export class DriveRepository implements FileRepository {
         void pics.sync.enqueue(f.id, folderId, ids).catch(() => undefined)
         this.markUnsynced(id, false)
         driveLog('skipped-same', { file: f.name })
+        this.matched(id)
         return
       }
     }
@@ -367,6 +572,8 @@ export class DriveRepository implements FileRepository {
     await this.local.update(id, { driveMeta: next })
     driveLog('saved', { file: f.name, stored: next })
     this.markUnsynced(id, false)
+    await this.rememberBase(id, content)
+    this.matched(id)
     // The map is safe now. Its pictures follow in the background (each one at most once); editing never waits for them.
     if (pics && folderId) void pics.sync.enqueue(f.id, folderId, ids).catch(() => undefined)
   }
@@ -463,28 +670,31 @@ export class DriveRepository implements FileRepository {
    */
   async loadContent(id: string): Promise<Uint8Array | null> {
     const f = await this.local.get(id)
-    if (!this.isDrive(f) || !this.api.available()) return this.local.loadContent(id)
-    try {
-      return await this.lock(id, async () => {
-        const remote = await this.api.meta(f.contentRef)
-        if (remote.trashed) return this.local.loadContent(id)
-        await this.adoptProtection(f, remote)
-        const state = classify(f.driveMeta, remote)
-        if (state !== 'external') return this.local.loadContent(id)
-        if (this.unsynced.has(id)) {
-          if (await this.sameContent(f)) {
-            await this.local.update(id, { driveMeta: withExtras(f.driveMeta, baseOf(remote)) }) // identical: nothing to choose, adopt silently
-            this.markUnsynced(id, false)
-            this.clearConflict(id)
-            return this.local.loadContent(id)
-          }
-          this.setConflict(id, remote)
-          return this.local.loadContent(id)
-        }
-        return this.pull(f, remote)
-      })
-    } catch {
+    if (!this.isDrive(f)) return this.local.loadContent(id)
+    // Always ask Drive first, even when this page has no access token yet (it is renewed silently by the request).
+    if (!this.reachable()) {
+      this.setInfo(id, { state: 'offline' })
       return this.local.loadContent(id)
+    }
+    this.setInfo(id, { state: 'checking' })
+    // A slow Drive never holds the map up: after a few seconds the copy kept here is shown, and the check carries on (its result is
+    // put into the open map when it arrives).
+    const work = this.lock(id, async () => (await this.reconcile(f)).content)
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const slow = new Promise<'slow'>((r) => void (timer = setTimeout(() => r('slow'), OPEN_WAIT_MS)))
+    try {
+      const got = await Promise.race([work, slow])
+      if (got === 'slow') {
+        work.catch(() => this.setInfo(id, { state: 'offline' }))
+        return this.local.loadContent(id)
+      }
+      return got
+    } catch {
+      // Offline, or Drive could not be reached: the copy kept here is shown, marked as possibly out of date.
+      this.setInfo(id, { state: 'offline' })
+      return this.local.loadContent(id)
+    } finally {
+      clearTimeout(timer)
     }
   }
 

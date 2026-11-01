@@ -17,6 +17,7 @@ import { getTheme } from './scene'
 import { lockDoc } from '@/core/model/lock'
 import { closedPdfPanel, useEditor, type ReadReason } from './store'
 import { unwatchFile, watchFile } from './tabwatch'
+import { startRemoteSync } from './remoteSync'
 
 export { mapDoc }
 
@@ -318,7 +319,8 @@ async function doOpen(fileId: string, repo: FileRepository, opts: OpenOptions = 
   })
   // Every change to the document (edits, undo/redo, images, settings) is saved; loading is not.
   const onUpdate = (_u: Uint8Array, origin: unknown) => {
-    if (origin !== 'load' && !useEditor.getState().readOnly) saver.markDirty()
+    // Loading and what came in from another device are not edits of this device's: they are not saved again.
+    if (origin !== 'load' && origin !== 'refresh' && !useEditor.getState().readOnly) saver.markDirty()
   }
   mapDoc.ydoc.on('update', onUpdate)
   disposers.push(() => {
@@ -336,6 +338,8 @@ async function doOpen(fileId: string, repo: FileRepository, opts: OpenOptions = 
     /* ignore */
   }
   lockDoc(mapDoc.ydoc, !!opts.readOnly)
+  // A Drive map keeps checking for newer versions from other devices while it is open.
+  if (file.storage === 'drive') disposers.push(startRemoteSync(fileId, { hasUnsaved: () => saver.hasUnsaved, flush: () => saver.flush() }))
   if (recovered && !opts.readOnly) saver.markDirty() // put the recovered copy into the file
   return file
 }

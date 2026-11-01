@@ -60,20 +60,23 @@ export type SyncState =
  * Is what Drive holds now our own, or did someone else change it?
  *
  *  1. Same revision, or same content checksum: nothing changed (Drive's housekeeping bumps `version` only).
- *  2. A different revision whose writer marker is ours (same session, a counter not older than our last write): our own write.
+ *  2. A different revision whose writer marker is THIS tab's own session (and a counter not older than our last write): our own
+ *     write, for example one whose reply was lost. A marker of any OTHER session is someone else's, even when it is the session
+ *     our base was adopted from (a base fetched from Drive carries the marker of whoever wrote that revision, and that writer's
+ *     next save must not look like ours: that mistake showed a phone the old map and let it overwrite the laptop's newer one).
  *  3. Anything else with a different revision or checksum: another editor (another tab, address, device, or Drive itself).
  *
  * `modifiedTime` is used only for old bases that recorded neither a revision nor a checksum. Client and Drive clocks are
  * never compared with each other.
  */
-export function classify(base: DriveMeta | null | undefined, remote: Pick<DriveFileMeta, 'modifiedTime' | 'md5Checksum' | 'headRevisionId' | 'appProperties'>): SyncState {
+export function classify(base: DriveMeta | null | undefined, remote: Pick<DriveFileMeta, 'modifiedTime' | 'md5Checksum' | 'headRevisionId' | 'appProperties'>, mySession: string | null): SyncState {
   if (!base) return 'same'
   const sameRev = base.revisionId && remote.headRevisionId ? base.revisionId === remote.headRevisionId : undefined
   if (sameRev) return 'same'
   const sameMd5 = base.md5 && remote.md5Checksum ? base.md5 === remote.md5Checksum : undefined
   if (sameMd5) return 'same'
   const m = markerOf(remote)
-  if (m && base.session && m.session === base.session && base.counter !== undefined && m.counter >= base.counter) return 'ours'
+  if (m && mySession && m.session === mySession && (base.session !== mySession || base.counter === undefined || m.counter >= base.counter)) return 'ours'
   if (sameRev === false || sameMd5 === false) return 'external'
   // Old base with no revision or checksum on one side: the only evidence left is the modified time.
   const was = Date.parse(base.modifiedTime)
@@ -83,7 +86,7 @@ export function classify(base: DriveMeta | null | undefined, remote: Pick<DriveF
 }
 
 /** True only when someone else changed the file's content. */
-export const isExternalChange = (base: DriveMeta | null | undefined, remote: Parameters<typeof classify>[1]) => classify(base, remote) === 'external'
+export const isExternalChange = (base: DriveMeta | null | undefined, remote: Parameters<typeof classify>[1], mySession: string | null = null) => classify(base, remote, mySession) === 'external'
 
 /** A plain-language line about who last wrote the file in Drive, for the conflict dialog and the save details. */
 export function describeWriter(remote: Pick<DriveFileMeta, 'appProperties'>, here: { session: string; origin?: string }): string {
