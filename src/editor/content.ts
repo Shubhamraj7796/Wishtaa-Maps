@@ -6,7 +6,7 @@ import { addBoundary, addCallout, addRelationship, addSummary, deleteObject, upd
 import type { BoundaryShape, ObjectKind, ObjectRef } from '@/core/model/objects'
 import type { ImagePosition } from '@/core/model/topic'
 import { setSetting } from '@/core/settings'
-import { centerOn, primary, selectIds, selectOnly } from './actions'
+import { centerOn, ensureVisible, primary, selectIds, selectOnly } from './actions'
 import { mapDoc } from './mapdoc'
 import { showNotice } from './notice'
 import { mayEdit } from './readmode'
@@ -202,6 +202,9 @@ export function openTab(tab: PanelTab, section?: DetailsSection) {
 
 export function setView(view: ViewMode) {
   set({ view })
+  // Back on the map: the topic that was selected in the outline is brought into view (the map and the outline share the selection).
+  const id = get().selected[0]
+  if (view === 'map' && id) setTimeout(() => ensureVisible(id), 80)
 }
 
 export function toggleNumbering() {

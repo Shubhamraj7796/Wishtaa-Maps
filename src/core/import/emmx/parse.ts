@@ -505,7 +505,8 @@ async function convertBinaryPage(ctx: PageCtx, topics: BinTopic[], rels: Map<str
     add(ctx, 'reparented')
   }
   ctx.stats.topics += count
-  return { name: cleanName(root.text.split('\n')[0], fallbackName), root }
+  // The whole central topic, its lines joined by a space ("IND AS 116" and "Leases" make "IND AS 116 Leases").
+  return { name: cleanName(root.text.replace(/\s*\n\s*/g, ' '), fallbackName), root }
 }
 
 /**

@@ -5,7 +5,9 @@ import { setNote } from '@/core/model/content'
 import { sanitizeNote } from '@/core/sanitize'
 import { Icon } from '@/ui/icons'
 import { showPreview, startOcr } from '../content'
-import { loadImageBlob, useImageUrl } from '../images'
+import * as A from '../actions'
+import { loadImageBlob, removeImage, replaceImage, useImageUrl } from '../images'
+import { originalFor } from '../pictures/flow'
 import { mapDoc } from '../mapdoc'
 import { showNotice } from '../notice'
 import { OCR_LANGUAGES, ocrLines, recognizeText } from '../ocr'
@@ -38,6 +40,10 @@ function LightboxInner({ imageId }: { imageId: string }) {
   const at = Math.max(0, ids.indexOf(imageId))
   const [zoom, setZoom] = useState(1)
   const { url, missing } = useImageUrl(imageId)
+  const readOnly = useEditor((s) => s.readOnly)
+  const selected = useEditor((s) => s.selected)
+  // The topic this picture belongs to (the selected one if it has this picture), for the editing actions.
+  const topicId = selected.find((id) => topics[id]?.image?.imageId === imageId) ?? Object.keys(topics).find((id) => topics[id]?.image?.imageId === imageId)
   const close = useRef<HTMLButtonElement>(null)
   useEffect(() => close.current?.focus(), [])
   useEffect(() => setZoom(1), [imageId])
@@ -77,6 +83,24 @@ function LightboxInner({ imageId }: { imageId: string }) {
         <button type="button" aria-label="Actual size" title="Reset (0)" onClick={() => setZoom(1)} className="min-w-12 text-center tabular-nums">{Math.round(zoom * 100)}%</button>
         <button type="button" aria-label="Zoom in" title="Zoom in (+)" onClick={() => zoomBy(1)} className={btn}>+</button>
       </div>
+      {!readOnly && topicId && (
+        <div role="toolbar" aria-label="Picture actions" className="absolute left-4 top-4 flex flex-wrap items-center gap-2 rounded-full bg-surface/90 px-2 py-1 text-sm shadow" onPointerDown={(e) => e.stopPropagation()}>
+          <button type="button" className="rounded-full px-3 py-1 hover:bg-bg" onClick={() => { showPreview(null); void replaceImage(topicId) }}>
+            Replace
+          </button>
+          {originalFor(imageId) && (
+            <button type="button" className="rounded-full px-3 py-1 hover:bg-bg" onClick={() => { showPreview(null); useEditor.setState({ pictureDraft: { blob: originalFor(imageId) as Blob, source: 'upload', target: { kind: 'replace', id: topicId } } }) }}>
+              Crop again
+            </button>
+          )}
+          <button type="button" className="rounded-full px-3 py-1 hover:bg-bg" onClick={() => { useEditor.setState({ selected: [topicId], imageSelected: topicId }); showPreview(null); A.togglePanel('picture') }}>
+            Resize
+          </button>
+          <button type="button" className="rounded-full px-3 py-1 text-bad hover:bg-bg" onClick={() => { showPreview(null); removeImage(topicId) }}>
+            Delete picture
+          </button>
+        </div>
+      )}
       {url ? (
         <img src={url} alt="Full-size picture" style={{ maxWidth: zoom === 1 ? '100%' : 'none', maxHeight: zoom === 1 ? '100%' : 'none', width: zoom === 1 ? undefined : `${zoom * 100}%` }} className="rounded-md bg-white object-contain" onPointerDown={(e) => e.stopPropagation()} />
       ) : (

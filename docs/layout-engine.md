@@ -65,6 +65,7 @@ Notes:
 - Sub-topics stay on the side of their main topic. Adding or removing a main topic follows the rule at once (the topics glide for 0.3 s).
 - A main topic's stored `side` (only set by importing an `.emmx`) is honoured under Balanced and ignored while Clockwise or Reverse is chosen;
   it is not overwritten, so Balanced brings it back. There is no way to move a topic to the other side by hand yet, so there is no "Reset to automatic".
+- The **Outline** always shows the logical order of the children (see `docs/outline-view.md`); a branch direction changes only the map.
 - One undo step. Hidden for Right only, Left only, Top-down and every other layout; the choice stays stored with the map.
 - **`.emmx` files:** nothing is read for this. In the sample file (IND AS 2) the page and the central topic carry `<Layout V="8"/>`
   and no direction flag; `<LayoutDirection V="0"/>` appears only on two nested shapes. One sample is not enough to map it reliably, so imported

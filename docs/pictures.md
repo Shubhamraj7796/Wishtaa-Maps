@@ -34,3 +34,16 @@ is used where it exists (https and localhost), with a plain-JavaScript fallback 
 ## Touch
 Touch-friendly controls follow the device (`(pointer: coarse)` and `(hover: none)`), not the window width, so a tablet or phone asking for the
 "Desktop site" still gets 44 px targets and bottom sheets. Preferences > Touch-friendly controls: Auto (default) / Always on / Off.
+
+## Pictures paused
+The line next to "Saved" says how many pictures are waiting to go up to Google Drive, **in all your maps**. The map itself is always saved first; pictures follow in the background and never hold up editing. If they stop, the line says why and has a button:
+
+| Why | What it says | Button | Carries on by itself? |
+|---|---|---|---|
+| The Google sign-in expired (it is kept only in memory, so every reload needs it again) | sign in to Google Drive to continue | **Sign in** | **Yes**, as soon as a new sign-in arrives |
+| Access to a file or folder was removed in Drive | Google Drive no longer allows access | **Sign in** | No: Resume after fixing it in Drive |
+| Google Drive is full | Google Drive is full | **Resume** | No: free some space first |
+| You paused them (Preferences, Storage and picture uploads) | paused by you | **Resume** | No |
+| Data saver is on and "pause on data saver" is chosen | paused because data saver is on | **Sync now** | No |
+
+"Only when I tap Sync" is not a pause: the pictures wait, and **Sync now** sends them. A connection that drops only delays them (they retry with growing waits); that never counts as a pause. **Resume** also makes the ones that failed try again at once instead of waiting.

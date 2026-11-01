@@ -1,11 +1,16 @@
-import { memo, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { addChild, addSibling, deleteTopics, moveTopic, reorder, setCollapsed, setText } from '@/core/model/commands'
+import type { TopicImage } from '@/core/model/topic'
 import { buildIndex, childrenOf } from '@/core/model/tree'
 import { computeNumbers } from '@/core/numbering'
 import { Icon } from '@/ui/icons'
 import { selectOnly, toggleFold } from '../actions'
-import { viewTopics } from '../scene'
+import { showPreview } from '../content'
+import { noteViewportActivity, removeImage, replaceImage, useImageUrl, usePictureColor, useUpgrade, useViewMoving } from '../images'
 import { mapDoc } from '../mapdoc'
+import { offsets, pictureBox, rowHeight, ROW_H, scrollToShow, windowFor, type PictureBox } from '../outlineLayout'
+import { openAddPicture } from '../pictures/flow'
+import { viewTopics } from '../scene'
 import { useEditor } from '../store'
 import { MarkBadge } from './MarkBadge'
 
@@ -15,9 +20,16 @@ interface Row {
   hasKids: boolean
 }
 
+/** A line break in a topic's text is shown as a space here (the box below is one line); the stored text is not touched by it. */
+export const oneLine = (text: string) => text.replace(/\s*\r?\n\s*/g, ' ')
+
 interface RowProps {
   row: Row
+  top: number
+  height: number
   text: string
+  image: TopicImage | null
+  box: PictureBox | null
   marks: string[]
   collapsed: boolean
   number: string
@@ -27,53 +39,140 @@ interface RowProps {
   onKey: (e: React.KeyboardEvent<HTMLInputElement>, row: Row) => void
 }
 
-const OutlineRow = memo(function OutlineRow({ row, text, marks, collapsed, number, selected, readOnly, register, onKey }: RowProps) {
+/** The picture under a topic: the small version first, the full one only when it is shown large and the list is still. */
+function OutlinePicture({ topicId, image, box, label, selected, readOnly }: { topicId: string; image: TopicImage; box: PictureBox; label: string; selected: boolean; readOnly: boolean }) {
+  const moving = useViewMoving()
+  const dpr = typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1
+  const wantsFull = box.w * dpr > 300 // the small version is 256 px wide
+  const upgraded = useUpgrade(wantsFull && !moving)
+  const { url, missing, pending } = useImageUrl(image.imageId, { thumb: !(wantsFull && upgraded) })
+  const color = usePictureColor(image.imageId, true)
+  const last = useRef<{ id: string; url: string } | null>(null)
+  if (url) last.current = { id: image.imageId, url }
+  const shown = url ?? (last.current?.id === image.imageId ? last.current.url : null)
   return (
-    <li role="treeitem" aria-level={row.depth + 1} aria-selected={selected} aria-expanded={row.hasKids ? !collapsed : undefined} className={`flex items-center gap-1 rounded-ui pr-2 ${selected ? 'bg-brand/10' : ''}`} style={{ paddingLeft: row.depth * 22 + 4 }}>
+    <div className="relative" style={{ width: box.w, height: box.h }} data-outline-picture={topicId}>
       <button
         type="button"
-        aria-label={row.hasKids ? (collapsed ? 'Expand' : 'Collapse') : 'No sub topics'}
-        disabled={!row.hasKids}
-        onClick={() => (readOnly ? toggleFold(row.id) : setCollapsed(mapDoc, [row.id], !collapsed))}
-        className="grid h-7 w-6 shrink-0 place-items-center rounded text-muted hover:bg-bg disabled:opacity-0"
-      >
-        <Icon name={collapsed ? 'chevronRight' : 'chevronDown'} size={15} />
-      </button>
-      <span className="grid h-7 w-4 shrink-0 place-items-center" aria-hidden="true">
-        <span className="h-1.5 w-1.5 rounded-full bg-muted" />
-      </span>
-      {marks.map((m, i) => (
-        <MarkBadge key={`${m}-${i}`} mark={m} size={16} />
-      ))}
-      {number && <span className="shrink-0 text-sm text-muted">{number}</span>}
-      <input
-        key={`${row.id}:${text}`}
-        ref={(el) => register(row.id, el)}
-        defaultValue={text}
-        readOnly={readOnly}
-        aria-label={`Topic text, level ${row.depth + 1}`}
-        onFocus={() => selectOnly(row.id)}
-        onBlur={(e) => {
-          if (!readOnly && e.currentTarget.value !== text && e.currentTarget.value.trim()) setText(mapDoc, row.id, e.currentTarget.value)
+        aria-label={`Open picture: ${label}`}
+        title="Open the picture larger"
+        onClick={() => {
+          selectOnly(topicId)
+          useEditor.setState({ imageSelected: topicId })
+          showPreview(image.imageId)
         }}
-        onKeyDown={(e) => onKey(e, row)}
-        className="min-w-0 flex-1 bg-transparent py-1 text-sm outline-none"
-      />
+        className="block h-full w-full overflow-hidden rounded-md border border-line"
+        style={{ backgroundColor: color ?? 'rgba(128,128,128,0.2)', contain: 'layout paint' }}
+      >
+        {shown ? (
+          <img src={shown} alt={label} decoding="async" draggable={false} className="block h-full w-full object-contain" />
+        ) : (
+          <span className="grid h-full w-full place-items-center px-2 text-center text-xs text-muted">{missing ? 'Picture missing' : pending ? 'Picture is still uploading' : ''}</span>
+        )}
+      </button>
+      {selected && !readOnly && (
+        <div className="absolute right-1 top-1 flex gap-1">
+          <button type="button" aria-label="Replace the picture" title="Replace the picture" onClick={() => void replaceImage(topicId)} className="grid h-7 w-7 place-items-center rounded-full bg-surface text-ink shadow">
+            <Icon name="replace" size={14} />
+          </button>
+          <button type="button" aria-label="Delete the picture" title="Delete the picture" onClick={() => removeImage(topicId)} className="grid h-7 w-7 place-items-center rounded-full bg-surface text-bad shadow">
+            <Icon name="trash" size={14} />
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+const OutlineRow = memo(function OutlineRow({ row, top, height, text, image, box, marks, collapsed, number, selected, readOnly, register, onKey }: RowProps) {
+  const shown = oneLine(text)
+  const label = shown.trim() || 'Picture'
+  return (
+    <li
+      role="treeitem"
+      aria-level={row.depth + 1}
+      aria-selected={selected}
+      aria-expanded={row.hasKids ? !collapsed : undefined}
+      data-row={row.id}
+      className={`absolute left-0 right-0 rounded-ui pr-2 ${selected ? 'bg-brand/10' : ''}`}
+      style={{ top, height, paddingLeft: row.depth * 22 + 4 }}
+    >
+      <div className="flex items-center gap-1" style={{ height: ROW_H }}>
+        <button
+          type="button"
+          aria-label={row.hasKids ? (collapsed ? 'Expand' : 'Collapse') : 'No sub topics'}
+          disabled={!row.hasKids}
+          onClick={() => (readOnly ? toggleFold(row.id) : setCollapsed(mapDoc, [row.id], !collapsed))}
+          className="grid h-7 w-6 shrink-0 place-items-center rounded text-muted hover:bg-bg disabled:opacity-0"
+        >
+          <Icon name={collapsed ? 'chevronRight' : 'chevronDown'} size={15} />
+        </button>
+        <span className="grid h-7 w-4 shrink-0 place-items-center" aria-hidden="true">
+          <span className="h-1.5 w-1.5 rounded-full bg-muted" />
+        </span>
+        {marks.map((m, i) => (
+          <MarkBadge key={`${m}-${i}`} mark={m} size={16} />
+        ))}
+        {number && <span className="shrink-0 text-sm text-muted">{number}</span>}
+        <input
+          key={`${row.id}:${text}`}
+          ref={(el) => register(row.id, el)}
+          defaultValue={shown}
+          readOnly={readOnly}
+          placeholder={image ? 'Picture' : 'Empty topic'}
+          aria-label={`Topic text, level ${row.depth + 1}`}
+          onFocus={() => selectOnly(row.id)}
+          onBlur={(e) => {
+            if (!readOnly && e.currentTarget.value !== shown && e.currentTarget.value.trim()) setText(mapDoc, row.id, e.currentTarget.value)
+          }}
+          onKeyDown={(e) => onKey(e, row)}
+          className="min-w-0 flex-1 bg-transparent py-1 text-sm outline-none placeholder:italic placeholder:text-muted"
+        />
+        {selected && !readOnly && (
+          <button
+            type="button"
+            aria-label={image ? 'Replace picture' : 'Add picture'}
+            title={image ? 'Replace the picture' : 'Add a picture'}
+            onClick={() => openAddPicture(image ? { kind: 'replace', id: row.id } : { kind: 'topic', id: row.id })}
+            className="grid h-7 w-7 shrink-0 place-items-center rounded text-muted hover:bg-bg hover:text-ink"
+          >
+            <Icon name="image" size={15} />
+          </button>
+        )}
+      </div>
+      {image && box && (
+        <div style={{ paddingLeft: 24 + 16 + 8, paddingTop: 2 }}>
+          <OutlinePicture topicId={row.id} image={image} box={box} label={label} selected={selected} readOnly={readOnly} />
+        </div>
+      )}
     </li>
   )
 })
 
-/** The whole map as an editable indented list. Edits show up in the map immediately, and the other way round. */
+/** Where each file's outline was scrolled to, so switching to the map and back puts you where you were. */
+const scrolled = new Map<string, number>()
+
+/**
+ * The whole map as an editable indented list, with the pictures of picture-only topics shown under them. It is the same data as
+ * the map, never a copy: the order is the order of the children (a branch direction only changes where the map draws them), edits
+ * show up in the map at once and the other way round, and the selection and the fold state are shared. Only the rows near the screen
+ * are drawn, so a map with hundreds of pictures scrolls smoothly.
+ */
 export function OutlineView() {
   const saved = useEditor((s) => s.topics)
   const readOnly = useEditor((s) => s.readOnly)
   const folding = useEditor((s) => s.viewCollapsed)
   const topics = useMemo(() => viewTopics(saved, readOnly, folding), [saved, readOnly, folding])
   const rootId = useEditor((s) => s.rootId)
+  const fileId = useEditor((s) => s.fileId) ?? ''
   const selected = useEditor((s) => s.selected)
   const numbering = useEditor((s) => s.settings.numbering)
   const refs = useRef(new Map<string, HTMLInputElement>())
+  const scroller = useRef<HTMLDivElement>(null)
+  const list = useRef<HTMLUListElement>(null)
   const [pending, setPending] = useState<string | null>(null)
+  const [scrollTop, setScrollTop] = useState(0)
+  const [view, setView] = useState({ h: 0, w: 0 })
 
   const { rows } = useMemo(() => {
     const idx = buildIndex(topics)
@@ -91,14 +190,87 @@ export function OutlineView() {
   const rowsRef = useRef(rows)
   rowsRef.current = rows
 
-  useEffect(() => {
-    if (pending && refs.current.get(pending)) {
-      const el = refs.current.get(pending)
-      el?.focus()
-      el?.select()
-      setPending(null)
+  // The size of the window and of the list (a phone shows pictures at the full width of the row).
+  useLayoutEffect(() => {
+    const el = scroller.current
+    if (!el) return
+    const measure = () => setView({ h: el.clientHeight, w: el.clientWidth })
+    measure()
+    if (typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+  const viewH = view.h || 800
+  const listW = view.w || 800
+
+  // Every row's height, and where each row starts. A picture row is as tall as its picture.
+  const boxes = useMemo(() => rows.map((r) => {
+    const image = topics[r.id]?.image
+    return image ? pictureBox(image, listW, r.depth) : null
+  }), [rows, topics, listW])
+  const starts = useMemo(() => offsets(boxes.map(rowHeight)), [boxes])
+  const total = starts[starts.length - 1] as number
+  const listTop = list.current?.offsetTop ?? 0
+  const { start, end } = windowFor(starts, scrollTop - listTop, viewH)
+  const indexOf = useMemo(() => new Map(rows.map((r, i) => [r.id, i])), [rows])
+
+  // Scrolling: remember where it is, and tell the pictures the view is moving (small versions while it moves).
+  const frame = useRef(0)
+  const onScroll = () => {
+    noteViewportActivity()
+    if (frame.current) return
+    frame.current = requestAnimationFrame(() => {
+      frame.current = 0
+      const el = scroller.current
+      if (!el) return
+      setScrollTop(el.scrollTop)
+      scrolled.set(fileId, el.scrollTop)
+    })
+  }
+  useEffect(() => () => cancelAnimationFrame(frame.current), [])
+
+  // Back in the outline: where it was (unless the selected topic is out of sight; then it is shown).
+  useLayoutEffect(() => {
+    const el = scroller.current
+    if (!el) return
+    el.scrollTop = scrolled.get(fileId) ?? 0
+    setScrollTop(el.scrollTop)
+  }, [fileId])
+
+  const showRow = (id: string) => {
+    const el = scroller.current
+    const i = indexOf.get(id)
+    if (!el || i === undefined) return
+    const to = scrollToShow(starts, i, el.scrollTop - listTop, el.clientHeight || viewH)
+    if (to !== null) {
+      el.scrollTop = to + listTop
+      setScrollTop(el.scrollTop)
+      scrolled.set(fileId, el.scrollTop)
     }
-  }, [pending, rows])
+  }
+
+  // A topic selected in the map (or anywhere else) is selected here too, and scrolled into view. Typing in the outline does not jump.
+  const sole = selected.length === 1 ? (selected[0] as string) : null
+  useLayoutEffect(() => {
+    if (!sole) return
+    if (refs.current.get(sole) && refs.current.get(sole) === document.activeElement) return
+    showRow(sole)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sole, rows.length])
+
+  // Moving to a row with the keyboard: scroll it into view, then focus it once it is drawn.
+  useEffect(() => {
+    if (!pending) return
+    const el = refs.current.get(pending)
+    if (el) {
+      showRow(pending)
+      el.focus()
+      el.select()
+      setPending(null)
+    } else if (indexOf.has(pending)) showRow(pending)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pending, rows, start, end])
 
   const register = useMemo(
     () => (id: string, el: HTMLInputElement | null) => {
@@ -110,7 +282,8 @@ export function OutlineView() {
 
   const commit = (e: React.KeyboardEvent<HTMLInputElement>, id: string) => {
     const v = e.currentTarget.value
-    if (v.trim() && v !== topics[id]?.text) setText(mapDoc, id, v)
+    const was = oneLine(topics[id]?.text ?? '')
+    if (v.trim() && v !== was) setText(mapDoc, id, v)
   }
 
   const onKey = (e: React.KeyboardEvent<HTMLInputElement>, row: Row) => {
@@ -130,8 +303,8 @@ export function OutlineView() {
       else if (e.key === 'Escape') e.currentTarget.blur()
       return
     }
-    const list = rowsRef.current
-    const i = list.findIndex((r) => r.id === row.id)
+    const rowsNow = rowsRef.current
+    const i = rowsNow.findIndex((r) => r.id === row.id)
     const idx = buildIndex(topics)
     const siblings = t.parentId && topics[t.parentId] ? childrenOf(idx, t.parentId) : []
     const pos = siblings.findIndex((s) => s.id === row.id)
@@ -162,17 +335,17 @@ export function OutlineView() {
     } else if (e.key === 'Backspace' && e.currentTarget.value === '' && row.id !== rootId && !row.hasKids) {
       e.preventDefault()
       deleteTopics(mapDoc, [row.id])
-      const before = list[i - 1]
+      const before = rowsNow[i - 1]
       if (before) setPending(before.id)
     } else if (e.key === 'ArrowUp' && !e.altKey) {
       e.preventDefault()
       commit(e, row.id)
-      const target = list[i - 1]
+      const target = rowsNow[i - 1]
       if (target) setPending(target.id)
     } else if (e.key === 'ArrowDown' && !e.altKey) {
       e.preventDefault()
       commit(e, row.id)
-      const target = list[i + 1]
+      const target = rowsNow[i + 1]
       if (target) setPending(target.id)
     } else if ((e.key === 'ArrowUp' || e.key === 'ArrowDown') && e.altKey) {
       e.preventDefault()
@@ -185,7 +358,7 @@ export function OutlineView() {
 
   const sel = new Set(selected)
   return (
-    <div className="absolute inset-0 overflow-y-auto bg-bg" role="region" aria-label="Outline view">
+    <div ref={scroller} onScroll={onScroll} className="absolute inset-0 overflow-y-auto bg-bg" role="region" aria-label="Outline view">
       <div className="mx-auto max-w-3xl px-4 py-5">
         <p className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted">
           {readOnly ? (
@@ -204,15 +377,20 @@ export function OutlineView() {
             </>
           )}
         </p>
-        <ul role="tree" className="space-y-0.5 rounded-ui border border-line bg-surface p-2">
-          {rows.map((row) => {
+        <ul ref={list} role="tree" className="relative rounded-ui border border-line bg-surface" style={{ height: total + 16, paddingTop: 8 }} data-total={rows.length} data-drawn={end - start}>
+          {rows.slice(start, end).map((row, k) => {
+            const i = start + k
             const t = topics[row.id]
             if (!t) return null
             return (
               <OutlineRow
                 key={row.id}
                 row={row}
+                top={(starts[i] as number) + 8}
+                height={(starts[i + 1] as number) - (starts[i] as number)}
                 text={t.text}
+                image={t.image ?? null}
+                box={boxes[i] ?? null}
                 marks={t.marks ?? []}
                 collapsed={!!t.collapsed}
                 number={numbers.get(row.id) ?? ''}

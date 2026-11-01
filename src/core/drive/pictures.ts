@@ -112,6 +112,28 @@ export function parsePictureName(name: string): { id: string; kind: PictureKind 
 
 export type SyncMode = 'auto' | 'manual'
 
+/**
+ * Why pictures are not going up:
+ *  - user       you paused them (Storage settings);
+ *  - auth       the Google sign-in expired or is missing (it comes back by itself when you sign in);
+ *  - revoked    access to a file or folder was taken away in Google Drive;
+ *  - quota      Google Drive is full (free some space, then resume);
+ *  - datasaver  the browser says data saver is on and "pause on data saver" is chosen.
+ */
+export type PauseReason = 'user' | 'auth' | 'revoked' | 'quota' | 'datasaver'
+
+/** What to tell the person, and what they can do about it. */
+/** What the button for a paused queue says. */
+export const resumeLabel = (reason: PauseReason | null): string => (reason === 'auth' || reason === 'revoked' ? 'Sign in' : reason === 'datasaver' ? 'Sync now' : 'Resume')
+
+export const PAUSE_TEXT: Record<PauseReason, string> = {
+  user: 'paused by you',
+  auth: 'sign in to Google Drive to continue',
+  revoked: 'Google Drive no longer allows access to a file or folder',
+  quota: 'Google Drive is full',
+  datasaver: 'paused because data saver is on',
+}
+
 export interface SyncOptions {
   /** 3 or 4 uploads at once. */
   concurrency?: number
@@ -139,6 +161,8 @@ export interface SyncStatus {
   /** Rough seconds left for the batch, once enough has been sent to tell; otherwise null. */
   etaSeconds: number | null
   paused: boolean
+  /** Why uploads are stopped, or null when they are not. */
+  pausedReason: PauseReason | null
   mode: SyncMode
   bytesUploaded: number
   lastError: string | null
@@ -151,9 +175,9 @@ export class PictureSync {
   private index = new Map<string, Map<string, DriveFileMeta>>()
   private running: Promise<void> | null = null
   private batch = { total: 0, done: 0, startedAt: 0 }
-  private paused = false
+  private pausedBy: PauseReason | null = null
   private listeners = new Set<() => void>()
-  private snap: SyncStatus = { pending: 0, pictures: 0, batchTotal: 0, batchDone: 0, etaSeconds: null, active: 0, done: 0, retrying: 0, paused: false, mode: 'auto', bytesUploaded: 0, lastError: null }
+  private snap: SyncStatus = { pending: 0, pictures: 0, batchTotal: 0, batchDone: 0, etaSeconds: null, active: 0, done: 0, retrying: 0, paused: false, pausedReason: null, mode: 'auto', bytesUploaded: 0, lastError: null }
   private readonly concurrency: number
   private readonly now: () => number
   private readonly sleep: (ms: number) => Promise<void>
@@ -176,7 +200,8 @@ export class PictureSync {
   }
   getStatus = (): SyncStatus => this.snap
   private set(patch: Partial<SyncStatus>) {
-    this.snap = { ...this.snap, ...patch, mode: this.opts.mode?.() ?? 'auto', paused: this.paused }
+    const reason = this.pausedBy ?? (this.opts.holdBack?.() ? 'datasaver' : null)
+    this.snap = { ...this.snap, ...patch, mode: this.opts.mode?.() ?? 'auto', paused: reason !== null, pausedReason: reason }
     this.listeners.forEach((l) => l())
   }
   private async refreshCounts(active = this.snap.active) {
@@ -236,22 +261,36 @@ export class PictureSync {
   }
 
   private autoRuns() {
-    return !this.paused && (this.opts.mode?.() ?? 'auto') === 'auto' && !this.opts.holdBack?.()
+    return this.pausedBy === null && (this.opts.mode?.() ?? 'auto') === 'auto' && !this.opts.holdBack?.()
   }
 
   pause() {
-    this.paused = true
+    this.pausedBy = 'user'
     this.set({})
   }
   resume() {
-    this.paused = false
-    this.set({})
-    void this.run().catch(() => undefined)
+    this.pausedBy = null
+    this.set({}) // the label goes at once
+    // Failed ones are tried again now, not after their waiting time (they only waited for the cause to go away).
+    void this.ledger
+      .jobs()
+      .then((jobs) => Promise.all(jobs.filter((j) => j.nextAt > 0).map((j) => this.ledger.putJob({ ...j, nextAt: 0 }))))
+      .then(() => {
+        this.set({ lastError: null })
+        return this.run()
+      })
+      .catch(() => undefined)
+  }
+
+  /** Carries on if (and only if) the pause was for this reason: used when the cause has gone, such as signing in again. */
+  resumeIfPausedFor(...reasons: PauseReason[]) {
+    if (this.pausedBy && reasons.includes(this.pausedBy)) this.resume()
   }
 
   /** "Sync now": runs the queue even in "only when I tap Sync" mode. */
   syncNow(): Promise<void> {
-    this.paused = false
+    this.pausedBy = null
+    this.set({})
     return this.run({ force: true })
   }
 
@@ -285,7 +324,7 @@ export class PictureSync {
     }
     const worker = async () => {
       for (;;) {
-        if (this.paused) return
+        if (this.pausedBy) return
         const job = await claim()
         if (!job) return
         await this.refreshCounts(inFlight.size)
@@ -325,7 +364,10 @@ export class PictureSync {
       await this.ledger.putJob({ ...job, attempts, nextAt: this.now() + backoffMs(attempts), error: err.message })
       this.set({ lastError: err.message })
       // Signed out, access removed or Drive full: more tries right now would only fail the same way.
-      if (err.kind === 'auth' || err.kind === 'revoked' || err.kind === 'quota') this.paused = true
+      if (err.kind === 'auth' || err.kind === 'revoked' || err.kind === 'quota') {
+        this.pausedBy = err.kind
+        this.set({})
+      }
     }
   }
 

@@ -6,7 +6,7 @@ import type { FileRepository } from '@/core/files/types'
 import { browserCodec } from '@/core/images/codec.browser'
 import { makeThumb } from '@/core/images/thumbs'
 import { useSettings } from '@/stores/settings'
-import { driveClient } from './drive'
+import { driveAuth, driveClient } from './drive'
 
 let blobs: BlobStores | undefined
 /** Registered at start-up (the picture and attachment stores live in the editor and can't be imported here). */
@@ -55,6 +55,28 @@ export const pictureSync = new PictureSync(driveClient, pictureSource, new Index
   mode: () => useSettings.getState().pictureUploads,
   holdBack: () => useSettings.getState().pauseOnDataSaver && dataSaver(),
 })
+
+// When the Google sign-in comes back (after it expired, or after the page was reloaded), pictures that waited for it carry on by themselves.
+driveAuth.subscribe(() => {
+  if (driveAuth.hasValidToken()) pictureSync.resumeIfPausedFor('auth')
+})
+
+/**
+ * The "Resume" action. When the pictures are waiting for Google, it signs in first (this runs from a click, so the sign-in window is
+ * allowed); when data saver holds them back it sends them anyway ("Sync now").
+ */
+export async function resumePictureUploads(): Promise<void> {
+  const reason = pictureSync.getStatus().pausedReason
+  if (reason === 'datasaver') return void (await pictureSync.syncNow())
+  if (reason === 'auth' || reason === 'revoked') {
+    try {
+      await driveAuth.connect()
+    } catch {
+      return // the sign-in was closed or refused: the reason stays on screen
+    }
+  }
+  pictureSync.resume()
+}
 
 /** Brings pictures back from Drive when this device does not have them. */
 export const pictureFetcher = new PictureFetcher(driveClient, pictureSync)

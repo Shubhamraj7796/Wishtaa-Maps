@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'react'
 import { Icon } from '@/ui/icons'
-import { pictureSync } from '@/app/repo'
+import { pictureSync, resumePictureUploads } from '@/app/repo'
+import { PAUSE_TEXT, resumeLabel } from '@/core/drive/pictures'
 import { uploadingText } from '@/core/drive/progress'
 import { retrySave } from '../session'
 import { useEditor } from '../store'
@@ -98,9 +99,20 @@ export function SaveStatus() {
           {reason}
         </span>
       )}
-      {up.pictures > 0 && (
-        <span data-testid="pictures-uploading" title="The map itself is saved. Pictures go up in the background and never hold up your editing." className="mt-0.5 hidden max-w-[16rem] truncate text-[11px] text-muted sm:block">
-          {up.paused ? `${up.pictures} picture${up.pictures === 1 ? '' : 's'} paused` : up.mode === 'manual' && up.active === 0 ? `${up.pictures} picture${up.pictures === 1 ? '' : 's'} waiting for Sync` : uploadingText(up)}
+      {up.pictures > 0 && up.pausedReason && (
+        <button
+          type="button"
+          data-testid="pictures-paused"
+          onClick={() => void resumePictureUploads()}
+          title={`${up.pictures} picture${up.pictures === 1 ? '' : 's'} in all your maps ${up.pictures === 1 ? 'is' : 'are'} not going up to Google Drive: ${PAUSE_TEXT[up.pausedReason]}. The map itself is saved. Click to ${resumeLabel(up.pausedReason).toLowerCase()}.`}
+          className="mt-0.5 max-w-[16rem] truncate text-left text-[11px] text-warn underline decoration-dotted underline-offset-2"
+        >
+          {up.pictures} picture{up.pictures === 1 ? '' : 's'} paused: {PAUSE_TEXT[up.pausedReason]} · {resumeLabel(up.pausedReason)}
+        </button>
+      )}
+      {up.pictures > 0 && !up.pausedReason && (
+        <span data-testid="pictures-uploading" title="The map itself is saved. Pictures (in all your maps) go up in the background and never hold up your editing." className="mt-0.5 hidden max-w-[16rem] truncate text-[11px] text-muted sm:block">
+          {up.mode === 'manual' && up.active === 0 ? `${up.pictures} picture${up.pictures === 1 ? '' : 's'} waiting for Sync` : uploadingText(up)}
         </span>
       )}
       {otherTab && (

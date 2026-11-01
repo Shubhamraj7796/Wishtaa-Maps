@@ -3,7 +3,8 @@ import { imageStore } from '@/editor/images'
 import { useSettings } from '@/stores/settings'
 import { buttonSecondary } from './Modal'
 import { uploadingText } from '@/core/drive/progress'
-import { pictureSync } from './repo'
+import { PAUSE_TEXT, resumeLabel } from '@/core/drive/pictures'
+import { pictureSync, resumePictureUploads } from './repo'
 
 const mb = (bytes: number) => (bytes < 1048576 ? `${Math.max(1, Math.round(bytes / 1024))} KB` : `${(bytes / 1048576).toFixed(1)} MB`)
 
@@ -103,7 +104,7 @@ export function PictureStorage() {
         <span>
           {status.pictures === 0
             ? 'No pictures waiting to upload.'
-            : `${uploadingText(status)}${status.retrying ? ` (${status.retrying} will retry)` : ''}${status.paused ? ', paused' : ''}.`}
+            : `${uploadingText(status)}${status.retrying ? ` (${status.retrying} will retry)` : ''}${status.pausedReason ? `. Paused: ${PAUSE_TEXT[status.pausedReason]}` : ''} (all your maps).`}
         </span>
         {status.lastError && status.pictures > 0 && <span className="w-full text-xs text-bad">{status.lastError}</span>}
         {status.pictures > 0 && (
@@ -111,9 +112,15 @@ export function PictureStorage() {
             <button type="button" className={buttonSecondary} onClick={() => void pictureSync.syncNow()}>
               Sync now
             </button>
-            <button type="button" className={buttonSecondary} onClick={() => (status.paused ? pictureSync.resume() : pictureSync.pause())}>
-              {status.paused ? 'Resume' : 'Pause'}
-            </button>
+            {status.pausedReason ? (
+              <button type="button" className={buttonSecondary} onClick={() => void resumePictureUploads()}>
+                {resumeLabel(status.pausedReason)}
+              </button>
+            ) : (
+              <button type="button" className={buttonSecondary} onClick={() => pictureSync.pause()}>
+                Pause
+              </button>
+            )}
           </>
         )}
       </div>
