@@ -1,3 +1,4 @@
+import { readOutlineZoom } from './navigation'
 import type { ThemePreview } from '@/core/theme/apply'
 import { create } from 'zustand'
 import type { SaveSnapshot } from '@/core/autosave'
@@ -73,6 +74,8 @@ export interface EditorState {
   selected: string[]
   editingId: string | null
   viewport: Viewport
+  /** How big the Outline is shown (1 = 100%). The map has its own zoom in `viewport`. */
+  outlineZoom: number
   canvasSize: { w: number; h: number }
   tool: 'pan' | 'select'
   levels: number | null
@@ -171,6 +174,7 @@ export const useEditor = create<EditorState>(() => ({
   selected: [],
   editingId: null,
   viewport: { x: 0, y: 0, k: 1 },
+  outlineZoom: readOutlineZoom(),
   canvasSize: { w: 0, h: 0 },
   tool: 'pan',
   levels: null,

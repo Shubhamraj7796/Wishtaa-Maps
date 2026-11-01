@@ -4,7 +4,7 @@ import type { TopicImage } from '@/core/model/topic'
 import { buildIndex, childrenOf } from '@/core/model/tree'
 import { computeNumbers } from '@/core/numbering'
 import { Icon } from '@/ui/icons'
-import { selectOnly, toggleFold } from '../actions'
+import { selectOnly, setOutlineZoom, toggleFold } from '../actions'
 import { showPreview } from '../content'
 import { noteViewportActivity, removeImage, replaceImage, useImageUrl, usePictureColor, useUpgrade, useViewMoving } from '../images'
 import { mapDoc } from '../mapdoc'
@@ -35,15 +35,17 @@ interface RowProps {
   number: string
   selected: boolean
   readOnly: boolean
+  /** How big the outline is shown (1 = 100%). */
+  zoom: number
   register: (id: string, el: HTMLInputElement | null) => void
   onKey: (e: React.KeyboardEvent<HTMLInputElement>, row: Row) => void
 }
 
 /** The picture under a topic: the small version first, the full one only when it is shown large and the list is still. */
-function OutlinePicture({ topicId, image, box, label, selected, readOnly }: { topicId: string; image: TopicImage; box: PictureBox; label: string; selected: boolean; readOnly: boolean }) {
+function OutlinePicture({ topicId, image, box, label, selected, readOnly, zoom }: { topicId: string; image: TopicImage; box: PictureBox; label: string; selected: boolean; readOnly: boolean; zoom: number }) {
   const moving = useViewMoving()
   const dpr = typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1
-  const wantsFull = box.w * dpr > 300 // the small version is 256 px wide
+  const wantsFull = box.w * zoom * dpr > 300 // the small version is 256 px wide
   const upgraded = useUpgrade(wantsFull && !moving)
   const { url, missing, pending } = useImageUrl(image.imageId, { thumb: !(wantsFull && upgraded) })
   const color = usePictureColor(image.imageId, true)
@@ -84,7 +86,7 @@ function OutlinePicture({ topicId, image, box, label, selected, readOnly }: { to
   )
 }
 
-const OutlineRow = memo(function OutlineRow({ row, top, height, text, image, box, marks, collapsed, number, selected, readOnly, register, onKey }: RowProps) {
+const OutlineRow = memo(function OutlineRow({ row, top, height, text, image, box, marks, collapsed, number, selected, readOnly, zoom, register, onKey }: RowProps) {
   const shown = oneLine(text)
   const label = shown.trim() || 'Picture'
   return (
@@ -94,9 +96,11 @@ const OutlineRow = memo(function OutlineRow({ row, top, height, text, image, box
       aria-selected={selected}
       aria-expanded={row.hasKids ? !collapsed : undefined}
       data-row={row.id}
-      className={`absolute left-0 right-0 rounded-ui pr-2 ${selected ? 'bg-brand/10' : ''}`}
-      style={{ top, height, paddingLeft: row.depth * 22 + 4 }}
+      className={`absolute left-0 right-0 overflow-hidden rounded-ui ${selected ? 'bg-brand/10' : ''}`}
+      style={{ top, height }}
     >
+      {/* The row is drawn at 100% and scaled as a whole, so text, buttons and pictures zoom together. */}
+      <div style={{ width: `${100 / zoom}%`, transform: zoom === 1 ? undefined : `scale(${zoom})`, transformOrigin: '0 0', paddingLeft: row.depth * 22 + 4, paddingRight: 8 }}>
       <div className="flex items-center gap-1" style={{ height: ROW_H }}>
         <button
           type="button"
@@ -142,9 +146,10 @@ const OutlineRow = memo(function OutlineRow({ row, top, height, text, image, box
       </div>
       {image && box && (
         <div style={{ paddingLeft: 24 + 16 + 8, paddingTop: 2 }}>
-          <OutlinePicture topicId={row.id} image={image} box={box} label={label} selected={selected} readOnly={readOnly} />
+          <OutlinePicture topicId={row.id} image={image} box={box} label={label} selected={selected} readOnly={readOnly} zoom={zoom} />
         </div>
       )}
+      </div>
     </li>
   )
 })
@@ -167,6 +172,7 @@ export function OutlineView() {
   const fileId = useEditor((s) => s.fileId) ?? ''
   const selected = useEditor((s) => s.selected)
   const numbering = useEditor((s) => s.settings.numbering)
+  const zoom = useEditor((s) => s.outlineZoom)
   const refs = useRef(new Map<string, HTMLInputElement>())
   const scroller = useRef<HTMLDivElement>(null)
   const list = useRef<HTMLUListElement>(null)
@@ -207,9 +213,9 @@ export function OutlineView() {
   // Every row's height, and where each row starts. A picture row is as tall as its picture.
   const boxes = useMemo(() => rows.map((r) => {
     const image = topics[r.id]?.image
-    return image ? pictureBox(image, listW, r.depth) : null
-  }), [rows, topics, listW])
-  const starts = useMemo(() => offsets(boxes.map(rowHeight)), [boxes])
+    return image ? pictureBox(image, listW / zoom, r.depth) : null // laid out at 100%, then scaled
+  }), [rows, topics, listW, zoom])
+  const starts = useMemo(() => offsets(boxes.map((b) => rowHeight(b) * zoom)), [boxes, zoom])
   const total = starts[starts.length - 1] as number
   const listTop = list.current?.offsetTop ?? 0
   const { start, end } = windowFor(starts, scrollTop - listTop, viewH)
@@ -229,6 +235,46 @@ export function OutlineView() {
     })
   }
   useEffect(() => () => cancelAnimationFrame(frame.current), [])
+
+  // Zooming keeps the same place on screen: the scroll position grows or shrinks with the zoom.
+  const lastZoom = useRef(zoom)
+  useLayoutEffect(() => {
+    const el = scroller.current
+    const was = lastZoom.current
+    lastZoom.current = zoom
+    if (!el || was === zoom) return
+    el.scrollTop = Math.max(0, ((el.scrollTop - listTop) * zoom) / was + listTop)
+    setScrollTop(el.scrollTop)
+    scrolled.set(fileId, el.scrollTop)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [zoom])
+
+  // Ctrl + wheel (and a trackpad pinch, which arrives the same way) zooms. A plain wheel scrolls.
+  useEffect(() => {
+    const el = scroller.current
+    if (!el) return
+    const onWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey && !e.metaKey) return
+      e.preventDefault()
+      setOutlineZoom(useEditor.getState().outlineZoom * Math.exp(-e.deltaY * (e.deltaMode === 1 ? 0.04 : 0.0025)))
+    }
+    el.addEventListener('wheel', onWheel, { passive: false })
+    return () => el.removeEventListener('wheel', onWheel)
+  }, [])
+
+  // Two fingers on a touch screen zoom too.
+  const pinch = useRef<{ d: number; z: number } | null>(null)
+  const distance = (t: React.TouchList) => Math.hypot((t[0]?.clientX ?? 0) - (t[1]?.clientX ?? 0), (t[0]?.clientY ?? 0) - (t[1]?.clientY ?? 0))
+  const onTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 2) pinch.current = { d: distance(e.touches), z: useEditor.getState().outlineZoom }
+  }
+  const onTouchMove = (e: React.TouchEvent) => {
+    if (e.touches.length !== 2 || !pinch.current || pinch.current.d < 1) return
+    setOutlineZoom((pinch.current.z * distance(e.touches)) / pinch.current.d)
+  }
+  const onTouchEnd = (e: React.TouchEvent) => {
+    if (e.touches.length < 2) pinch.current = null
+  }
 
   // Back in the outline: where it was (unless the selected topic is out of sight; then it is shown).
   useLayoutEffect(() => {
@@ -358,7 +404,7 @@ export function OutlineView() {
 
   const sel = new Set(selected)
   return (
-    <div ref={scroller} onScroll={onScroll} className="absolute inset-0 overflow-y-auto bg-bg" role="region" aria-label="Outline view">
+    <div ref={scroller} onScroll={onScroll} onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd} onTouchCancel={onTouchEnd} className="absolute inset-0 overflow-y-auto bg-bg" style={{ touchAction: 'pan-y' }} role="region" aria-label="Outline view">
       <div className="mx-auto max-w-3xl px-4 py-5">
         <p className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted">
           {readOnly ? (
@@ -396,6 +442,7 @@ export function OutlineView() {
                 number={numbers.get(row.id) ?? ''}
                 selected={sel.has(row.id)}
                 readOnly={readOnly}
+                zoom={zoom}
                 register={register}
                 onKey={onKey}
               />

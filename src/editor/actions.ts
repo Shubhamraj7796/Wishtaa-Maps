@@ -35,7 +35,7 @@ import { getScene, getTheme } from './scene'
 import { mapDoc } from './mapdoc'
 import { showNotice } from './notice'
 import { mayEdit } from './readmode'
-import { MAX_ZOOM, MIN_ZOOM } from './navigation'
+import { MAX_ZOOM, MIN_ZOOM, OUTLINE_ZOOM_KEY, clampOutlineZoom } from './navigation'
 import { useEditor, type PanelTab, type Viewport } from './store'
 
 const get = useEditor.getState
@@ -74,23 +74,39 @@ export function zoomAround(factor: number, cx: number, cy: number) {
   set({ viewport: { k, x: cx - wx * k, y: cy - wy * k } })
   noteViewportActivity()
 }
+/** Zooms the Outline (its text and pictures together). Remembered on this device. */
+export function setOutlineZoom(zoom: number) {
+  const z = clampOutlineZoom(zoom)
+  set({ outlineZoom: z })
+  try {
+    localStorage.setItem(OUTLINE_ZOOM_KEY, String(z))
+  } catch {
+    /* not remembered */
+  }
+}
+const inOutline = () => get().view === 'outline'
+
 export function zoomBy(factor: number) {
+  if (inOutline()) return setOutlineZoom(get().outlineZoom * factor)
   const { w, h } = get().canvasSize
   zoomAround(factor, w / 2, h / 2)
 }
 /** Zooms to an exact percentage (2 to 400) around the middle of the canvas. */
 export function setZoomPercent(percent: number) {
   if (!Number.isFinite(percent)) return
+  if (inOutline()) return setOutlineZoom(percent / 100)
   const { w, h } = get().canvasSize
   const { viewport: v } = get()
   zoomAround(Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, percent / 100)) / v.k, w / 2, h / 2)
 }
 export function zoomTo100() {
+  if (inOutline()) return setOutlineZoom(1)
   const { w, h } = get().canvasSize
   const { viewport: v } = get()
   zoomAround(1 / v.k, w / 2, h / 2)
 }
 export function fitToScreen() {
+  if (inOutline()) return setOutlineZoom(1) // the outline always fits the width: "fit" puts it back to 100%
   const { canvasSize: c } = get()
   const b = getScene().bounds
   if (!c.w || !c.h || !b.w) return

@@ -6,6 +6,21 @@ export const MAX_ZOOM = 4
 
 export const clampZoom = (k: number) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, k))
 
+/** The Outline has its own zoom (text and pictures together): 50% to 300%. It is remembered on this device. */
+export const OUTLINE_MIN_ZOOM = 0.5
+export const OUTLINE_MAX_ZOOM = 3
+export const OUTLINE_ZOOM_KEY = 'wishtaamaps:outline-zoom'
+export const clampOutlineZoom = (z: number) => (Number.isFinite(z) ? Math.min(OUTLINE_MAX_ZOOM, Math.max(OUTLINE_MIN_ZOOM, Math.round(z * 100) / 100)) : 1)
+
+export function readOutlineZoom(): number {
+  try {
+    const v = Number(typeof localStorage === 'undefined' ? NaN : localStorage.getItem(OUTLINE_ZOOM_KEY))
+    return Number.isFinite(v) && v > 0 ? clampOutlineZoom(v) : 1
+  } catch {
+    return 1
+  }
+}
+
 /** What a plain mouse wheel does (a trackpad's two-finger scroll always moves the map). */
 export type WheelMode = 'move' | 'zoom'
 
