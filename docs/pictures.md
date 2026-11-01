@@ -73,3 +73,8 @@ text does not edit).
 
 Double clicks are told from single ones by time (350 ms between presses on the same topic), which also covers touch screens where
 the browser does not send a double-click event. Tested (fake timers and a real browser at desktop and tablet size): `src/editor/pictureSelection.test.tsx`.
+
+## Turning and marking up a picture
+
+A picture can be turned, flipped and marked up from the full-screen viewer without changing the stored picture or uploading anything.
+See `docs/picture-viewer.md`.

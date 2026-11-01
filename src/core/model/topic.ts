@@ -1,4 +1,4 @@
-import type { SourceRef } from '../pdf/types'
+import type { MarkupObject, SourceRef } from '../pdf/types'
 import type { Topic } from './types'
 
 /** Layout direction a single branch can use instead of the map's layout. */
@@ -13,6 +13,15 @@ export interface TopicImage {
   imageId: string
   width: number
   height: number
+  /** Turned this far clockwise (never rewrites the stored picture). `width` and `height` are always the size as shown. */
+  rotation?: 90 | 180 | 270
+  /** Mirrored on screen, after the turn. */
+  flipX?: boolean
+  flipY?: boolean
+  /** Marks drawn over the picture (see pictureEdit.ts). Positions are fractions of the stored picture. */
+  marks?: Record<string, MarkupObject>
+  /** "Show markup" is off: the marks are kept but not drawn. */
+  markHidden?: boolean
   /** Where the picture sits relative to the text (default: above). */
   position?: ImagePosition
   /** Text read out to people who cannot see the picture. Unset = the topic's text. */

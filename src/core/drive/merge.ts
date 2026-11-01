@@ -133,30 +133,38 @@ export function mergeMaps(base: Uint8Array | null, local: Uint8Array, remote: Ui
         continue
       }
       if (isObject(lv) && isObject(rv)) {
-        const bo = isObject(bv) ? bv : {}
-        const merged: Record<string, unknown> = {}
-        for (const f of new Set([...Object.keys(bo), ...Object.keys(lv), ...Object.keys(rv)])) {
-          const bf = bo[f]
-          const lf = lv[f]
-          const rf = rv[f]
-          let v: unknown
-          if (deepEqual(lf, rf)) v = lf
-          else if (hasBase && deepEqual(lf, bf)) {
-            v = rf
-            fromRemote++
-          } else if (hasBase && deepEqual(rf, bf)) {
-            v = lf
-            fromLocal++
-          } else if (!hasBase && lf === undefined) v = rf
-          else if (!hasBase && rf === undefined) v = lf
-          else {
-            // The same field of the same thing, changed on both sides: the newer wins.
-            v = newer === 'local' ? lf : rf
-            conflicts.push({ map: name, key, field: f, label: `${describe(name, key, newer === 'local' ? lv : rv)}: ${f}`, kept: newer, keptValue: v, lostValue: newer === 'local' ? rf : lf })
+        const label = describe(name, key, newer === 'local' ? lv : rv)
+        const merge = (bo: Record<string, unknown>, lo: Record<string, unknown>, ro: Record<string, unknown>, path: string, depth: number): Record<string, unknown> => {
+          const merged: Record<string, unknown> = {}
+          for (const f of new Set([...Object.keys(bo), ...Object.keys(lo), ...Object.keys(ro)])) {
+            const bf = bo[f]
+            const lf = lo[f]
+            const rf = ro[f]
+            let v: unknown
+            if (deepEqual(lf, rf)) v = lf
+            else if (hasBase && deepEqual(lf, bf)) {
+              v = rf
+              fromRemote++
+            } else if (hasBase && deepEqual(rf, bf)) {
+              v = lf
+              fromLocal++
+            } else if (!hasBase && lf === undefined) v = rf
+            else if (!hasBase && rf === undefined) v = lf
+            else if (depth < 3 && isObject(lf) && isObject(rf) && !Array.isArray(lf)) {
+              // Two plain objects (a topic's style, its picture, the marks on a picture, one mark): merged by their own fields.
+              v = merge(isObject(bf) ? bf : {}, lf, rf, `${path}${f}.`, depth + 1)
+            } else if (lf === undefined || rf === undefined) {
+              v = lf ?? rf // one side removed it, the other changed it: the change stays
+            } else {
+              // The same field of the same thing, changed on both sides: the newer wins.
+              v = newer === 'local' ? lf : rf
+              conflicts.push({ map: name, key, field: `${path}${f}`, label: `${label}: ${path}${f}`, kept: newer, keptValue: v, lostValue: newer === 'local' ? rf : lf })
+            }
+            if (v !== undefined) merged[f] = v
           }
-          if (v !== undefined) merged[f] = v
+          return merged
         }
-        result.set(key, merged)
+        result.set(key, merge(isObject(bv) ? bv : {}, lv, rv, '', 0))
         continue
       }
       const v = newer === 'local' ? lv : rv
@@ -244,17 +252,22 @@ export function applyDelta(doc: MapDoc, before: Uint8Array | null, after: Uint8A
           continue
         }
         if (isObject(lv) && isObject(av)) {
-          const bo = isObject(bv) ? bv : {}
-          const merged: Record<string, unknown> = { ...lv }
           let any = false
-          for (const f of new Set([...Object.keys(bo), ...Object.keys(av)])) {
-            if (deepEqual(bo[f], av[f])) continue
-            if (deepEqual(lv[f], bo[f])) {
-              if (av[f] === undefined) delete merged[f]
-              else merged[f] = av[f]
-              any = true
+          const apply = (bo: Record<string, unknown>, lo: Record<string, unknown>, ao: Record<string, unknown>, depth: number): Record<string, unknown> => {
+            const merged: Record<string, unknown> = { ...lo }
+            for (const f of new Set([...Object.keys(bo), ...Object.keys(ao)])) {
+              if (deepEqual(bo[f], ao[f])) continue
+              if (deepEqual(lo[f], bo[f])) {
+                if (ao[f] === undefined) delete merged[f]
+                else merged[f] = ao[f]
+                any = true
+              } else if (depth < 3 && isObject(lo[f]) && isObject(ao[f])) {
+                merged[f] = apply(isObject(bo[f]) ? (bo[f] as Record<string, unknown>) : {}, lo[f] as Record<string, unknown>, ao[f] as Record<string, unknown>, depth + 1)
+              }
             }
+            return merged
           }
+          const merged = apply(isObject(bv) ? bv : {}, lv, av, 0)
           if (any) {
             live.set(key, merged)
             changes++

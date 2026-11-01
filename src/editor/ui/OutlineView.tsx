@@ -1,4 +1,5 @@
 import { SourceBadge } from '../pdf/SourceBadge'
+import { PictureFace } from '../pictures/PictureFace'
 import { SOURCE_DRAG } from '../pdf/SelectionBar'
 import type { PdfSelection } from '../pdf/selection'
 import { addPdfTopics } from '../pdf/topics'
@@ -98,7 +99,7 @@ function OutlinePicture({ topicId, image, box, label, selected, readOnly, zoom }
         style={{ backgroundColor: color ?? 'rgba(128,128,128,0.2)', contain: 'layout paint' }}
       >
         {shown ? (
-          <img src={shown} alt={label} decoding="async" draggable={false} className="block h-full w-full object-contain" />
+          <PictureFace url={shown} alt={label} image={image} w={box.w} h={box.h} screenW={box.w * zoom} fit="contain" />
         ) : (
           <span className="grid h-full w-full place-items-center px-2 text-center text-xs text-muted">{missing ? 'Picture missing' : pending ? 'Picture is still uploading' : ''}</span>
         )}

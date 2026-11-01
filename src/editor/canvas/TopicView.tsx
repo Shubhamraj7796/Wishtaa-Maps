@@ -18,6 +18,7 @@ import { useEditor, type ImageLive } from '../store'
 import { Formula } from '../ui/Formula'
 import { MarkBadge } from '../ui/MarkBadge'
 import { SourceBadge } from '../pdf/SourceBadge'
+import { PictureFace } from '../pictures/PictureFace'
 
 export interface TopicViewProps {
   box: LaidOut
@@ -112,6 +113,7 @@ function TopicPicture(props: {
   const url = shown === 'dot' || shown === 'flat' ? null : (now ?? (last.current?.id === image.imageId ? last.current.url : null))
   const drag = useRef<{ corner: Corner; x: number; y: number; w: number; h: number; k: number } | null>(null)
 
+  const viewK = useEditor((s) => s.viewport.k)
   const liveSize = live ?? { width: image.width, height: image.height, corner: 'se' as Corner }
   const off = live ? liveOffset(live.corner, image, live) : { left: 0, top: 0 }
 
@@ -163,7 +165,7 @@ function TopicPicture(props: {
           {shown === 'dot' || shown === 'flat' ? (
             <div role="img" aria-label={alt} className="h-full w-full" />
           ) : url ? (
-            <img src={url} alt={alt} draggable={false} decoding="async" className="block h-full w-full select-none object-fill" />
+            <PictureFace url={url} alt={alt} image={image} w={liveSize.width} h={liveSize.height} screenW={liveSize.width * viewK} />
           ) : missing || pending ? (
             <div role="img" aria-label={missing ? 'Image missing' : 'Picture is still uploading'} className="grid h-full w-full place-items-center px-1 text-center text-[11px] text-current opacity-70">
               {missing ? 'Image missing' : 'Picture is still uploading'}

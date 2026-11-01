@@ -66,7 +66,6 @@ Delete (or Backspace) deletes the chosen markup, Escape lets it go (or restores 
 | Shortcut | What it does |
 |---|---|
 | Alt+Shift+P | Add picture to topic… |
-| I | Select the picture of the selected topic (Esc goes back to the topic) |
 | Alt+Shift+Q | Capture screen as a picture |
 | Alt+Shift+R | Relationship line |
 | Alt+Shift+O | Callout |

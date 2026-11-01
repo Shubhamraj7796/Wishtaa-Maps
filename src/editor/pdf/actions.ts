@@ -11,7 +11,7 @@ import { driveAuth, driveClient, driveConfig } from '@/app/drive'
 import { pickPdfFiles } from '@/core/drive/picker'
 import { askPassword } from './password'
 import { rememberSize, type PanelSize } from './layout'
-import { isShape, loadPrefs, sanitizeStyle, savePrefs, type StyleKey, type ToolStyle } from './toolPrefs'
+import { isShape, loadPrefs, sanitizeStyle, savePrefs, type Shape as PanelShape, type StyleKey, type ToolStyle } from './toolPrefs'
 import { bumpDevice, closePdf, loadPdfjs, pdfStore, rememberPassword } from './runtime'
 
 const get = useEditor.getState
@@ -41,6 +41,11 @@ export function togglePdfPanel() {
 export const setPdfPage = (page: number) => patch({ page: Math.max(1, Math.round(page)) })
 export const setPdfZoom = (zoom: number | null) => patch({ zoom: zoom === null ? null : Math.min(4, Math.max(0.25, zoom)) })
 export const setPdfTab = (tab: PdfPanelState['tab']) => patch({ tab })
+/** The Shapes button remembers the shape last used, wherever it was used (PDF or picture). */
+export function rememberShape(shape: PanelShape) {
+  patch({ shape })
+  savePrefs({ ...loadPrefs(), shape })
+}
 export function setPdfTool(tool: PdfPanelState['tool']) {
   if (isShape(tool)) {
     patch({ tool, shape: tool })
