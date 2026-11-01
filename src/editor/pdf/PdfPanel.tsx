@@ -4,6 +4,7 @@ import { Icon } from '@/ui/icons'
 import { useEditor } from '../store'
 import { addPdfFile, closePdfPanel, setPdfTool, openPdfFromDrive, pickPdfFromDevice, refetchFromDrive, removePdfFromDevice, removePdfSource, reopenPdf, setPdfPage, showSource, setPdfTab, setPdfZoom, showPdf } from './actions'
 import { accessPdf, getDeviceVersion, subscribeDevice, type PdfAccess } from './runtime'
+import { downloadMarkedPdf, saveCopyToDrive } from './exportActions'
 import { OutlineDialog } from './OutlineDialog'
 import { Viewer } from './Viewer'
 import { MarkupTab, Toolbar } from './tools'
@@ -98,6 +99,13 @@ export default function PdfPanel({ mode }: { mode: 'side' | 'sheet' }) {
                 </MenuItem>
               ))}
               {!list.length && <div className="px-3 py-2 text-xs text-muted">No PDFs in this map yet.</div>}
+              {source && (
+                <>
+                  <hr className="my-1 border-line" />
+                  <MenuItem onClick={() => (void downloadMarkedPdf(source.id), setMenu(null))}>Download PDF with markup</MenuItem>
+                  <MenuItem onClick={() => (void saveCopyToDrive(source.id), setMenu(null))}>Save copy to Google Drive</MenuItem>
+                </>
+              )}
               {source && !readOnly && (
                 <>
                   <hr className="my-1 border-line" />

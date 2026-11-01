@@ -32,6 +32,10 @@ menu) for the browser's own versions.
 | Ctrl+1 | Alt+Z | Zoom to 100% (Ctrl+1 switches to the first tab) |
 | Alt+1, 2, 3, 0 | Alt+Shift+1, 2, 3, 0 | Show levels (Alt+1 to 8 switch tabs on Linux) |
 
+## In the PDF panel
+
+Delete (or Backspace) deletes the chosen markup, Escape lets it go. Ctrl + wheel zooms the PDF. The Open or close the PDF panel command has no shortcut.
+
 ## The list
 
 ### Edit

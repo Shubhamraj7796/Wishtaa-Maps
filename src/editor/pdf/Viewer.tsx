@@ -195,9 +195,11 @@ function Slot({ source, handle, n, box, marked, tool, dim }: { source: PdfSource
   const [lines, setLines] = useState<PageLines | null>(null)
   useEffect(() => {
     let live = true
-    void handle.text(n).then((l) => live && setLines(l)).catch(() => undefined)
+    // A page flying past during a fast scroll does not load its text; one that stays does.
+    const timer = setTimeout(() => void handle.text(n).then((l) => live && setLines(l)).catch(() => undefined), 140)
     return () => {
       live = false
+      clearTimeout(timer)
     }
   }, [handle, n])
   const all = useEditor((s) => s.pdf.markup)

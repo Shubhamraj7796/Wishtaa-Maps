@@ -68,6 +68,9 @@ Several pictures can be shared at once; they become subtopics, one after another
 - **Big maps on slow tablets.** A map with hundreds of pictures drawn all at once at a very low zoom is the slowest case; see `docs/pictures.md` for the numbers.
 - **Google sign-in in an installed app** uses a pop-up. If a pop-up is blocked, allow it for the site and try again.
 - **Icons for clipart** need a connection the first time each icon is used.
+- **PDFs** open in a sheet along the bottom (not beside the map), with 44 px markup tools. Very large PDFs (near the 50 MB limit) are
+  slower to open on a tablet, and scrolling a long PDF very fast shows pages after a moment. Once a pen has touched the screen, fingers
+  scroll and do not draw. See `docs/pdf-source-panel.md` for the numbers; they were not measured on a real tablet.
 
 ## How it was checked
 
