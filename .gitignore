@@ -9,3 +9,6 @@ playwright-report
 test-results
 supabase/.branches
 supabase/.temp
+dist-*
+test-results
+dummy-non-existing-folder

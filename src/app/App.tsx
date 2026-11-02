@@ -1,4 +1,5 @@
-import { lazy, Suspense } from 'react'
+import { Suspense } from 'react'
+import { lazyWithRetry } from './chunkRecovery'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { FilesProvider } from './FilesContext'
 import { Shell } from './Shell'
@@ -9,7 +10,7 @@ import Kb from './pages/Kb'
 import { Gallery, NotFound, SearchPage } from './pages/Misc'
 
 // The editor is the heaviest part of the app; load it only when a file is opened.
-const EditorScreen = lazy(() => import('./EditorScreen'))
+const EditorScreen = lazyWithRetry(() => import('./EditorScreen'))
 
 const Loading = () => (
   <div className="grid h-full place-items-center text-sm text-muted" role="status">

@@ -303,3 +303,39 @@ describe('the route table', () => {
   })
 })
 
+
+describe('after a deploy removed a file an older tab still asks for', () => {
+  const OLD_CHUNK = `${ORIGIN}/assets/PdfPanel-OLD123.js`
+
+  it('never keeps an HTML page under a script’s address, and does not serve one it kept before', async () => {
+    // The host answers every unknown address with the app's page (200, text/html).
+    network = async (url) => (new URL(url).pathname.startsWith('/assets/PdfPanel-OLD') ? basic(PAGE) : basic('/* script */', 'text/javascript'))
+    const first = await request(OLD_CHUNK)
+    expect(await (first as Response).text()).toContain('<html>') // it is passed on as it came, so the failure is honest...
+    const kept = await caches.get('wishtaa-assets')?.match(OLD_CHUNK)
+    expect(kept).toBeUndefined() // ...but it is not kept
+    // A page kept by an older version of the worker is forgotten and fetched again.
+    await (await Promise.resolve(caches.get('wishtaa-assets') ?? new FakeCache())).put(OLD_CHUNK, basic(PAGE))
+    network = async () => basic('/* the real script */', 'text/javascript')
+    const again = await request(OLD_CHUNK)
+    expect(await (again as Response).text()).toContain('real script')
+  })
+
+  it('a real script is still kept, and answered from the keeping afterwards', async () => {
+    await request(`${ORIGIN}/assets/PdfPanel-NEW456.js`)
+    fetched = []
+    const hit = await request(`${ORIGIN}/assets/PdfPanel-NEW456.js`)
+    expect(await (hit as Response).text()).toContain('script')
+    expect(fetched).toEqual([])
+  })
+
+  it('on activating, removes any page an older worker left under a script’s address, and keeps the real scripts', async () => {
+    const cache = new FakeCache()
+    caches.set('wishtaa-assets', cache)
+    await cache.put(`${ORIGIN}/assets/Poisoned-1.js`, basic(PAGE))
+    await cache.put(`${ORIGIN}/assets/Real-2.js`, basic('/* ok */', 'text/javascript'))
+    await fire('activate', {})
+    expect(await cache.match(`${ORIGIN}/assets/Poisoned-1.js`)).toBeUndefined()
+    expect(await cache.match(`${ORIGIN}/assets/Real-2.js`)).toBeDefined()
+  })
+})

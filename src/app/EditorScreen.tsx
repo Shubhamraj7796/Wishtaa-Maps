@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
+import { Suspense, useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom'
 import { useSettings } from '@/stores/settings'
 import { tagColor } from '@/core/settings'
@@ -28,9 +28,10 @@ import type { FileRecord } from '@/core/files/types'
 import { Icon } from '@/ui/icons'
 import { IconButton } from '@/ui/IconButton'
 import { takePendingShare } from '@/pwa/share'
-import { togglePdfPanel } from '@/editor/pdf/actions'
+import { pickPdfFromDevice, togglePdfPanel } from '@/editor/pdf/actions'
 import { PasswordDialog } from '@/editor/pdf/PasswordDialog'
 import { useTouchFriendly } from '@/editor/pictures/touch'
+import { lazyWithRetry, takeAfterRecover } from './chunkRecovery'
 import { ErrorBoundary } from './ErrorBoundary'
 import { ReadToolbar } from './ReadToolbar'
 import { SaveLocation } from './SaveLocation'
@@ -88,7 +89,7 @@ function TagFilter() {
 }
 
 // pdf.js is large, so the viewer is fetched only when a PDF panel is first opened.
-const PdfPanel = lazy(() => import('@/editor/pdf/PdfPanel'))
+const PdfPanel = lazyWithRetry(() => import('@/editor/pdf/PdfPanel'), 'pdf')
 
 function Editor({ file }: { file: FileRecord }) {
   const theme = useSettings((s) => s.theme)
@@ -97,6 +98,12 @@ function Editor({ file }: { file: FileRecord }) {
   const { canUndo, canRedo, tool, levels, focusId, selected, rootId, title, panelOpen, painter, view, insertOpen, relationFrom, selectedObject, minimap, panelTab, readOnly, readPanelOpen } = useEditor()
   const isKb = file.type === 'kb'
   const pdfOpen = useEditor((s) => s.pdfPanel.open)
+  // After the app updated itself because the PDF viewer could not load, the PDF the person was opening comes back.
+  const openedId = useEditor((s) => s.fileId)
+  useEffect(() => {
+    if (openedId !== file.id) return // the map is still opening; opening the panel now would be undone when it finishes
+    if (takeAfterRecover() === 'pdf' && !useEditor.getState().pdfPanel.open) togglePdfPanel()
+  }, [openedId, file.id])
   const touch = useTouchFriendly()
   const [narrow, setNarrow] = useState(() => typeof window !== 'undefined' && window.innerWidth < 900)
   useEffect(() => {
@@ -214,7 +221,7 @@ function Editor({ file }: { file: FileRecord }) {
       <div className="relative flex min-h-0 flex-1">
         <PasswordDialog />
         {pdfOpen && pdfMode === 'side' && (
-          <ErrorBoundary inline label="The PDF panel">
+          <ErrorBoundary inline label="The PDF panel" reopen={pickPdfFromDevice}>
             <Suspense fallback={<div className="grid w-[460px] place-items-center text-sm text-muted">Loading the PDF viewer…</div>}>
               <PdfPanel mode="side" />
             </Suspense>
@@ -239,7 +246,7 @@ function Editor({ file }: { file: FileRecord }) {
           <NoticeToast />
         </main>
         {pdfOpen && pdfMode === 'sheet' && (
-          <ErrorBoundary inline label="The PDF panel">
+          <ErrorBoundary inline label="The PDF panel" reopen={pickPdfFromDevice}>
             <Suspense fallback={null}>
               <PdfPanel mode="sheet" />
             </Suspense>

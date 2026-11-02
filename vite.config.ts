@@ -37,11 +37,15 @@ function stampServiceWorker(): Plugin {
  * they come from this site with no other host involved. They are fetched only when a PDF needs them, and are not in the offline list.
  */
 function pdfjsData(): Plugin {
+  let outDir = 'dist'
   const root = join('node_modules', 'pdfjs-dist')
   const dirs = ['wasm', 'standard_fonts', 'cmaps', 'iccs']
   const skip = (src: string) => /quickjs/i.test(src) // the scripting engine is never used
   return {
     name: 'pdfjs-data',
+    configResolved(config) {
+      outDir = config.build.outDir
+    },
     configureServer(server) {
       server.middlewares.use('/pdfjs', (req, res, next) => {
         const rel = normalize(decodeURIComponent((req.url ?? '').split('?')[0] ?? '')).replace(/^([/\\]|\.\.)+/, '')
@@ -52,7 +56,7 @@ function pdfjsData(): Plugin {
       })
     },
     closeBundle() {
-      for (const d of dirs) if (existsSync(join(root, d))) cpSync(join(root, d), join('dist', 'pdfjs', d), { recursive: true, filter: (s) => !skip(s) })
+      for (const d of dirs) if (existsSync(join(root, d))) cpSync(join(root, d), join(outDir, 'pdfjs', d), { recursive: true, filter: (s) => !skip(s) })
     },
   }
 }

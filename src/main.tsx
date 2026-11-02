@@ -5,6 +5,7 @@ import 'katex/dist/katex.min.css'
 import './styles/tailwind.css'
 import { App } from './app/App'
 import { boot } from './app/boot'
+import { installChunkRecovery } from './app/chunkRecovery'
 import { ErrorBoundary } from './app/ErrorBoundary'
 import { listenForInstall } from './pwa/install'
 import { registerServiceWorker } from './pwa/register'
@@ -12,6 +13,8 @@ import { registerServiceWorker } from './pwa/register'
 // Installable app: listen for the browser's install offer, and keep the app ready to open with no connection (production only).
 listenForInstall()
 registerServiceWorker()
+// A tab left open across a deploy asks for files that no longer exist: recover once, by reloading the new version.
+installChunkRecovery()
 
 void boot()
   .catch(() => undefined) // a failed clean-up must never stop the app from opening

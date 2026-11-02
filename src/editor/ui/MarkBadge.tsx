@@ -1,10 +1,11 @@
-import { lazy, Suspense } from 'react'
+import { Suspense } from 'react'
+import { lazyWithRetry } from '@/app/chunkRecovery'
 import { Flag, Star, User } from 'lucide-react'
 import { MARK_COLORS, SYMBOLS, parseMark, priorityColor, type ColorName } from '@/core/marks'
 import { ARROW_ICONS, SYMBOL_ICONS } from '@/ui/icons'
 
 const SYMBOL_COLORS = Object.values(MARK_COLORS)
-const ClipartIcon = lazy(() => import('./ClipartIcon'))
+const ClipartIcon = lazyWithRetry(() => import('./ClipartIcon'))
 
 /** A mark drawn as a small badge. */
 export function MarkBadge({ mark, size = 18 }: { mark: string; size?: number }) {

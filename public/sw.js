@@ -46,6 +46,14 @@ function cacheable(response) {
   return !!response && response.status === 200 && response.type === 'basic'
 }
 
+/**
+ * A script, style or font is never an HTML page. When a deploy has removed an old file, a host that answers every unknown address with
+ * the app's page would hand that page back for the file's address; keeping it there would make the missing file look present for good.
+ */
+function isPageNotFile(response) {
+  return /text\/html/i.test((response && response.headers && response.headers.get('content-type')) || '')
+}
+
 async function precache() {
   const cache = await caches.open(SHELL)
   await cache.addAll(SHELL_FILES)
@@ -60,7 +68,7 @@ async function precache() {
     urls.map(async (u) => {
       if (await assets.match(u)) return
       const r = await fetch(u)
-      if (cacheable(r)) await assets.put(u, r)
+      if (cacheable(r) && !isPageNotFile(r)) await assets.put(u, r)
     })
   )
 }
@@ -81,9 +89,10 @@ async function navigate(request) {
 async function asset(request) {
   const cache = await caches.open(ASSETS)
   const hit = await cache.match(request)
-  if (hit) return hit
+  if (hit && !isPageNotFile(hit)) return hit
+  if (hit) await cache.delete(request) // an HTML page kept by mistake under a file's address: forget it
   const live = await fetch(request)
-  if (cacheable(live)) {
+  if (cacheable(live) && !isPageNotFile(live)) {
     cache.put(request, live.clone())
     trim(cache)
   }
@@ -128,6 +137,15 @@ async function receiveShare(request) {
   return Response.redirect('/home?shared=' + id, 303)
 }
 
+/** Removes any HTML page an older version of this worker kept under a script's address (see isPageNotFile). */
+async function purgeMisfiledPages() {
+  const cache = await caches.open(ASSETS)
+  for (const key of await cache.keys()) {
+    const r = await cache.match(key)
+    if (r && isPageNotFile(r)) await cache.delete(key)
+  }
+}
+
 async function purgeOldShares() {
   const cache = await caches.open(SHARE)
   for (const key of await cache.keys()) {
@@ -146,6 +164,7 @@ self.addEventListener('activate', (event) => {
     (async () => {
       for (const name of await caches.keys()) if (!KEEP.includes(name)) await caches.delete(name)
       await purgeOldShares()
+      await purgeMisfiledPages()
       await self.clients.claim()
     })()
   )
