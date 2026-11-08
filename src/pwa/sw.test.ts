@@ -134,6 +134,25 @@ describe('what the worker touches', () => {
     expect(fetched).toEqual([])
   })
 
+  it('never reads or keeps anything to do with signing in (Supabase, Turnstile, /auth and /api, one-time codes, the reset page)', async () => {
+    for (const url of [
+      'https://abcdefgh.supabase.co/auth/v1/token?grant_type=pkce',
+      'https://abcdefgh.supabase.co/auth/v1/verify?token=abc&type=signup',
+      'https://abcdefgh.supabase.co/rest/v1/recent_files?select=*',
+      'https://challenges.cloudflare.com/turnstile/v0/api.js',
+      'https://accounts.google.com/o/oauth2/v2/auth?client_id=x',
+      ORIGIN + '/auth/callback',
+      ORIGIN + '/api/delete-account',
+      ORIGIN + '/home?code=pkce-code-from-google',
+      ORIGIN + '/account?error_description=denied&error_code=x&code=1',
+    ]) {
+      expect(await request(url), url).toBeUndefined()
+    }
+    expect(await request(ORIGIN + '/reset-password', { mode: 'navigate' })).toBeUndefined()
+    expect(fetched).toEqual([])
+    expect([...caches.values()].every((c) => c.store.size === 0)).toBe(true)
+  })
+
   it('leaves its own file and anything it does not know to the network', async () => {
     expect(await request(ORIGIN + '/sw.js')).toBeUndefined()
     expect(await request(ORIGIN + '/api/anything')).toBeUndefined()
@@ -293,6 +312,9 @@ describe('the route table', () => {
     expect(r(ORIGIN + '/share-target', { method: 'POST', body: 'x' })).toBe('share')
     expect(r('https://www.googleapis.com/drive/v3/files')).toBe('none')
     expect(r(ORIGIN + '/other.json')).toBe('none')
+    expect(r(ORIGIN + '/reset-password', {}, 'navigate')).toBe('none')
+    expect(r(ORIGIN + '/home?code=abc', {}, 'navigate')).toBe('none')
+    expect(r('https://abcdefgh.supabase.co/auth/v1/token')).toBe('none')
   })
 
   it('only a plain 200 from this site is worth keeping', () => {

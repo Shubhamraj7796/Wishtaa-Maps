@@ -9,6 +9,9 @@ import { ConflictPrompt, DriveBanner } from './DriveUi'
 import { UpdateBar } from './PwaUi'
 import { SharedPictures } from './SharedPictures'
 import { useFiles } from './FilesContext'
+import { registerAccountNotice, useAuth } from './account'
+import { AccountMenu } from './auth/AccountMenu'
+import { AuthHost, ExpiredBar } from './auth/AuthHost'
 import { Cloud, HardDrive, Home, Info, Library, Menu, Moon, Plus, Search, Sparkles, Sun, Trash2, X, FileText } from './icons'
 
 export function Wordmark({ compact }: { compact?: boolean }) {
@@ -51,6 +54,7 @@ function linkClass({ isActive }: { isActive: boolean }) {
 
 function StorageInfo() {
   const f = useFiles()
+  const account = useAuth()
   const [used, setUsed] = useState<string | null>(null)
   useEffect(() => {
     let alive = true
@@ -71,7 +75,7 @@ function StorageInfo() {
         {count} {count === 1 ? 'file' : 'files'}
         {used ? ` · ${used}` : ''}
       </p>
-      <p className="mt-0.5">Guest. Files stay on this device.</p>
+      <p className="mt-0.5">{account.status === 'signed-in' ? `Signed in as ${account.user?.email ?? 'you'}. Files stay where you saved them.` : 'Guest. Files stay on this device.'}</p>
       <button type="button" onClick={() => f.setDialog({ kind: 'storage' })} className="mt-2 rounded-ui border border-line px-2 py-1 font-medium text-ink hover:bg-bg">
         Storage settings
       </button>
@@ -149,6 +153,7 @@ function TopBar() {
         <button type="button" onClick={toggleTheme} aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`} title="Switch theme" className="grid h-9 w-9 place-items-center rounded-ui hover:bg-bg">
           {theme === 'light' ? <Moon size={18} aria-hidden="true" /> : <Sun size={18} aria-hidden="true" />}
         </button>
+        <AccountMenu />
       </div>
     </header>
   )
@@ -196,9 +201,15 @@ export function Shell(): ReactNode {
   const immersive = pathname.startsWith('/map/') || pathname.startsWith('/kb/')
   const [drawer, setDrawer] = useState(false)
   const theme = useSettings((s) => s.theme)
+  const { notify } = useFiles()
   useEffect(() => {
     document.documentElement.dataset.theme = theme
   }, [theme])
+  // Messages from the account code (outside React) show in the same toast as everything else.
+  useEffect(() => {
+    registerAccountNotice(notify)
+    return () => registerAccountNotice(null)
+  }, [notify])
   useEffect(() => setDrawer(false), [pathname])
   useEffect(() => {
     if (!drawer) return
@@ -225,6 +236,7 @@ export function Shell(): ReactNode {
           {!immersive && <TopBar />}
           {!immersive && <LocalBanner />}
           <UpdateBar />
+          <ExpiredBar />
           <DriveBanner />
           <ConflictPrompt />
           <RecoverHost />
@@ -234,6 +246,7 @@ export function Shell(): ReactNode {
         </div>
       </div>
       <Dialogs />
+      <AuthHost />
       <CreateBridge />
       <PictureChoiceDialog />
       <SharedPictures />

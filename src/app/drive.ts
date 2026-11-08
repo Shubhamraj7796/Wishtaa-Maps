@@ -16,7 +16,7 @@ function safeStorage(): AuthStorage | undefined {
   }
 }
 
-const FOLDER_KEY = 'wishtaamaps:drive-folder'
+export const FOLDER_KEY = 'wishtaamaps:drive-folder'
 const folderCache: FolderCache = {
   get: () => {
     try {

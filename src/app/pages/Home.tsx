@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { LAST_OPEN_KEY } from '@/editor/session'
 import { useCreate } from '../createFlow'
 import { useImportEmmx } from '../importFlow'
@@ -8,6 +8,8 @@ import { timeAgo } from '../format'
 import { BookOpen, Cloud, FileText, LayoutTemplate, Network, Star, Upload, Clock } from '../icons'
 import { ActionCard, EmptyState, Page, PageHeader } from '../ui'
 import { useDriveActions } from '../useDrive'
+import { loadAccountRecents, useAuth } from '../account'
+import type { RecentRow } from '@/core/auth/types'
 
 function lastOpenId(): string | null {
   try {
@@ -15,6 +17,42 @@ function lastOpenId(): string | null {
   } catch {
     return null
   }
+}
+
+/** Google Drive maps from the account's recent list that this device has not opened yet. One click brings one in. */
+function AccountRecent({ have }: { have: (driveFileId: string) => boolean }) {
+  const auth = useAuth()
+  const drive = useDriveActions()
+  const [rows, setRows] = useState<RecentRow[]>([])
+  const uid = auth.status === 'signed-in' && !auth.offline ? auth.user?.id : undefined
+  useEffect(() => {
+    if (!uid) return void setRows([])
+    let alive = true
+    loadAccountRecents(20).then((r) => alive && setRows(r), () => undefined)
+    return () => {
+      alive = false
+    }
+  }, [uid])
+  const fresh = rows.filter((r) => r.storage_kind === 'drive' && r.drive_file_id && !have(r.drive_file_id)).slice(0, 6)
+  if (!fresh.length) return null
+  return (
+    <section aria-label="From your account" className="mb-8">
+      <h2 className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-muted"><Cloud size={14} aria-hidden="true" /> Recently opened on your other devices</h2>
+      <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        {fresh.map((r) => (
+          <li key={r.file_ref}>
+            <button type="button" onClick={() => void drive.openDriveFile(r.drive_file_id as string)} className="flex w-full items-center gap-3 rounded-ui border border-line bg-surface p-3 text-left hover:border-brand hover:bg-brand/10">
+              <Cloud size={18} aria-hidden="true" className="shrink-0 text-muted" />
+              <span className="min-w-0">
+                <span className="block truncate text-sm font-medium">{r.title || 'Untitled'}</span>
+                <span className="block text-xs text-muted">Google Drive · {timeAgo(Date.parse(r.last_opened))}</span>
+              </span>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
 }
 
 const noSelection: ReadonlySet<string> = new Set()
@@ -80,6 +118,8 @@ export default function Home() {
           <FileBrowser items={recent} view="grid" selection={noSelection} onSelect={noop} />
         </section>
       )}
+
+      <AccountRecent have={drive.isInDrive} />
 
       {starred.length > 0 && (
         <section aria-label="Starred" className="mb-8">

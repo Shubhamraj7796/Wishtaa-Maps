@@ -81,6 +81,8 @@ interface SettingsState {
   /** The one-time tip about Ctrl + wheel and pinch has been shown. */
   wheelHintSeen: boolean
   markWheelHintSeen: () => void
+  /** Applies preferences that came from the account (already checked by `sanitizePrefs`) and saves them here too. */
+  applySynced: (p: Partial<Pick<SettingsState, 'theme' | 'mouseWheel' | 'openAllReadOnly' | 'panelMode' | 'picturesPref' | 'touchControls' | 'pictureUploads' | 'pauseOnDataSaver'>>) => void
 }
 
 const storage = typeof localStorage === 'undefined' ? undefined : localStorage
@@ -146,6 +148,10 @@ export const useSettings = create<SettingsState>((set, get) => {
     markWheelHintSeen: () => {
       if (get().wheelHintSeen) return
       set({ wheelHintSeen: true })
+      persist()
+    },
+    applySynced: (p) => {
+      set(p)
       persist()
     },
   }

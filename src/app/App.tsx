@@ -3,11 +3,13 @@ import { lazyWithRetry } from './chunkRecovery'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { FilesProvider } from './FilesContext'
 import { Shell } from './Shell'
+import Account from './pages/Account'
 import Drive from './pages/Drive'
 import Files from './pages/Files'
 import Home from './pages/Home'
 import Kb from './pages/Kb'
 import { Gallery, NotFound, SearchPage } from './pages/Misc'
+import ResetPassword from './pages/ResetPassword'
 
 // The editor is the heaviest part of the app; load it only when a file is opened.
 const EditorScreen = lazyWithRetry(() => import('./EditorScreen'))
@@ -46,6 +48,8 @@ export function AppRoutes() {
         <Route path="gallery" element={<Gallery />} />
         <Route path="drive" element={<Drive />} />
         <Route path="search" element={<SearchPage />} />
+        <Route path="account" element={<Account />} />
+        <Route path="reset-password" element={<ResetPassword />} />
         <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>

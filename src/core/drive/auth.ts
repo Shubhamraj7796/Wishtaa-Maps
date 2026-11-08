@@ -267,6 +267,18 @@ export class DriveAuth implements TokenProvider {
     return this.request('')
   }
 
+  /**
+   * Forgets the linked Google account on this browser (token and remembered account) WITHOUT revoking Google's permission. Used when
+   * the Wishtaa Maps account signs out, so the next person never inherits this Drive access; signing in again needs no new consent.
+   */
+  forget() {
+    this.token = null
+    this.pending = null
+    this.inflight = null
+    this.set({ status: this.opts.clientId ? 'disconnected' : 'unconfigured', message: null, account: null })
+    this.writeHint(false)
+  }
+
   /** Removes our access: revokes the token with Google and forgets the account. */
   async disconnect(): Promise<void> {
     const t = this.token?.value

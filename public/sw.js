@@ -10,6 +10,8 @@
  *   - touch anything that is not from this site. Google Drive, Google sign-in and every other address are cross-origin, so
  *     they go straight to the network: nothing from them (responses, tokens) is ever read, cached or kept here;
  *   - cache a request that carries an Authorization header or an access token in its address;
+ *   - touch any account request: sign-in (Supabase and Cloudflare Turnstile are other sites, so they never reach this worker), this
+ *     site's own /api and /auth addresses, or the password-reset page, whose link carries a one-time code;
  *   - cache a page that is not the app (an error page, a redirect).
  *
  * Updates: the build id below changes with every build, so the browser sees a new worker. It waits (it does NOT take over
@@ -33,6 +35,8 @@ function routeFor(url, request, origin) {
   if (request.method !== 'GET') return 'none'
   if (url.origin !== origin) return 'none' // Google Drive, sign-in, fonts, everything else: straight to the network
   if (request.headers && request.headers.has('authorization')) return 'none'
+  // Sign-in is never ours to keep: no account call (this site's /api, /auth, a reset or confirmation link) is read or cached here.
+  if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/auth/') || url.pathname === '/reset-password') return 'none'
   if (/[?&](access_token|token|key|code)=/i.test(url.search)) return 'none'
   if (url.pathname === '/sw.js') return 'none'
   if (request.mode === 'navigate') return 'nav'

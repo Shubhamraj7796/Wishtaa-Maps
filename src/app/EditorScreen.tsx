@@ -28,6 +28,7 @@ import type { FileRecord } from '@/core/files/types'
 import { Icon } from '@/ui/icons'
 import { IconButton } from '@/ui/IconButton'
 import { takePendingShare } from '@/pwa/share'
+import { recordRecentFile } from './account'
 import { pickPdfFromDevice, togglePdfPanel } from '@/editor/pdf/actions'
 import { PasswordDialog } from '@/editor/pdf/PasswordDialog'
 import { useTouchFriendly } from '@/editor/pictures/touch'
@@ -104,6 +105,10 @@ function Editor({ file }: { file: FileRecord }) {
     if (openedId !== file.id) return // the map is still opening; opening the panel now would be undone when it finishes
     if (takeAfterRecover() === 'pdf' && !useEditor.getState().pdfPanel.open) togglePdfPanel()
   }, [openedId, file.id])
+  // Opening a file adds it to the account's recent list (name and ids only), when signed in.
+  useEffect(() => {
+    if (openedId === file.id) recordRecentFile(file)
+  }, [openedId, file.id, file.name, file.storage]) // eslint-disable-line react-hooks/exhaustive-deps
   const touch = useTouchFriendly()
   const [narrow, setNarrow] = useState(() => typeof window !== 'undefined' && window.innerWidth < 900)
   useEffect(() => {

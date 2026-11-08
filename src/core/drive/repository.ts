@@ -812,6 +812,29 @@ export class DriveRepository implements FileRepository {
     return this.local.update(id, { storage: 'local', contentRef: id, driveMeta: null })
   }
 
+  /**
+   * For sign-out (or a different person signing in): forgets the cached copies of Drive files in this browser, WITHOUT touching Drive.
+   * A file with changes not yet sent (or a waiting conflict, or pictures still going up) is never dropped: it stays as a file in this
+   * browser, so no work is lost. Everything else was already in Drive and is simply taken off this device's list.
+   */
+  async forgetDriveCache(): Promise<{ removed: number; keptLocal: number }> {
+    const files = (await this.local.list({ parentId: 'any' })).filter((f) => this.isDrive(f))
+    const picturesWaiting = (this.opts.pictures?.sync.getStatus().pending ?? 0) > 0
+    let removed = 0
+    let keptLocal = 0
+    for (const f of files) {
+      if (this.unsynced.has(f.id) || this.conflictMap.has(f.id) || picturesWaiting) {
+        await this.keepLocal(f.id)
+        keptLocal++
+      } else {
+        this.clearConflict(f.id)
+        await this.local.remove(f.id)
+        removed++
+      }
+    }
+    return { removed, keptLocal }
+  }
+
   /** Opens a file that is already in Drive (chosen with Picker or from the Drive browser). Reuses the local file if linked. */
   async openFromDrive(driveFileId: string): Promise<FileRecord> {
     const existing = (await this.local.list({ parentId: 'any' })).find((f) => f.storage === 'drive' && f.contentRef === driveFileId)

@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Accounts (optional; the app is unchanged without the Supabase settings)
+- **Sign in** with an emailed 6-digit code, email and password (confirmation, "Forgot password", reset page), or Google. One account per verified email whichever way. Account menu (name, Preferences, Storage settings, Account, Sign out), Account page (name, ways to sign in with add/remove and never the last one, sign out of all devices, delete account with a clear note that Drive files are not touched).
+- Sessions refresh by themselves; offline the app stays signed in and sync resumes; an expired sign-in shows "Sign in again" and never loses local work.
+- Supabase holds only profile, preferences, recent-files list and Drive link status (`supabase/migrations/0003_accounts.sql`, owner-only row-level security tested against a real Postgres engine). Never map content or pictures.
+- First sign-in with files in this browser offers "Add my files to my account" (names only; optionally move to Drive). Sign-out removes the person's Drive access and cached Drive list (never dropping unsent edits); guest files stay.
+- Service worker never reads or keeps sign-in traffic. CAPTCHA (Cloudflare Turnstile) and rate limits are dashboard settings: see `docs/auth-setup.md`.
+
 ### Add picture: one menu, crop, readable compression, touch
 - **Add picture** menu with Upload, Upload and crop, Take photo, Choose from Photos, Paste from clipboard, Capture screen (Ctrl+Shift+S), drag and
   drop, and Insert from my pictures. Bottom sheet on touch devices (decided by the device, not the window width).
