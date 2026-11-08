@@ -44,7 +44,7 @@ export function toFailure(e: unknown, online = typeof navigator === 'undefined' 
   const r = (e && typeof e === 'object' ? e : {}) as Raw
   const msg = r.message ?? ''
   const network = r.name === 'AuthRetryableFetchError' || r.name === 'TypeError' || r.status === 0 || !online || /failed to fetch|network|load failed/i.test(msg)
-  if (network) return new AuthFailure('network', 'No connection to the sign-in service. Check your internet and try again. Your files are safe on this device.')
+  if (network) return new AuthFailure('network', 'Could not reach the sign-in service. Check your internet connection, or try again in a little while. Your files are safe on this device.')
   const known = r.code ? BY_CODE[r.code] : undefined
   if (known) return new AuthFailure(known[0], known[1])
   if (r.status === 429) return new AuthFailure('rate', SLOW_DOWN)
