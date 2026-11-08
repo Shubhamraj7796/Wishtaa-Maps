@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Google sign-in linked to Drive (accounts, step 2)
+- After **Sign in with Google**, one clear question asks for the narrow Drive permission in the same Google account (`login_hint`). **Connect Google Drive** after an email sign-in always shows Google's account chooser, shows which account was linked, and says so when it differs from the sign-in email.
+- Drive access renews itself: about every 50 minutes, when the tab returns, after a reload, and on the next click if the browser needs one. The "sign in again" bar appears only when Google itself asks the person to confirm. The account records which Google address is linked (never a token).
+- Sign-out and a different person signing in remove Drive access and the cached Drive list from the browser, never dropping unsent edits. See `docs/drive-sign-in.md` (also: what needs a server, with a plan, cost and risk).
+
 ### Accounts (optional; the app is unchanged without the Supabase settings)
 - **Sign in** with an emailed 6-digit code, email and password (confirmation, "Forgot password", reset page), or Google. One account per verified email whichever way. Account menu (name, Preferences, Storage settings, Account, Sign out), Account page (name, ways to sign in with add/remove and never the last one, sign out of all devices, delete account with a clear note that Drive files are not touched).
 - Sessions refresh by themselves; offline the app stays signed in and sync resumes; an expired sign-in shows "Sign in again" and never loses local work.

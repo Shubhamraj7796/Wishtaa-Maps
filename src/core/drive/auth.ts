@@ -30,6 +30,14 @@ export interface GisTokenResponse {
 export interface GisTokenClient {
   requestAccessToken(overrides?: { prompt?: string; hint?: string }): void
 }
+
+/** How a quiet renewal (no window, no question) went. */
+export type RenewResult =
+  | 'ok'
+  | 'needs-gesture' // the browser would not open Google's window without a click: try again on the next click
+  | 'offline'
+  | 'failed' // Google needs the person to confirm (signed out of Google, or access changed)
+  | 'not-linked'
 export interface Gis {
   initTokenClient(config: {
     client_id: string
@@ -92,8 +100,11 @@ export interface DriveAuthOptions {
 export class DriveAuth implements TokenProvider {
   private token: { value: string; expiresAt: number } | null = null
   private client: GisTokenClient | null = null
-  private pending: { resolve: (t: string) => void; reject: (e: DriveError) => void } | null = null
+  private pending: { resolve: (t: string) => void; reject: (e: DriveError) => void; quiet: boolean } | null = null
+  /** The Google address to suggest when asking for access (the one the person signed in with), used until an account is linked. */
+  private loginHint: string | null = null
   private inflight: Promise<string> | null = null
+  private inflightQuiet = false
   private listeners = new Set<Listener>()
   private snap: DriveAuthState
   private readonly load: () => Promise<Gis>
@@ -182,6 +193,11 @@ export class DriveAuth implements TokenProvider {
       callback: (r) => this.onResponse(r, gis),
       error_callback: (e) => {
         const closed = e.type === 'popup_closed' || e.type === 'popup_failed_to_open'
+        if (this.pending?.quiet) {
+          // A quiet attempt that could not open Google's window is not a sign-in problem: it waits for a click.
+          this.fail(new DriveError(e.type === 'popup_failed_to_open' ? 'popup' : 'auth', e.message || 'Google sign-in window.'), false, true)
+          return
+        }
         this.fail(new DriveError('auth', closed ? 'The Google sign-in window was closed before finishing.' : e.message || 'Google sign-in failed.'))
       },
     })
@@ -191,6 +207,10 @@ export class DriveAuth implements TokenProvider {
   private onResponse(r: GisTokenResponse, gis: Gis) {
     if (r.error || !r.access_token) {
       const denied = r.error === 'access_denied'
+      if (this.pending?.quiet && !denied) {
+        this.fail(new DriveError('auth', r.error_description || 'Google needs you to confirm.'), false, true)
+        return
+      }
       this.fail(
         new DriveError(denied ? 'revoked' : 'auth', denied ? 'Google Drive access was not allowed. You can try connecting again.' : r.error_description || 'Google sign-in failed.'),
         denied
@@ -210,7 +230,14 @@ export class DriveAuth implements TokenProvider {
     p?.resolve(r.access_token)
   }
 
-  private fail(e: DriveError, forget = false) {
+  private fail(e: DriveError, forget = false, quiet = false) {
+    if (quiet) {
+      // A quiet renewal that did not work changes nothing the person sees: the old token (if any) keeps working until it expires.
+      const p = this.pending
+      this.pending = null
+      p?.reject(e)
+      return
+    }
     this.token = null
     if (forget) {
       this.set({ status: 'disconnected', message: e.message, account: null })
@@ -223,13 +250,19 @@ export class DriveAuth implements TokenProvider {
     p?.reject(e)
   }
 
-  private request(prompt: string): Promise<string> {
-    if (this.inflight) return this.inflight
+  private request(prompt: string, o: { quiet?: boolean; chooseAccount?: boolean } = {}): Promise<string> {
+    if (this.inflight) {
+      // A person's own request never inherits the failure of a quiet one in progress: it asks properly if the quiet one did not work.
+      if (!o.quiet && this.inflightQuiet) return this.inflight.then((t) => t, () => this.request(prompt, o))
+      return this.inflight
+    }
+    this.inflightQuiet = !!o.quiet
     const p = new Promise<string>((resolve, reject) => {
       this.tokenClient().then(
         (client) => {
-          this.pending = { resolve, reject }
-          client.requestAccessToken({ prompt, ...(this.snap.account ? { hint: this.snap.account } : {}) })
+          this.pending = { resolve, reject, quiet: !!o.quiet }
+          const hint = o.chooseAccount ? null : this.snap.account ?? this.loginHint
+          client.requestAccessToken({ prompt, ...(hint ? { hint } : {}) })
         },
         (e) => reject(e)
       )
@@ -242,13 +275,16 @@ export class DriveAuth implements TokenProvider {
     return p
   }
 
-  /** Starts sign-in (call from a click). Resolves when connected. */
-  async connect(): Promise<void> {
+  /**
+   * Starts sign-in (call from a click). Resolves when connected. With `chooseAccount`, Google always shows its account chooser and no
+   * address is suggested (for someone who signed in to Wishtaa Maps by email and picks which Google account holds their maps).
+   */
+  async connect(o: { chooseAccount?: boolean } = {}): Promise<void> {
     if (this.snap.status === 'unconfigured') throw new DriveError('config', 'Google Drive is not set up for this site yet.')
     const first = this.snap.status !== 'connected' && this.snap.status !== 'reconnect'
     if (first) this.set({ status: 'connecting', message: null })
     try {
-      await this.request(first ? 'consent' : '')
+      await this.request(first ? (o.chooseAccount ? 'select_account consent' : 'consent') : o.chooseAccount ? 'select_account' : '', { chooseAccount: o.chooseAccount })
     } catch (e) {
       if (first && this.snap.status === 'connecting') this.set({ status: 'disconnected' })
       throw e
@@ -265,6 +301,38 @@ export class DriveAuth implements TokenProvider {
     if (!this.connected()) throw new DriveError('auth', 'Connect Google Drive to save this file there.')
     this.token = null
     return this.request('')
+  }
+
+  /** Suggests a Google address for the next sign-in window (the account the person signed in with). Never overrides a linked account. */
+  setLoginHint(email: string | null) {
+    this.loginHint = email
+  }
+
+  /** Milliseconds until the current token stops working; null when there is no token in memory. */
+  expiresInMs(): number | null {
+    return this.token ? this.token.expiresAt - this.now() : null
+  }
+
+  /**
+   * Gets a fresh token without asking anything (Google's `prompt: none`), ahead of expiry. Nothing the person sees changes unless
+   * Google refuses outright (see `markReconnect`). The current token keeps working while this runs.
+   */
+  async renewQuietly(): Promise<RenewResult> {
+    if (!this.connected()) return 'not-linked'
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) return 'offline'
+    try {
+      await this.request('none', { quiet: true })
+      return 'ok'
+    } catch (e) {
+      if (e instanceof DriveError && e.kind === 'popup') return 'needs-gesture'
+      if (e instanceof DriveError && e.kind === 'offline') return 'offline'
+      return 'failed'
+    }
+  }
+
+  /** Shows the "Reconnect" bar: a quiet renewal failed and the current token is gone or about to be. */
+  markReconnect(message: string) {
+    if (this.snap.status === 'connected') this.set({ status: 'reconnect', message })
   }
 
   /**

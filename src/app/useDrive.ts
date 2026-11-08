@@ -6,12 +6,23 @@ import { pickDriveFolder, pickOpenableFiles } from '@/core/drive/picker'
 import type { ConflictChoice, DriveConflict } from '@/core/drive/repository'
 import type { FileRecord } from '@/core/files/types'
 import { currentFileId, reopenFile } from '@/editor/session'
+import { auth } from './account'
 import { driveAuth, driveClient, driveConfig } from './drive'
 import { useFiles } from './FilesContext'
 import { driveRepository } from './repo'
 
 export const useDriveAuth = (): DriveAuthState => useSyncExternalStore(driveAuth.subscribe, driveAuth.getState)
 export const useDriveConflicts = (): DriveConflict[] => useSyncExternalStore(driveRepository.subscribeSync, driveRepository.conflicts)
+
+/** After linking Drive: says which Google account it is, and says so plainly when it is not the address the person signed in with. */
+function connectedMessage(account: string | null): string {
+  const me = auth.state.user
+  const signedInWith = me?.googleEmail ?? me?.email
+  if (account && signedInWith && account.toLowerCase() !== signedInWith.toLowerCase()) {
+    return `Google Drive connected as ${account}. That is not the address you signed in with (${signedInWith}); that is fine, your maps will be in the Drive you chose.`
+  }
+  return 'Google Drive connected.'
+}
 
 const messageOf = (e: unknown) => (e instanceof Error && e.message ? e.message : 'Something went wrong with Google Drive.')
 
@@ -30,13 +41,13 @@ export function useDriveActions() {
     }
 
     /** Signs in, creates the "Wishtaa Maps" folder on first use, and brings files up to date. */
-    const connect = () =>
+    const connect = (o: { chooseAccount?: boolean } = {}) =>
       run(async () => {
-        await driveAuth.connect()
+        await driveAuth.connect(o)
         const account = await driveClient.account()
         driveAuth.setAccount(account)
         await driveClient.ensureAppFolder()
-        notify('Google Drive connected.')
+        notify(connectedMessage(account))
         void driveRepository.syncAll()
         return true
       })

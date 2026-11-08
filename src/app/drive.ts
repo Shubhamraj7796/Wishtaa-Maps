@@ -1,5 +1,6 @@
 import { DriveAuth, type AuthStorage } from '@/core/drive/auth'
 import { DriveClient, type FolderCache } from '@/core/drive/client'
+import { DriveRenewal } from '@/core/drive/renewal'
 
 /** Browser-safe settings from the environment. Nothing secret lives here: a client id and a restricted API key. */
 export const driveConfig = {
@@ -38,3 +39,9 @@ const folderCache: FolderCache = {
 /** Google sign-in for Drive. Tokens are kept in memory only. */
 export const driveAuth = new DriveAuth({ clientId: driveConfig.clientId, storage: safeStorage() })
 export const driveClient = new DriveClient(driveAuth, folderCache)
+
+/** Keeps Drive access alive: a new token about every 50 minutes and when the tab comes back, without any window or question. */
+export const driveRenewal = new DriveRenewal(driveAuth)
+export function startDriveRenewal() {
+  if (driveConfig.clientId) driveRenewal.start()
+}

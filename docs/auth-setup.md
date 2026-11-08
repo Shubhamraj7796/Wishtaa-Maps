@@ -19,6 +19,8 @@ against a real Postgres engine.
 Sign-in methods (all lead to the **same account for the same verified email**): an emailed 6-digit code, email and password
 (with confirmation and "Forgot password"), and Google.
 
+See `docs/drive-sign-in.md` for how Google sign-in and Google Drive fit together, how access is kept alive, and what would need a server.
+
 ---
 
 ## Part A. Supabase (do these in order)

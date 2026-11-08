@@ -19,6 +19,8 @@ export interface AuthState {
   recovery: boolean
   /** The address to pre-fill in "Sign in again". */
   expiredEmail: string | null
+  /** The sign-in was confirmed with the service this session (not only remembered from last time). */
+  verified: boolean
 }
 
 export interface AccountHooks {
@@ -50,7 +52,7 @@ export interface ControllerOptions {
   returning?: boolean
 }
 
-const SIGNED_OUT: AuthState = { status: 'signed-out', user: null, offline: false, recovery: false, expiredEmail: null }
+const SIGNED_OUT: AuthState = { status: 'signed-out', user: null, offline: false, recovery: false, expiredEmail: null, verified: false }
 
 export class AuthController {
   private snap: AuthState
@@ -159,7 +161,7 @@ export class AuthController {
       return
     }
     const hint = this.readHint()
-    if (hint && !this.signingOut) this.set({ status: 'expired', user: null, offline: false, expiredEmail: hint.email })
+    if (hint && !this.signingOut) this.set({ status: 'expired', user: null, offline: false, expiredEmail: hint.email, verified: false })
     else if (this.snap.status !== 'signed-out') this.set({ ...SIGNED_OUT })
   }
 
@@ -180,7 +182,7 @@ export class AuthController {
       if (this.signingOut) return
       // Signed out somewhere else (or revoked): the files here are untouched, the person is asked to sign in again.
       const email = this.snap.user?.email ?? this.readHint()?.email ?? null
-      if (this.snap.status === 'signed-in' || this.snap.status === 'expired') this.set({ status: 'expired', user: null, expiredEmail: email, offline: false })
+      if (this.snap.status === 'signed-in' || this.snap.status === 'expired') this.set({ status: 'expired', user: null, expiredEmail: email, offline: false, verified: false })
       return
     }
     if (!user) return
@@ -201,7 +203,7 @@ export class AuthController {
     }
     this.writeHint(user)
     this.verified = true
-    this.set({ status: 'signed-in', user, offline: false, expiredEmail: null })
+    this.set({ status: 'signed-in', user, offline: false, expiredEmail: null, verified: true })
     if (firstTime) this.opts.hooks?.signedIn?.(user, { newBrowserUser: !owner || other })
   }
 

@@ -33,6 +33,7 @@ function returningFromAuth(): boolean {
 
 let sync: AccountSync | null = null
 let stopPrefs: (() => void) | null = null
+let stopDriveWatch: (() => void) | null = null
 
 const QUEUE_PREFIX = 'wishtaamaps:acct-queue:'
 const OFFER_PREFIX = 'wishtaamaps:guest-offer:'
@@ -43,6 +44,8 @@ function stopAccountSync() {
   sync = null
   stopPrefs?.()
   stopPrefs = null
+  stopDriveWatch?.()
+  stopDriveWatch = null
 }
 
 const hooks: AccountHooks = {
@@ -62,6 +65,7 @@ const hooks: AccountHooks = {
       /* a cache that cannot be cleared must not stop the sign-out */
     }
     driveAuth.forget()
+    driveAuth.setLoginHint(null)
     try {
       local()?.removeItem(FOLDER_KEY)
     } catch {
@@ -124,6 +128,7 @@ async function startAccountSync(user: AuthUser, info: { newBrowserUser: boolean 
   s.start()
   void auth.loadProfile()
   void reconcilePrefs(db, s, user.id).catch(() => undefined)
+  void linkDrive(db, s, user)
   if (info.newBrowserUser) void offerGuestFiles(user.id)
 }
 
@@ -147,6 +152,42 @@ async function reconcilePrefs(db: AccountDb, s: AccountSync, uid: string) {
     last = now
     s.prefs(PREFS_VERSION, now)
   })
+}
+
+// ---------------------------------------------------------------- google drive
+/**
+ * Ties Google Drive to the account: suggests the right Google address when asking for access (the one linked on another device, else the
+ * one signed in with), and records in the account which Google account is linked here and whether it needs reconnecting. No token is
+ * ever sent: only the address and a status.
+ */
+async function linkDrive(db: AccountDb, s: AccountSync, user: AuthUser) {
+  let remote: Awaited<ReturnType<AccountDb['getDriveLink']>> = null
+  try {
+    remote = await db.getDriveLink(user.id)
+  } catch {
+    /* offline: the hint from sign-in is enough */
+  }
+  if (sync !== s) return
+  const suggested = (remote && remote.status !== 'disconnected' ? remote.google_email : null) ?? user.googleEmail
+  if (!driveAuth.connected()) driveAuth.setLoginHint(suggested ?? null)
+
+  // Only a device that is (or was, this session) linked reports changes: a new device must never mark another device's link as gone.
+  let linkedHere = driveAuth.connected()
+  let last = ''
+  const report = () => {
+    const st = driveAuth.state
+    if (st.status === 'connected' || st.status === 'reconnect') linkedHere = true
+    if (!linkedHere || st.status === 'unconfigured' || st.status === 'connecting') return
+    const status = st.status === 'connected' ? 'connected' : st.status === 'reconnect' ? 'needs_reconnect' : 'disconnected'
+    const email = st.account ?? remote?.google_email ?? null
+    const key = `${status}|${email ?? ''}`
+    if (key === last) return
+    last = key
+    s.driveLink({ google_email: email, status, ...(status === 'connected' ? { connected_at: new Date().toISOString() } : {}) })
+  }
+  stopDriveWatch?.()
+  stopDriveWatch = driveAuth.subscribe(report)
+  report()
 }
 
 // --------------------------------------------------------------- recent files

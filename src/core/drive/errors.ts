@@ -7,6 +7,7 @@ export type DriveErrorKind =
   | 'notfound'
   | 'conflict'
   | 'config' // client id / API key not set up
+  | 'popup' // the browser would not open Google's window without a click (a quiet renewal had to wait for one)
   | 'other'
 
 /** Anything that goes wrong talking to Google Drive, with a message that is safe to show. */

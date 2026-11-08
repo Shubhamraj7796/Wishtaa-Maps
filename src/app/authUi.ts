@@ -12,12 +12,22 @@ export type AuthDialog =
 
 interface AuthUiState {
   dialog: AuthDialog | null
+  /** Dialogs waiting their turn (a second one never replaces the one the person is in). */
+  queue: AuthDialog[]
+  /** Shows a dialog now, or after the current one is closed. */
   open: (d: AuthDialog) => void
+  /** Shows a dialog now, replacing the current one (the person asked for it). */
+  openNow: (d: AuthDialog) => void
   close: () => void
 }
 
-export const useAuthUi = create<AuthUiState>((set) => ({
+export const useAuthUi = create<AuthUiState>((set, get) => ({
   dialog: null,
-  open: (dialog) => set({ dialog }),
-  close: () => set({ dialog: null }),
+  queue: [],
+  open: (d) => (get().dialog ? set({ queue: [...get().queue, d] }) : set({ dialog: d })),
+  openNow: (dialog) => set({ dialog }),
+  close: () => {
+    const [next, ...rest] = get().queue
+    set({ dialog: next ?? null, queue: rest })
+  },
 }))

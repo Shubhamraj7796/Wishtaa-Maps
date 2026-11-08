@@ -4,6 +4,7 @@ import './styles/tokens.css'
 import 'katex/dist/katex.min.css'
 import './styles/tailwind.css'
 import { startAuth } from './app/account'
+import { startDriveRenewal } from './app/drive'
 import { App } from './app/App'
 import { boot } from './app/boot'
 import { installChunkRecovery } from './app/chunkRecovery'
@@ -18,6 +19,7 @@ registerServiceWorker()
 installChunkRecovery()
 // Accounts (when this site has them set up): read the saved sign-in in the background; guests download nothing extra.
 startAuth()
+startDriveRenewal()
 
 void boot()
   .catch(() => undefined) // a failed clean-up must never stop the app from opening

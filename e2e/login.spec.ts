@@ -102,13 +102,18 @@ for (const size of SIZES) {
     await expect(page.getByRole('menuitem', { name: /sign out/i })).toBeVisible()
     await page.screenshot({ path: join(SHOTS, `${size.name}-5-signed-in.png`) })
 
+    await page.getByRole('menuitem', { name: /account/i }).click()
+    await expect(page.getByRole('heading', { name: 'Account', level: 1 })).toBeVisible()
+    await expect(page.getByRole('region', { name: 'Ways to sign in' })).toBeVisible()
+    await noSideScroll()
+    await page.screenshot({ path: join(SHOTS, `${size.name}-6-account.png`), fullPage: true })
+
     // The sign-in stays after a reload, then signing out puts the Sign in button back.
-    await page.keyboard.press('Escape')
     await page.reload()
     await expect(page.getByRole('button', { name: /account menu/i })).toBeVisible()
     await page.getByRole('button', { name: /account menu/i }).click()
     await page.getByRole('menuitem', { name: /sign out/i }).click()
-    await expect(page.getByRole('button', { name: /^sign in$/i })).toBeVisible()
+    await expect(page.getByRole('button', { name: /^sign in$/i }).first()).toBeVisible()
 
     expect(problems).toEqual([])
     // Nothing about the sign-in was kept by the service worker's caches, and no secrets are in the page address.

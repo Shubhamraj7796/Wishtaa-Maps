@@ -1,10 +1,13 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { addGuestFilesToAccount, auth, markGuestOfferDone, setLocalRecents, useAuth } from '../account'
 import { useAuthUi } from '../authUi'
 import { useFiles } from '../FilesContext'
 import { Info, X } from '../icons'
 import { Modal, buttonPrimary, buttonSecondary } from '../Modal'
+import { driveAuth, driveConfig } from '../drive'
 import { useDriveActions } from '../useDrive'
+import { DriveAllowDialog, DriveChooseDialog } from './DriveDialogs'
+import { takeGoogleReturn } from './googleReturn'
 import { Alert } from './parts'
 import { SignInDialog } from './SignInDialog'
 
@@ -96,8 +99,19 @@ function GuestFilesDialog({ count, onClose }: { count: number; onClose: () => vo
 export function AuthHost() {
   const dialog = useAuthUi((a) => a.dialog)
   const close = useAuthUi((a) => a.close)
+  const open = useAuthUi((a) => a.open)
+  const s = useAuth()
+  // Back from "Sign in with Google": ask for Drive access right away, in the same Google account (one flow, one extra click).
+  useEffect(() => {
+    if (s.status !== 'signed-in' || !s.verified || !s.user?.providers.includes('google')) return
+    if (!takeGoogleReturn()) return
+    if (!driveConfig.clientId || driveAuth.connected()) return
+    open({ kind: 'drive-allow', email: s.user.googleEmail ?? s.user.email })
+  }, [s.status, s.verified, s.user, open])
   if (!dialog) return null
   if (dialog.kind === 'signin') return <SignInDialog initial={dialog.view} reason={dialog.reason} onClose={close} />
   if (dialog.kind === 'guest-files') return <GuestFilesDialog count={dialog.count} onClose={close} />
+  if (dialog.kind === 'drive-allow') return <DriveAllowDialog email={dialog.email} onClose={close} />
+  if (dialog.kind === 'drive-choose') return <DriveChooseDialog onClose={close} />
   return null
 }
