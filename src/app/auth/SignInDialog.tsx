@@ -285,6 +285,10 @@ export function SignInDialog({ initial = 'email', reason, onClose }: { initial?:
         </div>
       )}
 
+      <p className="mt-3 text-center text-xs text-muted">
+        By continuing you agree to the <a href="/terms" target="_blank" rel="noopener noreferrer" className="underline">Terms</a> and the <a href="/privacy" target="_blank" rel="noopener noreferrer" className="underline">Privacy Policy</a>.
+      </p>
+
       {/* The security check stays mounted across steps so its token is ready when a step needs it. */}
       <div className={view === 'code' || view === 'forgot-sent' ? 'hidden' : 'mt-3'}>{captcha.element}</div>
     </Modal>

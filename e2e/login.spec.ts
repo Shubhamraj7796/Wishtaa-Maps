@@ -148,3 +148,23 @@ test('the app opens and works as a guest when accounts are not set up (the norma
     await new Promise((ok) => plain.close(ok))
   }
 })
+
+test('privacy and terms pages open as their own pages, readable at phone width, and are marked as drafts', async ({ browser }) => {
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: 'block' })
+  const page = await context.newPage()
+  for (const [path, title] of [['privacy', 'Privacy Policy'], ['terms', 'Terms of Service']] as const) {
+    const res = await page.goto(`http://127.0.0.1:4195/${path}`)
+    expect(res?.status()).toBe(200)
+    await expect(page.getByRole('heading', { name: title, level: 1 })).toBeVisible()
+    await expect(page.getByRole('note')).toContainText('DRAFT')
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+    await page.screenshot({ path: join(SHOTS, `phone-7-${path}.png`) })
+  }
+  // The login dialog links to both.
+  await page.goto('http://127.0.0.1:4195/home')
+  await page.getByRole('button', { name: /^sign in$/i }).click()
+  const dialog = page.getByRole('dialog', { name: 'Welcome to Wishtaa Maps' })
+  await expect(dialog.getByRole('link', { name: 'Privacy Policy' })).toHaveAttribute('href', '/privacy')
+  await expect(dialog.getByRole('link', { name: 'Terms' })).toHaveAttribute('href', '/terms')
+  await context.close()
+})

@@ -37,6 +37,8 @@ function routeFor(url, request, origin) {
   if (request.headers && request.headers.has('authorization')) return 'none'
   // Sign-in is never ours to keep: no account call (this site's /api, /auth, a reset or confirmation link) is read or cached here.
   if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/auth/') || url.pathname === '/reset-password') return 'none'
+  // The privacy and terms pages are separate static pages, not the app: they must never be saved as the app page.
+  if (/^\/(privacy|terms)\/?$/.test(url.pathname)) return 'none'
   if (/[?&](access_token|token|key|code)=/i.test(url.search)) return 'none'
   if (url.pathname === '/sw.js') return 'none'
   if (request.mode === 'navigate') return 'nav'

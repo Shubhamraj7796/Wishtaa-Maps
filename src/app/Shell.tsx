@@ -82,6 +82,10 @@ function StorageInfo() {
       <button type="button" onClick={() => f.setDialog({ kind: 'preferences' })} className="ml-2 mt-2 rounded-ui border border-line px-2 py-1 font-medium text-ink hover:bg-bg">
         Preferences
       </button>
+      <p className="mt-3 flex gap-3">
+        <a href="/privacy" target="_blank" rel="noopener noreferrer" className="underline-offset-2 hover:underline">Privacy</a>
+        <a href="/terms" target="_blank" rel="noopener noreferrer" className="underline-offset-2 hover:underline">Terms</a>
+      </p>
     </div>
   )
 }

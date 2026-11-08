@@ -312,6 +312,8 @@ describe('the route table', () => {
     expect(r(ORIGIN + '/share-target', { method: 'POST', body: 'x' })).toBe('share')
     expect(r('https://www.googleapis.com/drive/v3/files')).toBe('none')
     expect(r(ORIGIN + '/other.json')).toBe('none')
+    expect(r(ORIGIN + '/privacy', {}, 'navigate')).toBe('none') // a separate static page, never saved as the app
+    expect(r(ORIGIN + '/terms/', {}, 'navigate')).toBe('none')
     expect(r(ORIGIN + '/reset-password', {}, 'navigate')).toBe('none')
     expect(r(ORIGIN + '/home?code=abc', {}, 'navigate')).toBe('none')
     expect(r('https://abcdefgh.supabase.co/auth/v1/token')).toBe('none')

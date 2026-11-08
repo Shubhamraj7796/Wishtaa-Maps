@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Privacy Policy and Terms (accounts, step 3)
+- Static pages at `/privacy` and `/terms` (work without JavaScript, light and dark, phone-friendly), marked as **drafts** with highlighted blanks (owner name, contact email, region, age, governing law). Linked from the login dialog and the sidebar footer. The service worker never saves them as the app page.
+
 ### Google sign-in linked to Drive (accounts, step 2)
 - After **Sign in with Google**, one clear question asks for the narrow Drive permission in the same Google account (`login_hint`). **Connect Google Drive** after an email sign-in always shows Google's account chooser, shows which account was linked, and says so when it differs from the sign-in email.
 - Drive access renews itself: about every 50 minutes, when the tab returns, after a reload, and on the next click if the browser needs one. The "sign in again" bar appears only when Google itself asks the person to confirm. The account records which Google address is linked (never a token).

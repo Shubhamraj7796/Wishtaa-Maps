@@ -57,6 +57,8 @@ describe('the login screen', () => {
     await mount()
     const dialog = await openSignIn()
     expect(within(dialog).getByText(/send you a 6-digit code/i)).toBeTruthy()
+    expect(within(dialog).getByRole('link', { name: 'Privacy Policy' }).getAttribute('href')).toBe('/privacy')
+    expect(within(dialog).getByRole('link', { name: 'Terms' }).getAttribute('href')).toBe('/terms')
     const cont = within(dialog).getByRole('button', { name: /continue/i }) as HTMLButtonElement
     expect(cont.disabled).toBe(true) // no email yet
     type('Email', 'ann@example.com')

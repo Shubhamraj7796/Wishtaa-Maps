@@ -163,7 +163,7 @@ You already have an OAuth client for Drive (`docs/google-drive-setup.md`). The s
 
 While it says **Testing**, only the test users you list can sign in. To open it to everyone:
 
-1. **Branding**: App name `Wishtaa Maps`, user support email, app logo (optional), **Application home page** `https://maps.wishtaa.com`, **Privacy policy link** `https://maps.wishtaa.com/privacy`, **Terms of service link** `https://maps.wishtaa.com/terms` (these pages are step 3 of the build, after your "go"), **Authorized domains** `wishtaa.com`, developer contact email.
+1. **Branding**: App name `Wishtaa Maps`, user support email, app logo (optional), **Application home page** `https://maps.wishtaa.com`, **Privacy policy link** `https://maps.wishtaa.com/privacy`, **Terms of service link** `https://maps.wishtaa.com/terms` (draft pages, now in the app: `public/privacy/index.html` and `public/terms/index.html`; fill in the highlighted blanks and remove the DRAFT box before publishing the consent screen), **Authorized domains** `wishtaa.com`, developer contact email.
 2. Google asks you to prove you own `wishtaa.com`: open <https://search.google.com/search-console>, add the property `wishtaa.com`, and verify it with a DNS record.
 3. **Audience**: **User type External**, then **Publish app** and confirm **In production**.
 4. With only these scopes (none are "sensitive" or "restricted") Google does not need to review the app before it is public. Adding a logo triggers a short branding check.

@@ -14,6 +14,11 @@ export function serve(root, port, { oldHost = false } = {}) {
     const path = decodeURIComponent((req.url ?? '/').split('?')[0])
     const file = join(dir, normalize(path).replace(/^([/\\]|\.\.)+/, ''))
     const isFile = existsSync(file) && statSync(file).isFile()
+    const folderPage = join(file, 'index.html') // a folder with its own page (/privacy), served like the host does
+    if (!isFile && path !== '/' && !path.startsWith('/assets/') && existsSync(folderPage)) {
+      res.writeHead(200, { 'Content-Type': TYPES['.html'], 'Cache-Control': 'public, max-age=0, must-revalidate' })
+      return res.end(readFileSync(folderPage))
+    }
     const headers = (type) => ({ 'Content-Type': type, 'Cache-Control': path.startsWith('/assets/') ? 'public, max-age=31536000, immutable' : path === '/sw.js' ? 'no-store' : 'public, max-age=0, must-revalidate' })
     if (isFile) {
       res.writeHead(200, headers(TYPES[extname(file)] ?? 'application/octet-stream'))

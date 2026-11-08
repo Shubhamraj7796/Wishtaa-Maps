@@ -47,6 +47,7 @@ describe('sidebar', () => {
     const nav = await screen.findByRole('navigation', { name: 'Main' })
     const labels = within(nav)
       .getAllByRole('link')
+      .filter((a) => !['/privacy', '/terms'].includes(a.getAttribute('href') ?? '')) // the legal pages are small footer links, not destinations
       .map((a) => a.textContent?.trim())
     expect(labels).toEqual(['Home', 'All files', 'Knowledge base', 'Gallery', 'Google Drive', 'Trash'])
     expect(within(nav).getByRole('button', { name: /new file/i })).toBeTruthy()
