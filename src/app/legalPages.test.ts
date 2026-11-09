@@ -34,4 +34,20 @@ describe('privacy and terms pages (static drafts)', () => {
     expect(terms).toContain('href="/privacy"')
     expect(privacy).toContain('href="/"')
   })
+
+  it('can be indexed by search engines, name the app exactly, and show where the contact email goes', () => {
+    for (const [name, html] of [['privacy', privacy], ['terms', terms]] as const) {
+      expect(html).not.toMatch(/noindex/i)
+      expect(html).toContain(`<link rel="canonical" href="https://maps.wishtaa.com/${name}">`)
+      expect(html).toMatch(/<title>[^<]*- Wishtaa Maps<\/title>/)
+      expect(html).toMatch(/Contact:[^<]*<mark>\[contact email: fill in\]<\/mark>/)
+    }
+  })
+
+  it('robots.txt allows them and the sitemap lists them', () => {
+    expect(readFileSync('public/robots.txt', 'utf8')).toMatch(/Allow: \/privacy[\s\S]*Allow: \/terms[\s\S]*Sitemap: https:\/\/maps\.wishtaa\.com\/sitemap\.xml/)
+    const map = readFileSync('public/sitemap.xml', 'utf8')
+    expect(map).toContain('https://maps.wishtaa.com/privacy')
+    expect(map).toContain('https://maps.wishtaa.com/terms')
+  })
 })

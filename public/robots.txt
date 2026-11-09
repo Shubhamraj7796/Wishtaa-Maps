@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /privacy
+Allow: /terms
+Allow: /
+
+Sitemap: https://maps.wishtaa.com/sitemap.xml
