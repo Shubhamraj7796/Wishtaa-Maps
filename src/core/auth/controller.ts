@@ -28,6 +28,11 @@ export interface AccountHooks {
   clearAccountData(reason: 'sign-out' | 'other-user'): Promise<void>
   /** A sign-in was confirmed. `newBrowserUser` is true the first time this person signs in on this browser. */
   signedIn?(user: AuthUser, info: { newBrowserUser: boolean }): void
+  /**
+   * A sign-in event for an account that uses Google. `providerToken` is the Google access token from the sign-in (it carries the Drive
+   * permission asked for there) and is only present right after "Sign in with Google".
+   */
+  googleSignedIn?(user: AuthUser, providerToken: string | undefined): void
 }
 
 interface Store {
@@ -148,7 +153,7 @@ export class AuthController {
       return
     }
     this.unsubscribe?.()
-    this.unsubscribe = b.onChange((e, u) => void this.onEvent(e, u))
+    this.unsubscribe = b.onChange((e, u, x) => void this.onEvent(e, u, x))
     await this.verify(b)
   }
 
@@ -170,14 +175,14 @@ export class AuthController {
     const again = () => {
       window.removeEventListener('online', again)
       void this.backend().then((b) => {
-        if (!this.unsubscribe) this.unsubscribe = b.onChange((e, u) => void this.onEvent(e, u))
+        if (!this.unsubscribe) this.unsubscribe = b.onChange((e, u, x) => void this.onEvent(e, u, x))
         return this.verify(b)
       }, () => this.waitForOnline())
     }
     window.addEventListener('online', again)
   }
 
-  private async onEvent(event: BackendEvent, user: AuthUser | null) {
+  private async onEvent(event: BackendEvent, user: AuthUser | null, extra?: { providerToken?: string }) {
     if (event === 'SIGNED_OUT') {
       if (this.signingOut) return
       // Signed out somewhere else (or revoked): the files here are untouched, the person is asked to sign in again.
@@ -188,6 +193,7 @@ export class AuthController {
     if (!user) return
     await this.accept(user)
     if (event === 'PASSWORD_RECOVERY') this.set({ recovery: true })
+    if (event === 'SIGNED_IN' && user.providers.includes('google')) this.opts.hooks?.googleSignedIn?.(user, extra?.providerToken)
   }
 
   /** A confirmed signed-in person. */
@@ -299,7 +305,7 @@ export class AuthController {
   /** Reads the session again after a sign-in step, so the screen is signed in before the dialog closes. */
   private async afterSignIn() {
     const b = await this.backend()
-    if (!this.unsubscribe) this.unsubscribe = b.onChange((ev, u) => void this.onEvent(ev, u))
+    if (!this.unsubscribe) this.unsubscribe = b.onChange((ev, u, x) => void this.onEvent(ev, u, x))
     const { user } = await b.getSession()
     if (user) await this.accept(user)
   }

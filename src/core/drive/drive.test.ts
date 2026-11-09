@@ -240,7 +240,7 @@ describe('Google sign-in (token model)', () => {
     // The next request is answered by an error (popup blocked) instead of a token.
     const gisRequests = requests.length
     ;(auth as unknown as { client: { requestAccessToken: () => void } }).client.requestAccessToken = () => queueMicrotask(() => fail({ type: 'popup_failed_to_open' }))
-    await expect(auth.getToken()).rejects.toMatchObject({ kind: 'auth' })
+    await expect(auth.getToken()).rejects.toMatchObject({ kind: 'popup' })
     expect(auth.state.status).toBe('reconnect')
     expect(auth.connected()).toBe(true)
     expect(requests.length).toBe(gisRequests)

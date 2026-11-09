@@ -6,6 +6,8 @@ export const authConfig = {
   anonKey: clean(import.meta.env.VITE_SUPABASE_ANON_KEY),
   /** Cloudflare Turnstile site key (public). Leave unset until CAPTCHA is switched on in Supabase. */
   turnstileSiteKey: clean(import.meta.env.VITE_TURNSTILE_SITE_KEY),
+  /** Who to contact when Google blocks the app (it is still being approved). Public. */
+  supportEmail: clean(import.meta.env.VITE_SUPPORT_EMAIL),
 }
 
 /** The login screen exists only when both Supabase values are present, so the app still deploys and works as a guest without them. */

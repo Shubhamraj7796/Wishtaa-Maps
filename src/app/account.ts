@@ -7,7 +7,10 @@ import type { AccountDb, AuthUser } from '@/core/auth/types'
 import type { FileRecord } from '@/core/files/types'
 import { useSettings } from '@/stores/settings'
 import { useAuthUi } from './authUi'
-import { driveAuth, FOLDER_KEY } from './drive'
+import { DriveAccountError } from '@/core/drive/errors'
+import { expectedDriveEmail, linkDriveAccount } from '@/core/drive/linkAccount'
+import { takeGoogleReturn } from './auth/googleReturn'
+import { driveAuth, driveClient, driveConfig, FOLDER_KEY } from './drive'
 import { driveRepository, repository } from './repo'
 
 const local = (): Storage | undefined => {
@@ -76,6 +79,42 @@ const hooks: AccountHooks = {
   signedIn(user, info) {
     void startAccountSync(user, info)
   },
+  googleSignedIn(user, providerToken) {
+    void connectDriveAfterGoogle(user, providerToken)
+  },
+}
+
+let lastAdoptedToken = ''
+
+/**
+ * Right after "Sign in with Google": Google showed ONE consent screen for the sign-in and the narrow Drive permission together, and
+ * handed back a Drive token. It is checked (it must belong to the account that just signed in), kept in memory, and Drive is
+ * connected with no further click. If there is no token (the Drive box was unticked, or the browser dropped it), one clear button
+ * asks for it instead, because browsers only open Google's window from a click.
+ */
+async function connectDriveAfterGoogle(user: AuthUser, providerToken: string | undefined) {
+  const returning = takeGoogleReturn()
+  if (!driveConfig.clientId) return
+  if (providerToken) {
+    // The same token comes back with later "signed in" events for up to an hour: use it once, and never replace a newer one.
+    if (providerToken === lastAdoptedToken || (driveAuth.connected() && driveAuth.hasValidToken())) return
+    lastAdoptedToken = providerToken
+    driveAuth.adoptToken(providerToken)
+    try {
+      const account = await linkDriveAccount({ auth: driveAuth, client: driveClient }, expectedDriveEmail(user))
+      await driveClient.ensureAppFolder()
+      notifyOnce(account ? `Google Drive connected as ${account}.` : 'Google Drive connected.')
+      void driveRepository.syncAll()
+      return
+    } catch (e) {
+      if (e instanceof DriveAccountError && e.reason === 'mismatch') {
+        useAuthUi.getState().open({ kind: 'drive-problem', problem: { kind: 'account', reason: 'mismatch', actual: e.actual, expected: e.expected }, expected: e.expected })
+        return
+      }
+      await driveAuth.discard() // not usable (the Drive permission was not given, or Drive would not answer): ask in the one-click way below
+    }
+  } else if (!returning || driveAuth.ready()) return
+  if (auth.state.user?.id === user.id && !driveAuth.connected()) useAuthUi.getState().open({ kind: 'drive-allow', email: user.googleEmail ?? user.email })
 }
 
 let notice: ((text: string) => void) | null = null
@@ -172,11 +211,12 @@ async function linkDrive(db: AccountDb, s: AccountSync, user: AuthUser) {
   if (!driveAuth.connected()) driveAuth.setLoginHint(suggested ?? null)
 
   // Only a device that is (or was, this session) linked reports changes: a new device must never mark another device's link as gone.
-  let linkedHere = driveAuth.connected()
+  let linkedHere = driveAuth.connected() && !!driveAuth.state.account
   let last = ''
   const report = () => {
     const st = driveAuth.state
-    if (st.status === 'connected' || st.status === 'reconnect') linkedHere = true
+    // Linked only once the Google account is known (it was checked): a token still being checked, or thrown away, links nothing.
+    if ((st.status === 'connected' || st.status === 'reconnect') && st.account) linkedHere = true
     if (!linkedHere || st.status === 'unconfigured' || st.status === 'connecting') return
     const status = st.status === 'connected' ? 'connected' : st.status === 'reconnect' ? 'needs_reconnect' : 'disconnected'
     const email = st.account ?? remote?.google_email ?? null

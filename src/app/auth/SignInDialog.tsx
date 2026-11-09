@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { RESEND_SECONDS } from '@/core/auth/cooldown'
 import { passwordOk, validEmail, normalizeEmail } from '@/core/auth/passwords'
 import { auth, useAuth } from '../account'
+import { driveConfig } from '../drive'
 import { Mail, KeyRound, Loader2 } from '../icons'
 import { Modal, buttonPrimary, buttonSecondary } from '../Modal'
 import { markGoogleReturn } from './googleReturn'
@@ -139,6 +140,11 @@ export function SignInDialog({ initial = 'email', reason, onClose }: { initial?:
       <button type="button" onClick={() => void google()} disabled={step.busy} className={`${buttonSecondary} w-full`}>
         <GoogleMark /> Sign in with Google
       </button>
+      {driveConfig.clientId && (
+        <p className="mt-1.5 text-center text-xs text-muted">
+          This also connects your Google Drive. Allow Wishtaa Maps to create and open only the files it creates or you pick.
+        </p>
+      )}
     </>
   )
 

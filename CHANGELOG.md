@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Drive always uses the account you signed in with
+- **Sign in with Google** now connects Google Drive by itself in the same consent screen (only `drive.file`): no second window or click, and a clear "Google Drive connected as name@gmail.com." If Google gives no Drive token, one button asks for it.
+- Every Drive token is checked: its account must match the sign-in account (Gmail addresses compared the way Google does). A different account is discarded and revoked, with "This Drive belongs to other@gmail.com. Please use the same Google account you signed in with (name@gmail.com)." and **Try again**. Email sign-ins with a Gmail address are held to the same rule; other addresses may connect any Google account, saved in the account.
+- Friendly help for "Access blocked / app not verified / not a test user" (who to contact, **Copy details**) and for a blocked pop-up (a button opens it as a direct click). See `docs/drive-sign-in.md`.
+
 ### Privacy Policy and Terms (accounts, step 3)
 - Static pages at `/privacy` and `/terms` (work without JavaScript, light and dark, phone-friendly), marked as **drafts** with highlighted blanks (owner name, contact email, region, age, governing law). Linked from the login dialog and the sidebar footer. The service worker never saves them as the app page.
 

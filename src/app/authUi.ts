@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import type { DriveProblem } from './driveConnect'
 
 /** Which account dialog is open. The dialogs themselves live in `auth/AuthHost.tsx`. */
 export type AuthDialog =
@@ -9,6 +10,8 @@ export type AuthDialog =
   | { kind: 'drive-allow'; email: string | null }
   /** A Drive account other than the sign-in email was chosen, or "Connect Google Drive" from a non-Google sign-in. */
   | { kind: 'drive-choose' }
+  /** Something went wrong connecting Drive that the person can act on (wrong account, Google blocked it, popup blocked). */
+  | { kind: 'drive-problem'; problem: DriveProblem; expected?: string | null }
 
 interface AuthUiState {
   dialog: AuthDialog | null

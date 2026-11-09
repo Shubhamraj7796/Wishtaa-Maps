@@ -157,7 +157,7 @@ You already have an OAuth client for Drive (`docs/google-drive-setup.md`). The s
 ### 2. Scopes (keep these only)
 
 1. **Google Auth platform** (older: **OAuth consent screen**), **Data Access**, **Add or remove scopes**.
-2. Keep exactly: `openid`, `.../auth/userinfo.email`, `.../auth/userinfo.profile`, and `.../auth/drive.file`. Remove anything else.
+2. **Sign in with Google also asks for Drive** (`drive.file`) in the same consent screen, so `drive.file` MUST be on this list or Drive will not connect at sign-in. Keep exactly: `openid`, `.../auth/userinfo.email`, `.../auth/userinfo.profile`, and `.../auth/drive.file`. Remove anything else.
 
 ### 3. Publish the consent screen
 
@@ -177,6 +177,7 @@ While it says **Testing**, only the test users you list can sign in. To open it 
    - `VITE_SUPABASE_URL` = Supabase **Project Settings, API, Project URL**
    - `VITE_SUPABASE_ANON_KEY` = Supabase **Project Settings, API, anon public** key (the long `eyJ…` one that says *anon*)
    - `VITE_TURNSTILE_SITE_KEY` = the Turnstile **Site key** (part A step 10)
+   - `VITE_SUPPORT_EMAIL` = the address people should write to if Google says the app is not approved yet (shown in the "Google did not finish connecting Drive" box)
 3. **Never** add the `service_role` key as a `VITE_` variable. It is not used by the app.
 4. **Deployments**, the latest one, **⋯, Redeploy**, untick "Use existing Build Cache". The Sign in button appears once the first two are present.
 

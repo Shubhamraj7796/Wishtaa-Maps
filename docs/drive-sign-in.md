@@ -12,14 +12,26 @@ Two separate things, joined into one flow:
 
 ## The flows
 
-**Sign in with Google.** The Google button leaves for Google (account chooser always shown) and returns signed in. Back on the site a
-dialog says: *"Allow Wishtaa Maps to create and open only the files it creates or you pick."* One click on **Allow Google Drive** opens
-Google's small window already set to the account you signed in with (`login_hint`), so there is no second account picking. This is one extra
-click rather than zero because browsers only open Google's window from a click; the app cannot do it by itself on return from Google.
+**Rule: Drive is always linked to the same Google account you signed in with.**
 
-**Email code or password, then "Connect Google Drive".** Google's account chooser is always shown (no address suggested). Afterwards the
-screen shows which Google account was linked and, if it is not the sign-in email, says so plainly. That is allowed: your account stays your
-email, your maps are in the Drive of the account you chose.
+**Sign in with Google (automatic).** The Google button shows, before it leaves, *"This also connects your Google Drive. Allow Wishtaa Maps to
+create and open only the files it creates or you pick."* Google then shows **one** consent screen (account chooser, then the identity and the
+`drive.file` permission together). The Drive permission is requested in that same sign-in (`scopes: drive.file`), and Supabase hands the
+resulting Google access token back to the page, so Drive connects **with no extra window and no click** and the page says *"Google Drive
+connected as name@gmail.com."* If that token is missing (the Drive box was unticked) or unusable, one clear button asks for it instead
+("Allow Google Drive?", already set to the same address): browsers only open Google's window from a click, so that fallback cannot be
+automatic.
+
+**Checked every time.** Whenever a Drive token is obtained, the app reads the Drive account's email (Drive `about.get`) and compares it
+with the required account (Gmail addresses are compared the way Google does: dots, `+tag` and `googlemail.com` are ignored). On a mismatch
+the token is **discarded and revoked**, nothing is linked or saved, and the person sees *"This Drive belongs to other@gmail.com. Please use the
+same Google account you signed in with (name@gmail.com)."* with **Try again**, which asks Google for the right account with no chooser. If the
+address cannot be read at all, the token is not kept either (a display name is never trusted).
+
+**Email code or password.** "Connect Google Drive" requires the same address when the account email is a Gmail address (no chooser, address
+suggested, same mismatch check). If the account email is not a Gmail address it may or may not be a Google account, so Google's account chooser
+is shown, **any** Google account may be used, and the choice is saved in the account (`drive_links`) with a plain note if it differs from the
+sign-in email.
 
 **Remembered.** The account records which Google address is linked and its status (`drive_links`: `connected`, `needs_reconnect`,
 `disconnected`). Never a token. On a new device the same address is suggested.
@@ -29,6 +41,11 @@ permission itself is not revoked, so signing back in needs no new consent) and r
 without touching Drive. A map with edits not yet sent is never dropped: it stays as a file saved in this browser. Guest files ("This
 browser") are untouched. If a different person signs in without the first person having signed out, the same clean-up runs first. Signing
 out is not "disconnect Drive": the account keeps its Drive link record.
+
+## When Google or the browser gets in the way
+
+- **Window closed, or "Access blocked / app not verified / not a test user".** A dialog explains that the app is probably still being approved by Google and the account has not been added yet, shows who to contact (`VITE_SUPPORT_EMAIL`, else "the person who gave you this link"), and has **Copy details** (what happened, signed-in address, requested scope, client id prefix, browser, time: never a token) and **Try again**. Closing the window on the very first connect shows this too, because Google's error page can only be seen by closing it, and the app cannot tell the two apart.
+- **Pop-up blocked.** A dialog offers **Open Google sign-in**, which opens the window as a direct click.
 
 ## Keeping access alive (`src/core/drive/renewal.ts`)
 

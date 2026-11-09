@@ -21,7 +21,7 @@ export class FakeBackend implements AuthBackend {
   offline = false
   codes = new Map<string, string>()
   calls: string[] = []
-  private listeners = new Set<(e: BackendEvent, u: AuthUser | null) => void>()
+  private listeners = new Set<(e: BackendEvent, u: AuthUser | null, extra?: { providerToken?: string }) => void>()
   private seq = 0
   recents = new Map<string, Map<string, RecentRow>>()
   prefs = new Map<string, PrefsRow>()
@@ -61,9 +61,9 @@ export class FakeBackend implements AuthBackend {
   private view(u: FakeUser): AuthUser {
     return { id: u.id, email: u.email, name: u.name, avatarUrl: null, providers: [...u.providers], googleEmail: u.googleEmail ?? null }
   }
-  private emit(e: BackendEvent) {
+  private emit(e: BackendEvent, extra?: { providerToken?: string }) {
     const v = this.current ? this.view(this.current) : null
-    this.listeners.forEach((l) => l(e, v))
+    this.listeners.forEach((l) => l(e, v, extra))
   }
   private find(email: string) {
     return this.users.get(email.toLowerCase())
@@ -86,14 +86,14 @@ export class FakeBackend implements AuthBackend {
     this.emit('SIGNED_OUT')
   }
   /** Google finished and sent the person back. The account for that email is reused, or made. */
-  completeGoogle(email: string, name = 'Google Person') {
+  completeGoogle(email: string, name = 'Google Person', providerToken?: string) {
     const u = this.find(email) ?? this.create(email, 'google', true)
     u.providers.add('google')
     u.googleEmail = email.toLowerCase()
     u.confirmed = true
     u.name = name
     this.current = u
-    this.emit('SIGNED_IN')
+    this.emit('SIGNED_IN', providerToken ? { providerToken } : undefined)
   }
   sessionFor(email: string) {
     this.current = this.find(email) ?? null
@@ -111,7 +111,7 @@ export class FakeBackend implements AuthBackend {
     }
     return { user: this.current ? this.view(this.current) : null }
   }
-  onChange(cb: (e: BackendEvent, u: AuthUser | null) => void) {
+  onChange(cb: (e: BackendEvent, u: AuthUser | null, extra?: { providerToken?: string }) => void) {
     this.listeners.add(cb)
     return () => void this.listeners.delete(cb)
   }

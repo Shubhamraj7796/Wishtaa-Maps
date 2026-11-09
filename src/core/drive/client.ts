@@ -329,6 +329,16 @@ export class DriveClient implements DriveApi {
     }
   }
 
+  /** The signed-in Google account's email address, strictly (never a display name). Null when Drive does not say. */
+  async accountEmail(): Promise<string | null> {
+    try {
+      const about = await this.json<{ user?: { emailAddress?: string } }>(`${API}/about?fields=user(emailAddress)`)
+      return about.user?.emailAddress?.trim() || null
+    } catch {
+      return null
+    }
+  }
+
   async trash(id: string): Promise<void> {
     await this.request(`${API}/files/${encodeURIComponent(id)}?fields=id`, {
       method: 'PATCH',

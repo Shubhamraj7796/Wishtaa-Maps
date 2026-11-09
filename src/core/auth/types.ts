@@ -71,7 +71,8 @@ export interface AuthBackend {
   db: AccountDb
   /** The saved session, if any. `error` is set when it could not be checked (for example offline). */
   getSession(): Promise<{ user: AuthUser | null; error?: AuthFailure }>
-  onChange(cb: (event: BackendEvent, user: AuthUser | null) => void): () => void
+  /** `extra.providerToken` is the Google access token handed over right after "Sign in with Google" (it carries the Drive permission asked for during sign-in). */
+  onChange(cb: (event: BackendEvent, user: AuthUser | null, extra?: { providerToken?: string }) => void): () => void
   sendCode(email: string, captchaToken?: string): Promise<void>
   verifyCode(email: string, code: string): Promise<void>
   signInPassword(email: string, password: string, captchaToken?: string): Promise<void>

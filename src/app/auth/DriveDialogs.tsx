@@ -1,8 +1,10 @@
 import { useState } from 'react'
+import { expectedDriveEmail } from '@/core/drive/linkAccount'
 import { Cloud } from '../icons'
 import { Modal, buttonPrimary, buttonSecondary } from '../Modal'
 import { useDriveActions, useDriveAuth } from '../useDrive'
 import { auth, useAuth } from '../account'
+import { driveProblemDetails, supportEmail, type DriveProblem } from '../driveConnect'
 import { Alert } from './parts'
 
 const same = (a: string | null | undefined, b: string | null | undefined) => !!a && !!b && a.trim().toLowerCase() === b.trim().toLowerCase()
@@ -94,7 +96,84 @@ export function DriveChooseDialog({ onClose }: { onClose: () => void }) {
 
 /** Opens the right "connect Drive" step for how the person signed in. */
 export function connectDriveFor(open: (d: { kind: 'drive-allow'; email: string | null } | { kind: 'drive-choose' }) => void) {
-  const u = auth.state.user
-  if (u?.googleEmail) open({ kind: 'drive-allow', email: u.googleEmail })
+  // Signed in with Google, or with a Gmail address: it must be that same Google account, so no account choosing. Any other address: any Google account.
+  const required = expectedDriveEmail(auth.state.user)
+  if (required) open({ kind: 'drive-allow', email: required })
   else open({ kind: 'drive-choose' })
+}
+
+/**
+ * Something went wrong connecting Drive that the person can fix:
+ *  - the wrong Google account was chosen (the token was thrown away; "Try again" asks for the right one);
+ *  - Google's window closed or was blocked before finishing (cancelled, or "Access blocked / app not verified / not a test user");
+ *  - the browser would not open Google's window (a button opens it as a direct click).
+ */
+export function DriveProblemDialog({ problem, expected, onClose }: { problem: DriveProblem; expected?: string | null; onClose: () => void }) {
+  const actions = useDriveActions()
+  const [busy, setBusy] = useState(false)
+  const [copied, setCopied] = useState(false)
+  const retry = async () => {
+    setBusy(true)
+    onClose() // a new problem opens its own dialog; success shows a message
+    await actions.connect({ expected })
+  }
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(driveProblemDetails(problem))
+      setCopied(true)
+    } catch {
+      /* clipboard blocked */
+    }
+  }
+
+  if (problem.kind === 'account') {
+    return (
+      <Modal title="Use the same Google account" onClose={onClose}>
+        <Alert>
+          {problem.reason === 'mismatch' ? (
+            <>This Drive belongs to <strong className="break-all">{problem.actual}</strong>. Please use the same Google account you signed in with (<strong className="break-all">{problem.expected}</strong>).</>
+          ) : (
+            <>Could not confirm which Google account this Drive belongs to. Please try again with <strong className="break-all">{problem.expected}</strong>.</>
+          )}
+        </Alert>
+        <p className="mt-3 text-xs text-muted">The other Google account was not connected and nothing was saved to it.</p>
+        <div className="mt-4 flex flex-wrap justify-end gap-2">
+          <button type="button" className={buttonSecondary} onClick={() => void copy()}>{copied ? 'Copied' : 'Copy details'}</button>
+          <button type="button" className={buttonSecondary} onClick={onClose}>Cancel</button>
+          <button type="button" className={buttonPrimary} disabled={busy} onClick={() => void retry()}>Try again with {problem.expected}</button>
+        </div>
+      </Modal>
+    )
+  }
+
+  if (problem.kind === 'popup') {
+    return (
+      <Modal title="Your browser blocked Google's window" onClose={onClose}>
+        <p className="text-sm">Google needs to open a small window to connect Drive, and your browser stopped it. Press the button below to open it yourself, or allow pop-ups for this site.</p>
+        <div className="mt-4 flex justify-end gap-2">
+          <button type="button" className={buttonSecondary} onClick={onClose}>Cancel</button>
+          <button type="button" className={buttonPrimary} disabled={busy} onClick={() => void retry()}>
+            <Cloud size={16} aria-hidden="true" /> Open Google sign-in
+          </button>
+        </div>
+      </Modal>
+    )
+  }
+
+  return (
+    <Modal title="Google did not finish connecting Drive" onClose={onClose}>
+      <p className="text-sm">The Google window closed before connecting. If you simply changed your mind, you can try again.</p>
+      <div className="mt-3">
+        <Alert tone="info">
+          If Google said <strong>Access blocked</strong>, <strong>app not verified</strong> or <strong>not a test user</strong>, Wishtaa Maps is still being approved by Google and your account has not been added yet.
+          {supportEmail ? <> Please write to <a className="underline" href={`mailto:${supportEmail}`}>{supportEmail}</a> and include the details below.</> : <> Please contact the person who gave you this link and send them the details below.</>}
+        </Alert>
+      </div>
+      <div className="mt-4 flex flex-wrap justify-end gap-2">
+        <button type="button" className={buttonSecondary} onClick={() => void copy()}>{copied ? 'Copied' : 'Copy details'}</button>
+        <button type="button" className={buttonSecondary} onClick={onClose}>Close</button>
+        <button type="button" className={buttonPrimary} disabled={busy} onClick={() => void retry()}>Try again</button>
+      </div>
+    </Modal>
+  )
 }

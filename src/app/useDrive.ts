@@ -6,23 +6,16 @@ import { pickDriveFolder, pickOpenableFiles } from '@/core/drive/picker'
 import type { ConflictChoice, DriveConflict } from '@/core/drive/repository'
 import type { FileRecord } from '@/core/files/types'
 import { currentFileId, reopenFile } from '@/editor/session'
-import { auth } from './account'
-import { driveAuth, driveClient, driveConfig } from './drive'
+import { useAuthUi } from './authUi'
+import { classifyDriveProblem, connectDrive, type ConnectOptions } from './driveConnect'
+import { driveAuth, driveConfig } from './drive'
 import { useFiles } from './FilesContext'
 import { driveRepository } from './repo'
 
 export const useDriveAuth = (): DriveAuthState => useSyncExternalStore(driveAuth.subscribe, driveAuth.getState)
 export const useDriveConflicts = (): DriveConflict[] => useSyncExternalStore(driveRepository.subscribeSync, driveRepository.conflicts)
 
-/** After linking Drive: says which Google account it is, and says so plainly when it is not the address the person signed in with. */
-function connectedMessage(account: string | null): string {
-  const me = auth.state.user
-  const signedInWith = me?.googleEmail ?? me?.email
-  if (account && signedInWith && account.toLowerCase() !== signedInWith.toLowerCase()) {
-    return `Google Drive connected as ${account}. That is not the address you signed in with (${signedInWith}); that is fine, your maps will be in the Drive you chose.`
-  }
-  return 'Google Drive connected.'
-}
+const connectedMessage = (account: string | null) => (account ? `Google Drive connected as ${account}.` : 'Google Drive connected.')
 
 const messageOf = (e: unknown) => (e instanceof Error && e.message ? e.message : 'Something went wrong with Google Drive.')
 
@@ -41,16 +34,21 @@ export function useDriveActions() {
     }
 
     /** Signs in, creates the "Wishtaa Maps" folder on first use, and brings files up to date. */
-    const connect = (o: { chooseAccount?: boolean } = {}) =>
-      run(async () => {
-        await driveAuth.connect(o)
-        const account = await driveClient.account()
-        driveAuth.setAccount(account)
-        await driveClient.ensureAppFolder()
+    const connect = async (o: ConnectOptions = {}): Promise<true | null> => {
+      const wasFirst = driveAuth.state.status !== 'connected' && driveAuth.state.status !== 'reconnect'
+      try {
+        const account = await connectDrive(o)
         notify(connectedMessage(account))
         void driveRepository.syncAll()
         return true
-      })
+      } catch (e) {
+        const problem = classifyDriveProblem(e, wasFirst)
+        if (problem) useAuthUi.getState().openNow({ kind: 'drive-problem', problem, expected: o.expected })
+        // Closing the sign-in window is the person's choice, not a failure worth a message.
+        else if (!(e instanceof DriveError && e.kind === 'auth' && /window was closed/.test(e.message))) notify(messageOf(e))
+        return null
+      }
+    }
 
     const ensureConnected = async () => {
       if (driveAuth.ready()) return true

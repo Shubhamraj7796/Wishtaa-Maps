@@ -1,4 +1,5 @@
 import type { SupabaseClient, User } from '@supabase/supabase-js'
+import { DRIVE_SCOPE } from '../drive/auth'
 import { toFailure } from './errors'
 import type { AccountDb, AuthBackend, AuthUser, BackendEvent, DriveLinkRow, PrefsRow, Provider, RecentRow } from './types'
 
@@ -108,8 +109,9 @@ export async function createSupabaseBackend(url: string, anonKey: string): Promi
 
     onChange(cb) {
       const { data } = auth.onAuthStateChange((event, session) => {
-        const mapped = EVENTS[event]
-        if (mapped) cb(mapped, session?.user ? mapUser(session.user) : null)
+        // Returning from Google can announce itself as the first "initial session": treat it as a sign-in when it carries the Google token.
+        const mapped = EVENTS[event] ?? (event === 'INITIAL_SESSION' && session?.provider_token ? 'SIGNED_IN' : undefined)
+        if (mapped) cb(mapped, session?.user ? mapUser(session.user) : null, session?.provider_token ? { providerToken: session.provider_token } : undefined)
       })
       return () => data.subscription.unsubscribe()
     },
@@ -152,7 +154,8 @@ export async function createSupabaseBackend(url: string, anonKey: string): Promi
 
     async signInGoogle(redirectTo) {
       // select_account: always show Google's account chooser, so on a shared computer the wrong account is never picked silently.
-      const { error } = await auth.signInWithOAuth({ provider: 'google', options: { redirectTo, queryParams: { prompt: 'select_account' } } })
+      // The Drive permission (only drive.file) is asked for in the SAME consent screen, so nothing more is needed afterwards.
+      const { error } = await auth.signInWithOAuth({ provider: 'google', options: { redirectTo, scopes: DRIVE_SCOPE, queryParams: { prompt: 'select_account' } } })
       fail(error)
     },
 

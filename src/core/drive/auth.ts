@@ -198,7 +198,11 @@ export class DriveAuth implements TokenProvider {
           this.fail(new DriveError(e.type === 'popup_failed_to_open' ? 'popup' : 'auth', e.message || 'Google sign-in window.'), false, true)
           return
         }
-        this.fail(new DriveError('auth', closed ? 'The Google sign-in window was closed before finishing.' : e.message || 'Google sign-in failed.'))
+        if (e.type === 'popup_failed_to_open') {
+          this.fail(new DriveError('popup', 'Your browser blocked the Google window. Allow pop-ups for this site, or open it with the button.', undefined, e.type))
+          return
+        }
+        this.fail(new DriveError('auth', closed ? 'The Google sign-in window was closed before finishing.' : e.message || 'Google sign-in failed.', undefined, e.type))
       },
     })
     return this.client
@@ -212,7 +216,7 @@ export class DriveAuth implements TokenProvider {
         return
       }
       this.fail(
-        new DriveError(denied ? 'revoked' : 'auth', denied ? 'Google Drive access was not allowed. You can try connecting again.' : r.error_description || 'Google sign-in failed.'),
+        new DriveError(denied ? 'revoked' : 'auth', denied ? 'Google Drive access was not allowed. You can try connecting again.' : r.error_description || 'Google sign-in failed.', undefined, [r.error, r.error_description].filter(Boolean).join(': ')),
         denied
       )
       return
@@ -301,6 +305,33 @@ export class DriveAuth implements TokenProvider {
     if (!this.connected()) throw new DriveError('auth', 'Connect Google Drive to save this file there.')
     this.token = null
     return this.request('')
+  }
+
+  /**
+   * Takes a Drive token that was obtained during "Sign in with Google" (Google showed one consent screen for sign-in and Drive together), so
+   * no second window is needed. The caller must check which account it belongs to before keeping it (see `linkDriveAccount`).
+   */
+  adoptToken(token: string, expiresInSeconds = 3300) {
+    if (!this.opts.clientId) return
+    this.token = { value: token, expiresAt: this.now() + expiresInSeconds * 1000 }
+    this.set({ status: 'connected', message: null })
+    this.writeHint(true)
+  }
+
+  /** Throws away a token that belongs to the wrong account: it is revoked with Google (best effort), forgotten, and nothing is linked. */
+  async discard(): Promise<void> {
+    const t = this.token?.value
+    this.token = null
+    this.set({ status: this.opts.clientId ? 'disconnected' : 'unconfigured', message: null, account: null })
+    this.writeHint(false)
+    if (t) {
+      try {
+        const gis = await this.load()
+        await new Promise<void>((done) => gis.revoke(t, () => done()))
+      } catch {
+        /* revoking is best effort: the token is already gone from this browser */
+      }
+    }
   }
 
   /** Suggests a Google address for the next sign-in window (the account the person signed in with). Never overrides a linked account. */
