@@ -25,7 +25,7 @@ export const ICONS = {
   relationship: Share2, callout: MessageSquare, boundary: SquareDashed, summary: Braces, insert: Plus,
   notes: StickyNote, inlineNote: AlignLeft, tag: Tag, task: ListChecks, taskDone: CheckSquare, link: Link2, unlink: Unlink,
   attachment: Paperclip, latex: Sigma, table: Table, numbering: ListOrdered, image: ImageIcon, imageAdd: ImagePlus, camera: Camera, split: Columns2, pdf: FileText, flipH: FlipHorizontal2, highlighter: Highlighter, square: Square, circle: Circle, rotateCw: RotateCw, eyeOff: EyeOff, arrowUpRight: ArrowUpRight,
-  mark: Smile, clipart: Shapes, details: Layers, layout: LayoutGrid, theme: Palette, style: Brush, outline: List, map: Network,
+  openBook: Book, mark: Smile, clipart: Shapes, details: Layers, layout: LayoutGrid, theme: Palette, style: Brush, outline: List, map: Network,
   chevronRight: ChevronRight, chevronLeft: ChevronLeft, expand: Maximize2, shrink: Minimize2, chevronDown: ChevronDown, zoomIn: ZoomIn, zoomOut: ZoomOut, fit: Locate, fullscreen: Maximize,
   exitFullscreen: Minimize, bold: Bold, italic: Italic, underline: Underline, strike: Strikethrough, h1: Heading1, h2: Heading2,
   bulletList: List, orderedList: ListOrdered, quote: Quote, code: Code, ocr: ScanText, download: Download, preview: Eye,

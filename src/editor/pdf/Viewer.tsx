@@ -6,6 +6,9 @@ import { editKey, NO_EDIT, type PdfSource, type Rect, type Turn } from '@/core/p
 import { offsets, rowAt, windowFor } from '../outlineLayout'
 import { useEditor } from '../store'
 import { reportView, setViewOf } from './actions'
+import { buildRows, fitScale, nearestRow, rowIndexOf, rowShape, slotsOf, SPREAD_GAP, twoAllowed, type PageShape } from './spreads'
+import { forgetView, publishView } from './spreadState'
+import { ViewMenu } from './ViewMenu'
 import { PageView, shownPx, type PageBox } from './PageView'
 import { PageLayers } from './layers'
 import { SelectionBar } from './SelectionBar'
@@ -21,14 +24,47 @@ const PX_PER_POINT = 96 / 72
 
 const A4: PageInfo = { w: 595, h: 842, own: 0 }
 
-/** The pages of one PDF as a long scrolling column. Only the pages near the screen exist; the rest are empty space of the right height. */
+interface Item {
+  n: number
+  hidden: boolean
+  info: PageInfo
+  rotation: Turn
+  /** The page as shown (turned), in points. */
+  shape: PageShape
+}
+/** One half of a row: a page (with its box), or an empty half (a lone cover or last page). */
+interface Cell {
+  n: number | null
+  hidden: boolean
+  box: PageBox | null
+  /** Width on screen, in pixels. */
+  w: number
+}
+/** What the viewer shows in one step: a page, or a spread of two. */
+interface Row {
+  pages: number[]
+  cells: Cell[]
+  /** Height and width on screen, in pixels. */
+  h: number
+  w: number
+}
+
+/**
+ * The pages of one PDF: a long scrolling column (of pages, or of spreads when Two pages is on), or one page or spread at a time (Paged).
+ * Only the rows near the screen exist; the rest are empty space of the right height.
+ */
 export function Viewer({ source, handle, showHidden, active = true }: { source: PdfSource; handle: PdfHandle; showHidden: boolean; active?: boolean }) {
   const panel = useEditor((s) => s.pdfPanel)
-  // Each PDF has its own page, zoom and place: this pane reads and writes only its own view.
+  // Each PDF has its own page, zoom, layout and place: this pane reads and writes only its own view.
   const mine = useEditor((s) => s.pdfPanel.views[source.id])
   const page = mine?.page ?? 1
   const zoom = mine?.zoom ?? null
-  const sync = panel.sync && !!panel.other
+  const paged = mine?.paged === true
+  const cover = mine?.cover === true
+  const rtl = mine?.rtl === true
+  const fitKind = mine?.fit ?? 'width'
+  const split = !!panel.other
+  const sync = panel.sync && split
   const edits = useEditor((s) => s.pdf.pageEdits)
   const tool = useEditor((s) => s.pdfPanel.tool)
   const scroller = useRef<HTMLDivElement>(null)
@@ -75,55 +111,133 @@ export function Viewer({ source, handle, showHidden, active = true }: { source: 
   }, [])
   const viewH = view.h || 700
   const viewW = view.w || 480
+  // Two pages as chosen, if the pane is wide enough (the View menu says so when it is not).
+  const two = mine?.two === true && twoAllowed(viewW)
 
   const rotationOf = (n: number): Turn => edits[editKey(source.id, n)]?.rotation ?? 0
   const hiddenOf = (n: number) => (edits[editKey(source.id, n)] ?? NO_EDIT).hidden
   const first = infos.get(1) ?? A4
-  const firstShown = rotationOf(1) % 180 ? { w: first.h, h: first.w } : { w: first.w, h: first.h }
-  const fit = Math.max(0.2, (viewW - GUTTER * 2) / firstShown.w)
-  const scale = zoom ? zoom * PX_PER_POINT : fit
 
-  const pages = useMemo(() => {
-    const out: { n: number; box: PageBox; hidden: boolean }[] = []
+  const items = useMemo(() => {
+    const out: Item[] = []
     for (let n = 1; n <= handle.pages; n++) {
       const hidden = hiddenOf(n)
       if (hidden && !showHidden) continue
       const info = infos.get(n) ?? first
-      out.push({ n, hidden, box: { w: info.w, h: info.h, scale, rotation: rotationOf(n) } })
+      const rotation = rotationOf(n)
+      out.push({ n, hidden, info, rotation, shape: rotation % 180 ? { w: info.h, h: info.w } : { w: info.w, h: info.h } })
     }
     return out
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [handle, infos, edits, scale, showHidden, source.id])
-  const starts = useMemo(() => offsets(pages.map((p) => shownPx(p.box).h + GAP)), [pages])
-  const total = starts[starts.length - 1] as number
-  const { start, end } = windowFor(starts, scrollTop, viewH, viewH)
+  }, [handle, infos, edits, showHidden, source.id])
+  const byN = useMemo(() => new Map(items.map((i) => [i.n, i])), [items])
+  const rowPages = useMemo(() => buildRows(items.map((i) => i.n), two, cover), [items, two, cover])
+  const shapeOf = (row: number[], index: number) => rowShape(slotsOf(row, index, two, cover, rtl).map((n) => (n === null ? null : byN.get(n)?.shape ?? null)))
+  // Paged shows one row: the one holding the page.
+  const current = paged ? Math.min(rowPages.length - 1, nearestRow(rowPages, page)) : -1
+  // "Fit" fits the width of the first row (both pages of a spread), or the whole row when "Fit page" is chosen. Paged fits the row on show.
+  const fitRow = paged && current >= 0 ? current : 0
+  const fitShape = rowPages[fitRow] ? shapeOf(rowPages[fitRow] as number[], fitRow) : rowShape([{ w: first.w, h: first.h }])
+  const fit = Math.max(0.2, fitScale(fitShape, fitKind, viewW, viewH, GUTTER, GAP))
+  const scale = zoom ? zoom * PX_PER_POINT : fit
 
+  const rows = useMemo(() => {
+    const out: Row[] = rowPages.map((pages, index) => {
+      const slots = slotsOf(pages, index, two, cover, rtl)
+      const shape = shapeOf(pages, index)
+      const cells: Cell[] = slots.map((n, k) => {
+        const it = n === null ? undefined : byN.get(n)
+        const w = (shape.widths[k] as number) * scale
+        if (!it) return { n: null, hidden: false, box: null, w }
+        return { n: it.n, hidden: it.hidden, w, box: { w: it.info.w, h: it.info.h, scale: scale * (shape.factors[k] as number), rotation: it.rotation } }
+      })
+      return { pages, cells, h: shape.h * scale, w: shape.w * scale + (cells.length === 2 ? SPREAD_GAP : 0) }
+    })
+    return out
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rowPages, byN, scale, two, cover, rtl])
+  const boxes = useMemo(() => new Map(rows.flatMap((r) => r.cells.flatMap((c) => (c.n !== null && c.box ? [[c.n, c.box] as const] : [])))), [rows])
+  const starts = useMemo(() => offsets(rows.map((r) => r.h + GAP)), [rows])
+  const total = starts[starts.length - 1] as number
+  // Paged shows one row; otherwise the rows near the screen.
+  const { start, end } = paged ? { start: Math.max(0, current), end: Math.max(0, current) + (rows.length ? 1 : 0) } : windowFor(starts, scrollTop, viewH, viewH)
+  const contentH = paged ? Math.max(viewH, (rows[current]?.h ?? 0) + GAP) : total + GAP
+  const topOf = (i: number) => (paged ? Math.max(GAP / 2, (contentH - (rows[i]?.h ?? 0)) / 2) : (starts[i] as number) + GAP / 2)
+
+  // What this pane shows, for the page buttons and the View menu.
+  useEffect(() => {
+    publishView(source.id, { rows: rowPages, paneW: viewW, two })
+  }, [source.id, rowPages, viewW, two])
+  useEffect(() => () => forgetView(source.id), [source.id])
+
+  /** Paged: the previous or next page or spread. */
+  const turn = (dir: 1 | -1) => {
+    const t = rowPages[Math.max(0, current) + dir]
+    if (t) reportView(source.id, { page: t[0] as number, anchor: { n: t[0] as number, frac: 0 } })
+  }
   const onKeyDown = (e: React.KeyboardEvent) => {
+    const target = e.target as HTMLElement
     const id = useEditor.getState().pdfPanel.markId
-    if (id && (e.key === 'Delete' || e.key === 'Backspace') && !(e.target as HTMLElement).closest('textarea,input')) {
+    if (id && (e.key === 'Delete' || e.key === 'Backspace') && !target.closest('textarea,input')) {
       e.preventDefault()
       deleteMarkup(id)
     }
     if (e.key === 'Escape') selectMarkup(null)
+    // Paged: the arrow keys turn the page when the page fits (zoomed in, they scroll it); Page Up and Down when it fits top to bottom.
+    if (paged && !e.ctrlKey && !e.metaKey && !e.altKey && !target.closest('textarea,input,select')) {
+      const el = scroller.current
+      const fitsX = !el || el.scrollWidth <= el.clientWidth + 1
+      const fitsY = !el || el.scrollHeight <= el.clientHeight + 1
+      const forward = rtl ? 'ArrowLeft' : 'ArrowRight'
+      const back = rtl ? 'ArrowRight' : 'ArrowLeft'
+      const dir = (e.key === forward && fitsX) || (e.key === 'PageDown' && fitsY) ? 1 : (e.key === back && fitsX) || (e.key === 'PageUp' && fitsY) ? -1 : 0
+      if (dir) {
+        e.preventDefault()
+        e.stopPropagation() // the arrow keys turn this page; they do not move the selection in the map
+        turn(dir)
+      }
+    }
   }
 
-  // The place in the document (a page and how far down it), so a change of width or zoom keeps the same spot in view.
+  // The place in the document (a page and how far down it), so a change of width, zoom or layout keeps the same spot in view.
   const anchor = useRef<{ n: number; frac: number } | null>(null)
+  useEffect(() => {
+    if (paged) anchor.current = { n: page, frac: 0 } // leaving Paged comes back to this page
+  }, [paged, page])
+  const placeAnchor = (a: { n: number; frac: number }) => {
+    const el = scroller.current
+    const i = rowIndexOf(rowPages, a.n)
+    if (!el || i < 0) return
+    el.scrollTop = (starts[i] as number) + a.frac * ((starts[i + 1] as number) - (starts[i] as number) - GAP)
+    setScrollTop(el.scrollTop)
+  }
   const prevScale = useRef(scale)
   useLayoutEffect(() => {
-    const el = scroller.current
     const a = anchor.current
-    if (prevScale.current === scale || !el || !a) {
+    if (prevScale.current === scale || !scroller.current || !a) {
       prevScale.current = scale
       return
     }
     prevScale.current = scale
-    const i = pages.findIndex((p) => p.n === a.n)
-    if (i < 0) return
-    el.scrollTop = (starts[i] as number) + a.frac * ((starts[i + 1] as number) - (starts[i] as number) - GAP)
-    setScrollTop(el.scrollTop)
+    if (!paged) placeAnchor(a)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scale])
+  // A change of layout (Two pages, Show cover page, right to left, Paged): the same place, now in the new arrangement.
+  const layoutKey = `${two}|${cover}|${rtl}|${paged}`
+  const prevLayout = useRef(layoutKey)
+  useLayoutEffect(() => {
+    if (prevLayout.current === layoutKey) return
+    prevLayout.current = layoutKey
+    const el = scroller.current
+    if (!el) return
+    if (paged) {
+      el.scrollTop = 0
+      el.scrollLeft = 0
+      setScrollTop(0)
+      lastPage.current = page
+    } else placeAnchor(anchor.current ?? { n: page, frac: 0 })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [layoutKey])
 
   const readOnly = useEditor((s) => s.readOnly)
   const frame = useRef(0)
@@ -135,11 +249,12 @@ export function Viewer({ source, handle, showHidden, active = true }: { source: 
       const el = scroller.current
       if (!el) return
       setScrollTop(el.scrollTop)
-      const at = Math.min(pages.length - 1, rowAt(starts, el.scrollTop))
-      const pg = pages[at]
-      if (pg) anchor.current = { n: pg.n, frac: Math.max(0, Math.min(1, (el.scrollTop - (starts[at] as number)) / Math.max(1, (starts[at + 1] as number) - (starts[at] as number) - GAP))) }
-      const i = Math.min(pages.length - 1, rowAt(starts, el.scrollTop + viewH / 3))
-      const n = pages[i]?.n
+      if (paged) return // the page is the one that was turned to; scrolling only moves around a zoomed page
+      const at = Math.min(rows.length - 1, rowAt(starts, el.scrollTop))
+      const row = rows[at]
+      if (row) anchor.current = { n: row.pages[0] as number, frac: Math.max(0, Math.min(1, (el.scrollTop - (starts[at] as number)) / Math.max(1, (starts[at + 1] as number) - (starts[at] as number) - GAP))) }
+      const i = Math.min(rows.length - 1, rowAt(starts, el.scrollTop + viewH / 3))
+      const n = rows[i]?.pages[0]
       const moved = performance.now() > quiet.current // a scroll this pane was told to make (Sync scrolling) is not reported back
       if (n && n !== lastPage.current) {
         lastPage.current = n
@@ -169,8 +284,9 @@ export function Viewer({ source, handle, showHidden, active = true }: { source: 
   // Back in this tab (or after a reload): the place it was left, then Sync scrolling requests from the other pane.
   const restored = useRef(false)
   useEffect(() => {
-    if (restored.current || !pages.length || !scroller.current) return
+    if (restored.current || !rows.length || !scroller.current) return
     restored.current = true
+    if (paged) return // the page is already the place
     const a = mine?.anchor
     if (a) goToAnchor(a.n, a.frac)
     else if (page > 1) {
@@ -178,11 +294,18 @@ export function Viewer({ source, handle, showHidden, active = true }: { source: 
       goTo(page)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pages.length])
+  }, [rows.length])
   const goToAnchor = (n: number, frac: number) => {
     const el = scroller.current
-    const i = pages.findIndex((p) => p.n === n)
+    const i = rowIndexOf(rowPages, n)
     if (!el || i < 0) return
+    if (paged) {
+      // Another pane (Sync scrolling) asks this one to show a page: turn to the spread that has it.
+      const target = rowPages[i]?.[0] as number
+      lastPage.current = target
+      if (target !== page) setViewOf(source.id, { page: target, anchor: undefined })
+      return
+    }
     lastPage.current = n
     anchor.current = { n, frac } // so a change of width or zoom that follows (the pane is measured just after it appears) keeps this place
     el.scrollTop = (starts[i] as number) + frac * ((starts[i + 1] as number) - (starts[i] as number) - GAP)
@@ -197,29 +320,29 @@ export function Viewer({ source, handle, showHidden, active = true }: { source: 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [syncAt])
 
-  // The page was changed from outside (the page box, a link): go there.
+  // The page was changed from outside (the page box, the page buttons, a link): go there.
   const goTo = (n: number, withinPage = 0) => {
     const el = scroller.current
-    const i = pages.findIndex((p) => p.n === n)
+    const i = rowIndexOf(rowPages, n)
     if (!el || i < 0) return
     lastPage.current = n
-    el.scrollTop = Math.max(0, (starts[i] as number) + withinPage - GAP / 2)
+    el.scrollTop = paged ? Math.max(0, withinPage) : Math.max(0, (starts[i] as number) + withinPage - GAP / 2)
+    if (paged) el.scrollLeft = 0
     setScrollTop(el.scrollTop)
   }
   useEffect(() => {
     if (restored.current && page !== lastPage.current) goTo(page)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, pages.length])
+  }, [page, rows.length])
 
   // Following a source link: scroll so the passage is in the upper part of the view, and mark it for a moment.
   const [marked, setMarked] = useState<{ page: number; rect: Rect; at: number } | null>(null)
   useEffect(() => {
     const f = panel.focus
     if (!f || f.sourceId !== source.id) return
-    const i = pages.findIndex((p) => p.n === f.page)
-    const p = pages[i]
-    if (!p) return
-    const within = f.rect ? rectToShown(f.rect, p.box.rotation).y * shownPx(p.box).h - viewH / 4 : 0
+    const box = boxes.get(f.page)
+    if (!box) return
+    const within = f.rect ? rectToShown(f.rect, box.rotation).y * shownPx(box).h - viewH / 4 : 0
     goTo(f.page, Math.max(0, within))
     if (f.rect) {
       setMarked({ page: f.page, rect: f.rect, at: f.at })
@@ -227,7 +350,7 @@ export function Viewer({ source, handle, showHidden, active = true }: { source: 
       return () => clearTimeout(t)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [panel.focus?.at, pages.length])
+  }, [panel.focus?.at, rows.length])
 
   // Ctrl + wheel zooms the PDF (not the browser page).
   useEffect(() => {
@@ -250,19 +373,32 @@ export function Viewer({ source, handle, showHidden, active = true }: { source: 
         This PDF has no text to select (it looks scanned or handwritten). Use <b>Capture area</b> to take a part of a page as a picture.
       </p>
     )}
-    <div ref={scroller} onScroll={onScroll} className="min-h-0 flex-1 overflow-auto bg-neutral-200 dark:bg-neutral-800" data-pdf-scroller tabIndex={0} onKeyDown={onKeyDown} aria-label={`${source.name}, ${handle.pages} pages`}>
-      <div className="relative" style={{ height: total + GAP, width: Math.max(viewW, ...pages.map((p) => shownPx(p.box).w + GUTTER * 2).slice(start, end)) }}>
-        {pages.slice(start, end).map((p, k) => {
+    <div ref={scroller} onScroll={onScroll} className="min-h-0 flex-1 overflow-auto bg-neutral-200 dark:bg-neutral-800" data-pdf-scroller data-layout={two ? 'two' : 'single'} data-paged={paged ? 'true' : 'false'} tabIndex={0} onKeyDown={onKeyDown} aria-label={`${source.name}, ${handle.pages} pages`}>
+      <div className="relative" style={{ height: contentH, width: Math.max(viewW, ...rows.slice(start, end).map((r) => r.w + GUTTER * 2)) }}>
+        {rows.slice(start, end).map((r, k) => {
           const i = start + k
           return (
-            <div key={p.n} className="absolute left-0 right-0" style={{ top: (starts[i] as number) + GAP / 2 }} data-slot={p.n}>
-              {p.hidden && <div className="mb-1 text-center text-xs text-muted">Page {p.n} is hidden</div>}
-              <Slot source={source} handle={handle} n={p.n} box={p.box} marked={marked?.page === p.n ? marked.rect : null} tool={tool} dim={p.hidden} />
+            <div key={r.pages.join('-')} className="absolute left-0 right-0 flex items-start justify-center" style={{ top: topOf(i), gap: r.cells.length === 2 ? SPREAD_GAP : 0 }} data-row={r.pages.join('-')}>
+              {r.cells.map((c, j) =>
+                c.n === null || !c.box ? (
+                  <div key={`empty-${j}`} style={{ width: c.w }} aria-hidden="true" />
+                ) : (
+                  <div key={c.n} data-slot={c.n}>
+                    {c.hidden && <div className="mb-1 text-center text-xs text-muted">Page {c.n} is hidden</div>}
+                    <Slot source={source} handle={handle} n={c.n} box={c.box} marked={marked?.page === c.n ? marked.rect : null} tool={tool} dim={c.hidden} />
+                  </div>
+                )
+              )}
             </div>
           )
         })}
       </div>
     </div>
+    {split && (
+      <div className="absolute right-4 top-2 z-20">
+        <ViewMenu sourceId={source.id} compact />
+      </div>
+    )}
     <SelectionBar sourceId={source.id} root={scroller} />
     {!readOnly && active && <SelectedMarkup />}
     {!readOnly && active && <FloatingTools source={source} />}
@@ -270,7 +406,7 @@ export function Viewer({ source, handle, showHidden, active = true }: { source: 
   )
 }
 
-/** One page in the column: it loads the page's text when it comes into view. */
+/** One page of a row: it loads the page's text when it comes into view. */
 function Slot({ source, handle, n, box, marked, tool, dim }: { source: PdfSource; handle: PdfHandle; n: number; box: PageBox; marked: Rect | null; tool: string; dim: boolean }) {
   const [lines, setLines] = useState<PageLines | null>(null)
   useEffect(() => {

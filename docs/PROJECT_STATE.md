@@ -36,6 +36,7 @@ person's own Google Drive. Optional accounts (emailed code, password, Google) ad
   Insert-menu PDF and its own Drive picker, password prompt, **tabs and split view** (part 1).
 - **Capture area (Group A):** every capture is a new topic with a source link; pinned target with Change; Add as Sub-topic / Next sibling / New
   branch; Keep capturing; confirmation with Undo; tidy width; Compressed/Original asked once per session; optional titles (name from the page, text inside the rectangle) (unit tests, real-browser tests at three sizes, a synthetic-touch capture test).
+- **View menu, Part 2 Group A (committed locally, not live until "go live"):** Single or Two-page view, Show cover page, Enable scrolling off (paged), Right-to-left, Fit width / Fit page / Actual size / percentages; per PDF and per device; in the panel header and in each Split pane; page buttons step by spread; "p. N" opens the spread; capture and text layers on both pages (unit tests, 19 component tests, real-browser tests at desktop and tablet size with synthetic touch, memory counts).
 - **Google picker failure notice:** when the picker is blocked, cannot start or does not open within 15 s, one notice (copy link, try again, choose from device, copy details) instead of a hang; cancel never shows it (unit and component tests with mocked pickers).
 - **App shell:** installable PWA, offline start, Android share target for pictures, update bar, deploy-skew recovery (a stale tab recovers
   once), production smoke test.
@@ -56,14 +57,15 @@ person's own Google Drive. Optional accounts (emailed code, password, Google) ad
 1. Owner: run `0003_accounts.sql` and finish the dashboard checklist in `docs/auth-setup.md`; then test sign-in for real.
 2. Owner: fill the placeholders in `/privacy` and `/terms` (contact email, company/owner name, address, region, retention days, ages, law,
    court), remove the DRAFT box, set `VITE_SUPPORT_EMAIL`, publish the Google consent screen.
-3. Capture, Group C (clips tray as references). Groups A and B are done (below). **Unpushed commits** wait for the owner's "go live".
-4. PDF booklet view and view styles (spreads, page-turn styles, presentation mode, zoom modes).
+3. Capture, Group C (clips tray as references). Groups A and B are done and live.
+4. PDF booklet view, **Group B** (page-turn styles Slide / Flip / Fade / None, tap edge and swipe, Presentation mode, laser pointer; Flip falls back to Slide if it cannot hold 30 fps). Group A is done (see above); **unpushed commits** wait for the owner's "go live".
 5. Write `docs/pdf-ai-plan.md` (plan only: AI outline from a PDF; requested earlier, not written).
 6. Content-Security-Policy header (needs testing with pdf.js, OCR and Google scripts).
 7. Optional: server-side Drive refresh tokens (plan, cost and risk are in `docs/drive-sign-in.md`; not built).
 8. Test on real devices (first item of "not verified" above).
 
 ## Known bugs and limits
+- Two-page view: "Fit width" fits the first spread (the one on show when Paged), so a later spread with wider pages (a landscape page) may need a sideways scroll in the continuous view. The automatic 640 px fallback has no case yet: Single page is the default, and a chosen Two pages is honoured down to 480 px.
 - A browser tab already open on an old build needs one manual reload after a deploy that predates the recovery code; later deploys recover by themselves.
 - Live site shows the Sign in button because Vercel has the Supabase variables, even if the Supabase project is not set up; sign-in then fails
   with a message (guest mode is unaffected).

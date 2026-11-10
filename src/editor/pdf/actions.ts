@@ -15,6 +15,8 @@ import { rememberSize, type PanelSize } from './layout'
 import { isShape, loadPrefs, sanitizeStyle, savePrefs, type Shape as PanelShape, type StyleKey, type ToolStyle } from './toolPrefs'
 import { bumpDevice, closePdf, loadPdfjs, pdfStore, rememberPassword, trimOpenPdfs } from './runtime'
 import * as W from './workspace'
+import { nearestRow } from './spreads'
+import { liveViewOf } from './spreadState'
 import { beginCapture, endCapture } from './capture'
 
 const get = useEditor.getState
@@ -92,6 +94,16 @@ export function togglePdfPanel() {
 /** The page of the active PDF (the page box, the arrows). */
 export const setPdfPage = (page: number) => work((p) => (p.sourceId ? W.setView(p, p.sourceId, { page: Math.max(1, Math.round(page)), anchor: undefined }) : p))
 export const setPdfZoom = (zoom: number | null) => work((p) => (p.sourceId ? W.setView(p, p.sourceId, { zoom: zoom === null ? null : Math.min(4, Math.max(0.25, zoom)) }) : p))
+/** Fit the width of the pane (default) or the whole page or spread. */
+export const setPdfFit = (fit: 'width' | 'page') => work((p) => (p.sourceId ? W.setView(p, p.sourceId, { zoom: null, fit }) : p))
+/** The previous or next page, or spread when two pages are showing (the page buttons). */
+export function turnPdf(dir: 1 | -1) {
+  const p = get().pdfPanel
+  const rows = liveViewOf(p.sourceId)?.rows
+  if (!rows?.length) return setPdfPage(p.page + dir)
+  const target = rows[nearestRow(rows, p.page) + dir]
+  if (target) setPdfPage(target[0] as number)
+}
 /** A pane reports where it is (scrolling): the page and the place on it. Another pane follows when Sync scrolling is on. */
 export function reportView(id: string, change: { page?: number; anchor?: { n: number; frac: number } }) {
   work((p) => W.setView(p, id, change))

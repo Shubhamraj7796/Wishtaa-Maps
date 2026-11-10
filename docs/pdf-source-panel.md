@@ -272,3 +272,26 @@ instead of scrolling; the bar's buttons are 44 px on touch screens. Checked with
 `e2e/pdf-capture.spec.ts`); **not** yet tried on a physical tablet.
 
 Not yet built (later group): the clips tray.
+
+## View menu: Two-page view (Part 2, Group A)
+
+The **View** button (book icon) is in the panel's tool row and, in a split view, at the top right of each pane. It acts on that PDF only; the
+choices are remembered per PDF and per device with the workspace (`wishtaamaps:pdf-workspace:<fileId>`, optional fields `two`, `cover`,
+`paged`, `rtl`, `fit`; saves from before load as one page, scrolling, fit width).
+
+| Choice | What it does |
+| --- | --- |
+| Single-page view / Two-page view | One page per row, or two pages side by side (a *spread*). |
+| Show cover page | Two-page only. On: page 1 alone on the right, then 2-3, 4-5... Off: 1-2, 3-4... (the last page of an odd book is alone on the first side). |
+| Enable scrolling | On (default): a continuous column of pages or spreads. Off: one page or spread at a time, turned with the page buttons, the page box, or the arrow keys (the arrows scroll instead when the page is zoomed past the pane; Page Up/Down turn when the page fits top to bottom). |
+| Right-to-left reading | The first page of a spread is on the right (the cover on the left). |
+| Fit width / Fit page / Actual size / 50-300% | Fit width fits the whole spread across the pane; Fit page also fits its height. Paged fits the spread on show. |
+
+- **Common height.** Pages of different sizes in a spread are scaled to the taller one; an empty half (a lone cover or last page) is as wide as the page beside it.
+- **Narrow panes.** A chosen Two pages is honoured down to **480 px** of pane width; narrower, one page is shown, the choice is kept, and the menu says why (and Two pages returns when there is room). Nothing switches to two pages by itself, so the 640 px automatic limit has no case yet.
+- **Page buttons** read "Previous/Next spread" and the page box says "(showing 3–4)" when two pages are showing. "p. N" links, Sync scrolling and the page box all use page numbers, so they open the spread that has the page.
+- **Memory.** Only the spreads near the screen exist (as with single pages) and Paged draws one spread. The 2-background-document limit is unchanged. Measured in Chromium with a 60-page PDF: three spreads in the page and six page pictures while scrolling, two while Paged.
+- **Tools.** Text selection, markup, Add as topic and Capture work on either page of a spread (each page has its own layers). Read mode shows the pages without tools.
+- Code: `src/editor/pdf/spreads.ts` (pure layout maths, tested in `spreads.test.ts`), `spreadState.ts` (what each pane shows now), `ViewMenu.tsx`, `Viewer.tsx`; tests `views.test.tsx` and `e2e/pdf-views.spec.ts`.
+- **Not yet (Group B):** page-turn styles (Slide, Flip, Fade, None), tap-the-edge and swipe turning, Presentation mode, laser pointer.
+- **Not tested on a physical tablet or phone**, nor in Safari or Firefox.

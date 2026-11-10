@@ -12,7 +12,34 @@ export interface SourceView {
   anchor?: { n: number; frac: number }
   /** A request from the other pane (Sync scrolling) to move here. `at` makes the same place move again. */
   syncTo?: { n: number; frac: number; at: number }
+  // Layout choices (all optional; absent = one page, scrolling, fit width, left to right). Remembered per PDF and per device.
+  /** Two pages side by side, like an open book. */
+  two?: boolean
+  /** With two pages: the first page alone on the right, then 2-3, 4-5... (off: 1-2, 3-4...). */
+  cover?: boolean
+  /** One page (or spread) at a time instead of a continuous scroll. */
+  paged?: boolean
+  /** Right-to-left reading: the first page of a spread is on the right. */
+  rtl?: boolean
+  /** What "no zoom" fits: the width of the pane (default) or the whole page or spread. */
+  fit?: 'width' | 'page'
 }
+
+/** The layout choices of a view, only the ones that are set (so old saves and new ones stay small). */
+const layoutOf = (v: SourceView) => ({
+  ...(v.two ? { two: true } : {}),
+  ...(v.cover ? { cover: true } : {}),
+  ...(v.paged ? { paged: true } : {}),
+  ...(v.rtl ? { rtl: true } : {}),
+  ...(v.fit === 'page' ? { fit: 'page' as const } : {}),
+})
+const layoutFrom = (v: Partial<SourceView>) => ({
+  ...(v.two === true ? { two: true } : {}),
+  ...(v.cover === true ? { cover: true } : {}),
+  ...(v.paged === true ? { paged: true } : {}),
+  ...(v.rtl === true ? { rtl: true } : {}),
+  ...(v.fit === 'page' ? { fit: 'page' as const } : {}),
+})
 
 export const DEFAULT_VIEW: SourceView = { page: 1, zoom: null }
 
@@ -127,7 +154,7 @@ const key = (fileId: string) => `wishtaamaps:pdf-workspace:${fileId}`
 
 export function saveWorkspace(fileId: string, w: Workspace, store: Pick<Storage, 'setItem'> | undefined = safe()) {
   try {
-    const views = Object.fromEntries(Object.entries(w.views).map(([id, v]) => [id, { page: v.page, zoom: v.zoom, ...(v.anchor ? { anchor: v.anchor } : {}) }]))
+    const views = Object.fromEntries(Object.entries(w.views).map(([id, v]) => [id, { page: v.page, zoom: v.zoom, ...(v.anchor ? { anchor: v.anchor } : {}), ...layoutOf(v) }]))
     const saved: SavedWorkspace = { v: 1, tabs: w.tabs, active: w.sourceId, other: w.other, side: w.activeSide, ratio: w.ratio, sync: w.sync, views }
     store?.setItem(key(fileId), JSON.stringify(saved))
   } catch {
@@ -145,7 +172,7 @@ export function loadWorkspace(fileId: string, valid: ReadonlySet<string>, store:
     const views: Record<string, SourceView> = {}
     for (const [id, v] of Object.entries(s.views ?? {})) {
       if (!valid.has(id) || !v) continue
-      views[id] = { page: Math.max(1, Math.round(num(v.page, 1))), zoom: v.zoom === null || v.zoom === undefined ? null : Math.min(4, Math.max(0.25, num(v.zoom, 1))), ...(v.anchor ? { anchor: { n: Math.max(1, Math.round(num(v.anchor.n, 1))), frac: Math.min(1, Math.max(0, num(v.anchor.frac, 0))) } } : {}) }
+      views[id] = { page: Math.max(1, Math.round(num(v.page, 1))), zoom: v.zoom === null || v.zoom === undefined ? null : Math.min(4, Math.max(0.25, num(v.zoom, 1))), ...(v.anchor ? { anchor: { n: Math.max(1, Math.round(num(v.anchor.n, 1))), frac: Math.min(1, Math.max(0, num(v.anchor.frac, 0))) } } : {}), ...layoutFrom(v) }
     }
     const base: Workspace = {
       sourceId: typeof s.active === 'string' ? s.active : null,

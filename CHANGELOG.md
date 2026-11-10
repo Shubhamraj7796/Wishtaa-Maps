@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### View menu: Two-page view (PDF panel)
+- New **View** menu in the PDF panel and in each Split pane: Single-page or Two-page view (two pages of the same PDF side by side, like an open book), Show cover page (page 1 alone on the right, then 2-3, 4-5...), Enable scrolling (off: one page or spread at a time, with the page buttons and the arrow keys), Right-to-left reading, and Fit width, Fit page, Actual size or a percentage. Remembered per PDF and per device. Pages of different sizes share one height in a spread. A pane narrower than 480 px shows one page and the menu says why. The page buttons step by spread; a "p. N" link opens the spread that has the page. Capture, text selection and markup work on both pages.
+- Escape now closes an open View menu before it ends Capture area.
+
 ### Capture area always adds a NEW topic (PDF panel)
 - Optional titles for captured topics (off by default, remembered): name from the page ("Audit may 24, p. 3") and the text inside the rectangle when the PDF has text. Escape inside the capture menu closes it first.
 - A capture no longer changes the picture of a topic: every capture is a new topic (one undo step) with the picture, a PDF, page and rectangle link and a "p. N" badge. Capture bar with **Into** (pinned when capture starts; **Change** picks a topic in the map or Outline on purpose), **Add as** (Sub-topic, Next sibling, New branch) and **Keep capturing**; a confirmation with **Undo**; Compressed or Original asked once per capture session; tidy picture width (default 320 px, Preferences). See `docs/pdf-source-panel.md`.
