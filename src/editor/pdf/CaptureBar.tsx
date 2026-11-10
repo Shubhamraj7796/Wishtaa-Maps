@@ -22,7 +22,7 @@ export function CaptureBar() {
   // Escape: first cancels "Change", then ends capture.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape' || (e.target as HTMLElement | null)?.closest?.('textarea,select,[contenteditable="true"],input:not([type="checkbox"]):not([type="radio"])') || document.querySelector('[role="dialog"][aria-modal="true"]') || document.querySelector('[data-view-menu]')) return // an open View menu closes first
+      if (e.key !== 'Escape' || (e.target as HTMLElement | null)?.closest?.('textarea,select,[contenteditable="true"],input:not([type="checkbox"]):not([type="radio"])') || document.querySelector('[role="dialog"][aria-modal="true"]') || document.querySelector('[data-view-menu],[data-pdf-menu]')) return // an open menu closes first
       e.preventDefault()
       e.stopImmediatePropagation()
       if (menuOpen.current) setMenu(false)

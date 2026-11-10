@@ -8,6 +8,7 @@ import { DEFAULT_VIEW } from './workspace'
 
 const ZOOMS = [0.5, 0.75, 1.25, 1.5, 2, 3]
 
+const zoomBtn = 'grid h-8 min-w-8 place-items-center rounded border border-line px-1.5 hover:bg-bg [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:min-w-11'
 const row = 'flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-brand/15 [@media(pointer:coarse)]:min-h-11'
 
 /**
@@ -69,7 +70,7 @@ export function ViewMenu({ sourceId, compact = false }: { sourceId: string; comp
       {open && (
         <>
           <div className="fixed inset-0 z-40" onPointerDown={() => setOpen(false)} />
-          <div role="menu" aria-label="View" data-view-menu className="absolute right-0 top-full z-50 mt-1 w-72 max-w-[85vw] rounded-ui border border-line bg-surface py-1 text-ink shadow-xl sm:left-0 sm:right-auto">
+          <div role="menu" aria-label="View" data-view-menu className="absolute right-0 top-full z-50 mt-1 max-h-[75vh] w-72 max-w-[85vw] overflow-y-auto rounded-ui border border-line bg-surface py-1 text-ink shadow-xl sm:left-0 sm:right-auto">
             {radio(!two, 'Single-page view', () => set({ two: false }))}
             {radio(two, 'Two-page view', () => set({ two: true }), 'Two pages of this PDF side by side, like an open book')}
             {note && (
@@ -81,11 +82,22 @@ export function ViewMenu({ sourceId, compact = false }: { sourceId: string; comp
             {check(!paged, 'Enable scrolling', () => set({ paged: !paged }), 'On: scroll through the pages. Off: one page or spread at a time (page buttons and arrow keys)')}
             {check(v.rtl === true, 'Right-to-left reading', () => set({ rtl: v.rtl !== true }), 'The first page of a spread on the right')}
             <hr className="my-1 border-line" />
+            <div className="flex items-center gap-1 px-3 py-1" role="group" aria-label="Zoom">
+              <button type="button" className={zoomBtn} aria-label="Zoom out" title="Zoom out" onClick={() => set({ zoom: Math.max(0.25, (v.zoom ?? 1) / 1.25) })}>
+                <Icon name="zoomOut" size={15} />
+              </button>
+              <button type="button" className={`${zoomBtn} min-w-16 text-xs`} title="Fit to the width of the panel" onClick={() => set({ zoom: null, fit: 'width' })} aria-label={percent === null ? `Zoom: fit ${v.fit ?? 'width'}` : `Zoom ${percent} percent. Click to fit the width`}>
+                {percent === null ? (v.fit === 'page' ? 'Fit page' : v.fit === 'height' ? 'Fit height' : 'Fit') : `${percent}%`}
+              </button>
+              <button type="button" className={zoomBtn} aria-label="Zoom in" title="Zoom in" onClick={() => set({ zoom: Math.min(4, (v.zoom ?? 1) * 1.25) })}>
+                <Icon name="zoomIn" size={15} />
+              </button>
+            </div>
             {radio(percent === null && (v.fit ?? 'width') === 'width', 'Fit width', () => set({ zoom: null, fit: 'width' }))}
             {radio(percent === null && v.fit === 'page', 'Fit page', () => set({ zoom: null, fit: 'page' }))}
             {radio(percent === null && v.fit === 'height', 'Fit height', () => set({ zoom: null, fit: 'height' }), 'The page height fills the pane (a wide spread may then scroll sideways)')}
             {radio(percent === 100, 'Actual size (100%)', () => set({ zoom: 1 }))}
-            <div role="group" aria-label="Zoom" className="flex flex-wrap gap-1 px-3 py-1.5">
+            <div role="group" aria-label="Zoom percentages" className="flex flex-wrap gap-1 px-3 py-1.5">
               {ZOOMS.map((z) => (
                 <button key={z} type="button" aria-pressed={percent === Math.round(z * 100)} onClick={() => set({ zoom: z })} className={`rounded border px-2 py-1 text-xs [@media(pointer:coarse)]:min-h-11 ${percent === Math.round(z * 100) ? 'border-brand bg-brand/15 font-semibold' : 'border-line hover:bg-bg'}`}>
                   {Math.round(z * 100)}%

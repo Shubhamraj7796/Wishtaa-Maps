@@ -303,3 +303,24 @@ choices are remembered per PDF and per device with the workspace (`wishtaamaps:p
 - The book button (toolbar, `data-two-toggle`) is not shown in the small View button of a split pane.
 - Presentation mode is a disabled menu item until Group B builds it.
 
+## Clean reading interface (Part 2, Group A)
+The page comes first: one thin top bar, tools on demand, rare settings in menus. Rule 7 in `CLAUDE.md` makes this the standing design rule.
+
+**The top bar** (`PdfBar.tsx`, `data-pdf-bar`, 44 px): close, name drop-down, page controls, two-page book button, View, Capture area, Split (panel at least 700 px), Markup, Focus (at least 560 px), "..." (`data-more`), size button (`data-expand`). A phone-width panel (under 440 px, or 560 px on a touch screen) also moves Close and the previous/next arrows into the "..." menu (arrows stay in paged mode). The "..." menu always has: Open a PDF, Split view (when not on the bar), Sync scrolling, Focus mode, Page thumbnails, Markup list, Show hidden pages, "Pen bar folds away when idle", Outline column, Make bigger, Hide the panel. Menus close with Escape before anything else does (`menus.tsx`).
+
+**Tabs:** the strip (`Tabs.tsx`) shows with two or more PDFs and a panel at least 700 px wide; the name drop-down lists all PDFs otherwise.
+
+**Floating markup bar:** `panel.markupBar` (not saved). `setPdfTool` of any drawing tool opens it; the Markup button toggles it and putting it away also returns the tool to Select. Auto-fold (`idleCollapse`, 4 s, `MarkupToolbar.tsx`) is not saved, so the next visit opens it; the setting is `wishtaamaps:pdf-ui` (`autoCollapse`).
+
+**Markup list drawer:** `tab === 'markup'` now shows the pages plus a drawer (`data-markup-drawer`); a split view stays split while it is open.
+
+**Page chip** (`data-page-chip`, decorative, `aria-hidden`): fades 1.8 s after the page changes.
+
+**Focus mode:** `panel.focusMode` (not saved). Escape order: open menu, markup list, Outline drawer, Focus mode, Full screen back to Normal. At Full screen `EditorScreen.tsx` hides the app header and the map toolbar with `display: none` (kept in the page so nothing re-mounts).
+
+**Scan hint:** `data-scan-hint`, once per PDF by file hash (`wishtaamaps:pdf-hint-seen:<hash>`), fades after 12 s or on the close button.
+
+**Thumbnails:** `Thumbs.tsx`; `panel.thumbs`, saved in `wishtaamaps:pdf-ui`. Each thumbnail draws only while near the strip's own view (IntersectionObserver, 300 px margin) and releases its picture when it leaves. Measured: 6 to 9 thumbnail pictures in the page at once for a 60-page PDF.
+
+**Measurements** (`e2e/pdf-layout-measure.spec.ts`; distance from the top of the panel / window to the page, in px). Before: desktop 1366x768 Normal 188 / 285, Wide 152 / 249, Full 152 / 249; tablet landscape 1180x820 Normal 238 / 662, Wide 238 / 533, Full 209 / 294; tablet portrait 820x1180 Full 209 / 294. After: see the table in the report and `docs/PROJECT_STATE.md`.
+

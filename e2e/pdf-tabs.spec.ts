@@ -89,6 +89,9 @@ test('five PDFs of 200 pages: tabs, split view, memory and frame rate', async ({
   await page.getByRole('menuitem', { name: 'PDF from this device' }).click()
   await (await chooser).setFiles(files)
 
+  // The tab strip needs a wide panel (a narrow one uses the name drop-down): take the Wide size.
+  await expect(page.locator('[data-expand]')).toBeVisible({ timeout: 30_000 })
+  await page.locator('[data-expand]').click()
   const strip = page.getByRole('tablist', { name: 'Open PDFs' })
   await expect(strip.getByRole('tab')).toHaveCount(5, { timeout: 90_000 })
   await expect(page.locator('[data-page="1"] canvas').first()).toBeVisible({ timeout: 30_000 })
@@ -122,7 +125,9 @@ test('five PDFs of 200 pages: tabs, split view, memory and frame rate', async ({
   await expect(page.locator('[data-pdf-pane]')).toHaveCount(2)
   await page.screenshot({ path: join(DIR, 'desktop-2-split.png') })
   numbers.twoPanes = { ...(await scrollFps(page)), ...(await heapMB(page)), canvases: await canvases(page) }
-  await page.getByLabel('Sync scrolling').check()
+  await page.locator('[data-more]').click() // Sync scrolling is in the "..." menu
+  await page.getByRole('menuitemcheckbox', { name: 'Sync scrolling' }).click()
+  await page.keyboard.press('Escape')
   numbers.twoPanesSynced = { ...(await scrollFps(page)), ...(await heapMB(page)), canvases: await canvases(page) }
 
   // Tablet and phone: the split stacks on a narrow screen.

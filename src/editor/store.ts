@@ -1,5 +1,6 @@
 import { loadPrefs, type Shape, type ToolStyles } from './pdf/toolPrefs'
 import type { PanelSize } from './pdf/layout'
+import { loadPdfUi } from './pdf/uiPrefs'
 import { emptyPdfState, type PdfState, type Rect } from '@/core/pdf/types'
 import { readOutlineZoom } from './navigation'
 import type { ThemePreview } from '@/core/theme/apply'
@@ -46,6 +47,12 @@ export interface PdfPanelState {
   size: PanelSize
   /** The size the panel had before Two-page view widened it to Full (null when nothing was widened, or when the size was set by hand since). */
   widenedFrom: PanelSize | null
+  /** Focus mode: every control is hidden except a tiny handle, so the page has all the room. */
+  focusMode: boolean
+  /** The floating markup bar is showing (the Markup button in the top bar). */
+  markupBar: boolean
+  /** The thumbnail strip beside the pages (off by default, remembered on this device). */
+  thumbs: boolean
   /** The panel is tucked away to a small tab; the PDF stays open. */
   collapsed: boolean
   /** In full screen, the Outline slides over the PDF. */
@@ -118,7 +125,7 @@ export const closedCapture = (): CaptureState => ({ targetId: null, mode: 'sub',
 
 export const closedPdfPanel = (): PdfPanelState => {
   const prefs = loadPrefs()
-  return { open: false, sourceId: null, page: 1, tab: 'pages', tool: 'select', styles: prefs.styles, shape: prefs.shape, size: 'normal', widenedFrom: null, collapsed: false, drawer: false, toolSide: prefs.bar?.side ?? 'left', zoom: null, focus: null, markId: null, tabs: [], other: null, activeSide: 'left', views: {}, ratio: 0.5, sync: false, outlineColumn: false, capture: closedCapture() }
+  return { open: false, sourceId: null, page: 1, tab: 'pages', tool: 'select', styles: prefs.styles, shape: prefs.shape, size: 'normal', widenedFrom: null, focusMode: false, markupBar: false, thumbs: loadPdfUi().thumbs, collapsed: false, drawer: false, toolSide: prefs.bar?.side ?? 'left', zoom: null, focus: null, markId: null, tabs: [], other: null, activeSide: 'left', views: {}, ratio: 0.5, sync: false, outlineColumn: false, capture: closedCapture() }
 }
 
 export type PictureSource = 'upload' | 'camera' | 'gallery' | 'paste' | 'capture' | 'drop'

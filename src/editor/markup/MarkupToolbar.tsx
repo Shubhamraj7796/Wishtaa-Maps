@@ -39,6 +39,8 @@ export interface MarkupToolbarProps {
   readOnly?: boolean
   /** Short note for screen readers about what the tools act on. */
   label?: string
+  /** Fold to the small button after this many milliseconds without any pointer or key activity (not saved: the next visit opens it again). */
+  idleCollapse?: number
 }
 
 /** How the buttons are laid out for the room there is: one column, two columns, or the tools alone with a "More" button. */
@@ -59,7 +61,7 @@ export function barMode(cells: { tools: number; extras: number }, size: number, 
  * chevron) opens a flyout with that tool's colours, thickness and strength, remembered per tool on this device. When the tools do not
  * fit the height they go into two columns, and then into a "More" flyout; the bar never scrolls.
  */
-export function MarkupToolbar({ tool, onTool, styles, onStyle, shape, extras, placeKey, onSide, readOnly, label = 'Markup tools' }: MarkupToolbarProps) {
+export function MarkupToolbar({ tool, onTool, styles, onStyle, shape, extras, placeKey, onSide, readOnly, label = 'Markup tools', idleCollapse }: MarkupToolbarProps) {
   const touch = useTouchFriendly()
   const root = useRef<HTMLDivElement>(null)
   const bar = useRef<HTMLDivElement>(null)
@@ -69,6 +71,8 @@ export function MarkupToolbar({ tool, onTool, styles, onStyle, shape, extras, pl
   const [drag, setDrag] = useState<{ x: number; y: number } | null>(null)
   const [flyout, setFlyout] = useState<{ key: StyleKey | 'shapes' | 'more'; top: number } | null>(null)
   const [awake, setAwake] = useState(true)
+  const [idleFolded, setIdleFolded] = useState(false)
+  const folded = place.collapsed || idleFolded
   const timer = useRef(0)
   const dragged = useRef(false)
 
@@ -94,7 +98,23 @@ export function MarkupToolbar({ tool, onTool, styles, onStyle, shape, extras, pl
     const ro = new ResizeObserver(measure)
     ro.observe(el)
     return () => ro.disconnect()
-  }, [place.collapsed, extras.length])
+  }, [folded, extras.length])
+
+  // Auto-collapse: after a few seconds with no pointer, key or wheel activity anywhere, the bar folds to its small button.
+  useEffect(() => {
+    if (!idleCollapse || folded) return
+    let t = window.setTimeout(() => setIdleFolded(true), idleCollapse)
+    const again = () => {
+      window.clearTimeout(t)
+      t = window.setTimeout(() => setIdleFolded(true), idleCollapse)
+    }
+    const events = ['pointerdown', 'pointermove', 'keydown', 'wheel'] as const
+    for (const e of events) window.addEventListener(e, again, true)
+    return () => {
+      window.clearTimeout(t)
+      for (const e of events) window.removeEventListener(e, again, true)
+    }
+  }, [idleCollapse, folded])
 
   // Fading: with auto-fade on, the bar dims a moment after the last touch.
   const wake = useCallback(() => {
@@ -208,7 +228,7 @@ export function MarkupToolbar({ tool, onTool, styles, onStyle, shape, extras, pl
   return (
     <div
       ref={root}
-      data-floating-tools={place.collapsed ? 'collapsed' : place.side}
+      data-floating-tools={folded ? 'collapsed' : place.side}
       data-bar-mode={mode}
       className={`absolute z-20 transition-opacity ${faded ? 'opacity-30' : 'opacity-100'}`}
       style={style}
@@ -216,8 +236,8 @@ export function MarkupToolbar({ tool, onTool, styles, onStyle, shape, extras, pl
       onPointerDown={wake}
       onFocus={wake}
     >
-      {place.collapsed ? (
-        <button type="button" aria-label="Show the markup tools" title="Show the markup tools (drag to move)" onPointerDown={startDrag} onClick={() => !dragged.current && setPlace({ ...place, collapsed: false })} className={`${btn} touch-none border border-line bg-surface shadow-lg ${on}`} style={{ width: size, height: size }}>
+      {folded ? (
+        <button type="button" aria-label="Show the markup tools" title="Show the markup tools (drag to move)" onPointerDown={startDrag} onClick={() => !dragged.current && (setIdleFolded(false), setPlace({ ...place, collapsed: false }))} className={`${btn} touch-none border border-line bg-surface shadow-lg ${on}`} style={{ width: size, height: size }}>
           <Icon name={ActiveIcon} size={20} />
           {hasStyle(tool) || isShape(tool) ? dot(styles[activeStyleKey].color) : null}
         </button>

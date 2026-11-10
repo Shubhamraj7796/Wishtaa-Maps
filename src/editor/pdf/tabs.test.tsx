@@ -81,8 +81,10 @@ describe('several PDFs in tabs', () => {
     fireEvent.click(within(strip).getByRole('button', { name: 'Close Tax.pdf' }))
     expect(panel().tabs).toHaveLength(1)
     expect(Object.keys(st().pdf.sources)).toHaveLength(2) // still in the map
-    fireEvent.click(within(strip).getByRole('button', { name: 'Open another PDF' }))
-    fireEvent.click(await screen.findByRole('menuitem', { name: /Tax\.pdf/ }))
+    // With one tab left the strip is gone; the PDF's name drop-down lists every PDF of the map.
+    expect(screen.queryByRole('tablist', { name: 'Open PDFs' })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: /Audit\.pdf/ }))
+    fireEvent.click(await screen.findByRole('menuitem', { name: /^Tax\.pdf/ }))
     expect(panel().tabs).toHaveLength(2)
   })
 

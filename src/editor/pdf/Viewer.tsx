@@ -13,6 +13,8 @@ import { PageView, shownPx, type PageBox } from './PageView'
 import { PageLayers } from './layers'
 import { SelectionBar } from './SelectionBar'
 import { FloatingTools } from './FloatingTools'
+import { Thumbs } from './Thumbs'
+import { hintSeen, markHintSeen } from './uiPrefs'
 import { SelectedMarkup } from './tools'
 import { pagePoint } from './layers'
 import { deleteMarkup, markupAt, markupOfPage, selectMarkup } from './markup'
@@ -79,6 +81,22 @@ export function Viewer({ source, handle, showHidden, active = true }: { source: 
       live = false
     }
   }, [handle])
+  // The "looks scanned" note is a small hint, once per PDF: it fades by itself, or can be dismissed.
+  const [hint, setHint] = useState(false)
+  useEffect(() => {
+    if (!noText || hintSeen(source.hash)) return setHint(false)
+    setHint(true)
+    const t = setTimeout(() => (setHint(false), markHintSeen(source.hash)), 12_000)
+    return () => clearTimeout(t)
+  }, [noText, source.hash])
+  const closeHint = () => (setHint(false), markHintSeen(source.hash))
+  // The page chip ("Page 3 of 12") shows when the page changes and fades a moment later.
+  const [chip, setChip] = useState(true)
+  useEffect(() => {
+    setChip(true)
+    const t = setTimeout(() => setChip(false), 1800)
+    return () => clearTimeout(t)
+  }, [page, source.id])
   const [infos, setInfos] = useState<Map<number, PageInfo>>(new Map())
 
   // The size of every page, learned in batches in the background (until then a page is taken to be the size of the first).
@@ -366,11 +384,22 @@ export function Viewer({ source, handle, showHidden, active = true }: { source: 
     return () => el.removeEventListener('wheel', onWheel)
   }, [zoom, fit, source.id])
 
+  const here = rowPages[Math.max(0, nearestRow(rowPages, page))] ?? [page]
+  const chipText = here.length > 1 ? `Pages ${here[0]}–${here[here.length - 1]} of ${handle.pages}` : `Page ${page} of ${handle.pages}`
+  const thumbRatio = first.h / Math.max(1, first.w)
+
   return (
-    <div className="relative flex min-h-0 flex-1 flex-col">
-    {noText && (
-      <p role="status" className="shrink-0 border-b border-line bg-surface px-3 py-1.5 text-xs text-muted">
-        This PDF has no text to select (it looks scanned or handwritten). Use <b>Capture area</b> to take a part of a page as a picture.
+    <div className="relative flex min-h-0 flex-1 flex-row">
+    {panel.thumbs && <Thumbs handle={handle} pages={items.map((i) => i.n)} page={page} ratio={thumbRatio} />}
+    <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
+    {noText && hint && (
+      <p role="status" data-scan-hint className="absolute left-1/2 top-2 z-20 flex max-w-[92%] -translate-x-1/2 items-start gap-2 rounded-ui border border-line bg-surface px-3 py-1.5 text-xs text-muted shadow-lg">
+        <span>
+          This PDF has no text to select (it looks scanned or handwritten). Use <b>Capture area</b> to take a part of a page as a picture.
+        </span>
+        <button type="button" aria-label="Dismiss this hint" className="-my-1 grid h-7 w-7 shrink-0 place-items-center rounded hover:bg-bg [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-11" onClick={closeHint}>
+          ✕
+        </button>
       </p>
     )}
     <div ref={scroller} onScroll={onScroll} className="min-h-0 flex-1 overflow-auto bg-neutral-200 dark:bg-neutral-800" data-pdf-scroller data-layout={two ? 'two' : 'single'} data-paged={paged ? 'true' : 'false'} tabIndex={0} onKeyDown={onKeyDown} aria-label={`${source.name}, ${handle.pages} pages`}>
@@ -399,9 +428,13 @@ export function Viewer({ source, handle, showHidden, active = true }: { source: 
         <ViewMenu sourceId={source.id} compact />
       </div>
     )}
+    <div aria-hidden="true" data-page-chip className={`pointer-events-none absolute bottom-3 left-1/2 z-10 -translate-x-1/2 rounded-full bg-black/65 px-3 py-1 text-xs text-white shadow transition-opacity duration-500 ${chip ? 'opacity-100' : 'opacity-0'}`}>
+      {chipText}
+    </div>
     <SelectionBar sourceId={source.id} root={scroller} />
     {!readOnly && active && <SelectedMarkup />}
-    {!readOnly && active && <FloatingTools source={source} />}
+    {!readOnly && active && panel.markupBar && <FloatingTools source={source} />}
+    </div>
     </div>
   )
 }

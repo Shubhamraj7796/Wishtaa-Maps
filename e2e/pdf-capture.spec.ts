@@ -97,7 +97,7 @@ for (const size of SIZES) {
     await expect(page.locator('[data-capture-bar]')).toHaveCount(0)
 
     // Undo from the confirmation removes exactly the last capture.
-    await page.getByRole('button', { name: 'Undo', exact: true }).click().catch(() => undefined)
+    await page.getByRole('button', { name: 'Undo', exact: true }).click({ timeout: 3000 }).catch(() => undefined)
     expect(errors).toEqual([])
     await context.close()
   })

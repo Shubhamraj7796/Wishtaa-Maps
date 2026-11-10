@@ -2,23 +2,20 @@ import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import type { PdfSource } from '@/core/pdf/types'
 import { Icon } from '@/ui/icons'
 import { useEditor } from '../store'
-import { addPdfFiles, chooseLayout, closePdfPanel, focusPdfPane, openPdfFromDrive, openPdfTab, pickPdfFromDevice, refetchFromDrive, removePdfFromDevice, removePdfSource, reopenPdf, setPdfCollapsed, setPdfDrawer, setPdfFit, setPdfOutlineColumn, setPdfPage, setPdfRatio, setPdfSize, setPdfSync, setPdfTab, setPdfTool, setPdfZoom, showSource, splitPdf, turnPdf, unsplitPdf } from './actions'
-import { ViewMenu } from './ViewMenu'
-import { liveViewOf, subscribeViews, viewsVersion } from './spreadState'
-import { nearestRow } from './spreads'
+import { addPdfFiles, focusPdfPane, reopenPdf, refetchFromDrive, setPdfCollapsed, setPdfDrawer, setPdfFocusMode, setPdfRatio, setPdfSize, setPdfTab, setPdfTool, showSource } from './actions'
 import { SplitDropZones, Tabs } from './Tabs'
 import { CaptureBar } from './CaptureBar'
+import { PdfBar } from './PdfBar'
+import { btn } from './menus'
 import { accessPdf, bumpDevice, getDeviceVersion, rememberPassword, subscribeDevice, type PdfAccess } from './runtime'
-import { downloadMarkedPdf, saveCopyToDrive } from './exportActions'
 import { OutlineDialog } from './OutlineDialog'
 import { Viewer } from './Viewer'
 import { MarkupTab } from './tools'
 import { TOOL_KEYS } from './FloatingTools'
-import { clampSide, loadSheetHeight, loadSideWidth, nextSize, saveSheetHeight, saveSideWidth, SIZE_LABEL, startingSize } from './layout'
+import { clampSide, loadSheetHeight, loadSideWidth, saveSheetHeight, saveSideWidth, startingSize } from './layout'
 import { useTouchFriendly } from '../pictures/touch'
 import { OutlineView } from '../ui/OutlineView'
 
-const btn = 'grid h-8 min-w-8 shrink-0 place-items-center rounded px-1.5 text-sm hover:bg-bg [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:min-w-11'
 
 const typing = (t: EventTarget | null) => !!(t as HTMLElement | null)?.closest?.('input,textarea,select,[contenteditable="true"]')
 
@@ -36,12 +33,25 @@ export default function PdfPanel({ mode }: { mode: 'side' | 'sheet' }) {
   const list = Object.values(sources).sort((a, b) => a.addedAt - b.addedAt)
   const [side, setSide] = useState(() => loadSideWidth())
   const [sheet, setSheet] = useState(() => loadSheetHeight())
-  const [menu, setMenu] = useState<'open' | 'source' | null>(null)
   const [showHidden, setShowHidden] = useState(false)
+  const [panelW, setPanelW] = useState(1000)
   const [outline, setOutline] = useState(false)
   const aside = useRef<HTMLElement>(null)
   const size = panel.size
   const full = size === 'full'
+  const focus = panel.focusMode
+  const hiddenCount = useEditor((s) => (source ? Object.entries(s.pdf.pageEdits).filter(([k, v]) => v.hidden && k.startsWith(`${source.id}:`)).length : 0))
+  // The width of the panel decides which buttons stay on the top bar and which go into its "..." menu.
+  useEffect(() => {
+    const el = aside.current
+    if (!el) return
+    const measure = () => setPanelW(el.clientWidth || 1000)
+    measure()
+    if (typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [panel.collapsed])
 
   // Opening starts in the size that suits the device: full screen for a portrait touch screen.
   useEffect(() => {
@@ -60,18 +70,21 @@ export default function PdfPanel({ mode }: { mode: 'side' | 'sheet' }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [linked])
 
-  // Escape: close the drawer, then go back to Normal.
+  // Escape: close the markup list, then the Outline drawer, then leave Focus mode, then go back to Normal.
   useEffect(() => {
-    if (size === 'normal' && !panel.drawer) return
+    if (size === 'normal' && !panel.drawer && !focus && panel.tab !== 'markup') return
     const esc = (e: KeyboardEvent) => {
       if (e.key !== 'Escape' || typing(e.target) || document.querySelector('[role="dialog"][aria-modal="true"]') || document.querySelector('[data-flyout]')) return
       if (useEditor.getState().pdfPanel.tool === 'capture') return // Escape ends capture first (see the capture bar)
-      if (panel.drawer) setPdfDrawer(false)
-      else setPdfSize('normal')
+      if (document.querySelector('[data-view-menu],[data-pdf-menu]')) return // an open menu closes first
+      if (panel.tab === 'markup') setPdfTab('pages')
+      else if (panel.drawer) setPdfDrawer(false)
+      else if (focus) setPdfFocusMode(false)
+      else if (size !== 'normal') setPdfSize('normal')
     }
     window.addEventListener('keydown', esc)
     return () => window.removeEventListener('keydown', esc)
-  }, [size, panel.drawer])
+  }, [size, panel.drawer, panel.tab, focus])
 
   const room = () => (mode === 'side' ? (aside.current?.parentElement?.clientWidth ?? window.innerWidth) : (aside.current?.parentElement?.clientHeight ?? window.innerHeight))
   const setLength = (v: number, keep = false) => {
@@ -126,7 +139,7 @@ export default function PdfPanel({ mode }: { mode: 'side' | 'sheet' }) {
 
   // Tool keys while the PDF has the focus.
   const onKeyDown = (e: React.KeyboardEvent) => {
-    if (readOnly || panel.tab !== 'pages' || e.ctrlKey || e.metaKey || e.altKey || typing(e.target)) return
+    if (readOnly || e.ctrlKey || e.metaKey || e.altKey || typing(e.target)) return
     const t = TOOL_KEYS[e.key.toLowerCase()]
     if (t) {
       e.preventDefault()
@@ -167,99 +180,17 @@ export default function PdfPanel({ mode }: { mode: 'side' | 'sheet' }) {
           <span className="h-1 w-10 rounded-full bg-line" />
         </div>
       )}
-      <div className="flex shrink-0 items-center gap-1 border-b border-line px-1.5 py-1">
-        <button type="button" className={btn} aria-label="Close the PDF panel" title="Close the PDF (it stays in the map)" onClick={closePdfPanel}>
-          <Icon name="close" size={16} />
+      {focus ? (
+        <button type="button" data-focus-handle aria-label="Show the controls" title="Show the controls (Esc)" onClick={() => setPdfFocusMode(false)} className="absolute left-1/2 top-0 z-[48] grid h-5 w-14 -translate-x-1/2 place-items-center rounded-b-full border border-t-0 border-line bg-surface/90 text-muted shadow hover:text-ink [@media(pointer:coarse)]:h-8">
+          <Icon name="chevronDown" size={14} />
         </button>
-        <div className="relative min-w-0 flex-1">
-          <button type="button" aria-haspopup="menu" aria-expanded={menu === 'source'} onClick={() => setMenu(menu === 'source' ? null : 'source')} className="flex w-full items-center gap-1 truncate rounded px-2 py-1 text-left text-sm font-medium hover:bg-bg" title={source?.name ?? 'Choose a PDF'}>
-            <span className="truncate">{source?.name ?? 'No PDF'}</span>
-            <Icon name="chevronDown" size={14} />
-          </button>
-          {menu === 'source' && (
-            <Menu onClose={() => setMenu(null)}>
-              {list.map((s) => (
-                <MenuItem key={s.id} onClick={() => (openPdfTab(s.id), setMenu(null))} active={s.id === panel.sourceId || s.id === panel.other}>
-                  {s.name} <span className="text-xs text-muted">· {s.pages} pages</span>
-                </MenuItem>
-              ))}
-              {!list.length && <div className="px-3 py-2 text-xs text-muted">No PDFs in this map yet.</div>}
-              {list.length > 1 && (
-                <>
-                  <hr className="my-1 border-line" />
-                  {panel.other ? (
-                    <MenuItem onClick={() => (unsplitPdf(), setMenu(null))}>One PDF (merge the split view)</MenuItem>
-                  ) : (
-                    list
-                      .filter((s) => s.id !== panel.sourceId)
-                      .map((s) => (
-                        <MenuItem key={`split-${s.id}`} onClick={() => (splitPdf(s.id, 'right'), setMenu(null))}>
-                          Split view with {s.name}
-                        </MenuItem>
-                      ))
-                  )}
-                  {panel.other && <MenuItem onClick={() => (setPdfSync(!panel.sync), setMenu(null))}>{panel.sync ? 'Turn off Sync scrolling' : 'Sync scrolling'}</MenuItem>}
-                </>
-              )}
-              {size !== 'normal' && (
-                <MenuItem onClick={() => (setPdfOutlineColumn(!panel.outlineColumn), setMenu(null))}>{panel.outlineColumn ? 'Hide the Outline column' : 'Show the Outline beside the PDFs'}</MenuItem>
-              )}
-              {source && (
-                <>
-                  <hr className="my-1 border-line" />
-                  <MenuItem onClick={() => (void downloadMarkedPdf(source.id), setMenu(null))}>Download PDF with markup</MenuItem>
-                  <MenuItem onClick={() => (void saveCopyToDrive(source.id), setMenu(null))}>Save copy to Google Drive</MenuItem>
-                </>
-              )}
-              {source && !readOnly && (
-                <>
-                  <hr className="my-1 border-line" />
-                  <MenuItem onClick={() => (setOutline(true), setMenu(null))}>Start an outline from this PDF…</MenuItem>
-                  <MenuItem onClick={() => (void removePdfFromDevice(source.hash), setMenu(null))}>Remove from this device</MenuItem>
-                  <MenuItem danger onClick={() => (removePdfSource(source.id), setMenu(null))}>Remove from this map</MenuItem>
-                </>
-              )}
-            </Menu>
-          )}
-        </div>
-        {!readOnly && (
-          <div className="relative">
-            <button type="button" className={btn} aria-haspopup="menu" aria-expanded={menu === 'open'} aria-label="Open a PDF" title="Open a PDF" onClick={() => setMenu(menu === 'open' ? null : 'open')}>
-              <Icon name="plus" size={16} />
-            </button>
-            {menu === 'open' && (
-              <Menu onClose={() => setMenu(null)} right>
-                <MenuItem onClick={() => (pickPdfFromDevice(), setMenu(null))}>From this device…</MenuItem>
-                <MenuItem onClick={() => (void openPdfFromDrive(), setMenu(null))}>From Google Drive…</MenuItem>
-              </Menu>
-            )}
-          </div>
-        )}
-        <button
-          type="button"
-          className={btn}
-          data-expand
-          aria-label={full ? 'Restore the PDF to its normal size' : `Make the PDF bigger (now ${SIZE_LABEL[size]}; next ${SIZE_LABEL[nextSize(size)]})`}
-          title={full ? 'Restore (Esc)' : `${SIZE_LABEL[size]}. Click for ${SIZE_LABEL[nextSize(size)]}`}
-          onClick={() => setPdfSize(nextSize(size))}
-        >
-          <Icon name={full ? 'shrink' : 'expand'} size={16} />
-        </button>
-        <button type="button" className={btn} aria-label="Hide the PDF panel (the PDF stays open)" title="Hide the panel, keep the PDF open" onClick={() => setPdfCollapsed(true)}>
-          <Icon name={mode === 'side' ? 'chevronLeft' : 'chevronDown'} size={16} />
-        </button>
-      </div>
-
-      <Tabs />
+      ) : (
+        <>
+          <PdfBar panelW={panelW} source={source} list={list} readOnly={readOnly} showHidden={showHidden} setShowHidden={setShowHidden} hiddenCount={hiddenCount} onOutline={() => setOutline(true)} />
+          {panel.tabs.length > 1 && panelW >= 700 && <Tabs />}
+        </>
+      )}
       {source && !readOnly && panel.tool === 'capture' && <CaptureBar />}
-      {source && <Controls source={source} showHidden={showHidden} setShowHidden={setShowHidden} />}
-      <div role="tablist" aria-label="PDF panel" className="flex shrink-0 gap-1 border-b border-line px-2 py-1 text-xs">
-        {(['pages', 'markup'] as const).map((t) => (
-          <button key={t} type="button" role="tab" aria-selected={panel.tab === t} onClick={() => setPdfTab(t)} className={`rounded px-2 py-1 [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:px-3 ${panel.tab === t ? 'bg-brand/15 font-semibold' : 'hover:bg-bg'}`}>
-            {t === 'pages' ? 'Pages' : 'Markup'}
-          </button>
-        ))}
-      </div>
       <Panes showHidden={showHidden} />
       {outline && source && <OutlineLoader source={source} onClose={() => setOutline(false)} />}
       {mode === 'side' && !full && (
@@ -338,8 +269,8 @@ function Panes({ showHidden }: { showHidden: boolean }) {
   }, [])
   const stacked = dims.w < 560
   const wide = p.size !== 'normal' && dims.w >= 900
-  const thirdColumn = p.outlineColumn && wide && p.tab === 'pages'
-  const split = !!p.other && p.tab === 'pages' && !!sources[p.other]
+  const thirdColumn = p.outlineColumn && wide
+  const split = !!p.other && !!sources[p.other]
   const left = p.activeSide === 'left' ? p.sourceId : p.other
   const right = p.activeSide === 'left' ? p.other : p.sourceId
   const order = split ? [left, right] : [p.sourceId]
@@ -424,112 +355,6 @@ function Panes({ showHidden }: { showHidden: boolean }) {
   )
 }
 
-/** The page box and the zoom buttons. */
-function Controls({ source, showHidden, setShowHidden }: { source: PdfSource; showHidden: boolean; setShowHidden: (b: boolean) => void }) {
-  const page = useEditor((s) => s.pdfPanel.page)
-  const zoom = useEditor((s) => s.pdfPanel.zoom)
-  const tool = useEditor((s) => s.pdfPanel.tool)
-  const readOnly = useEditor((s) => s.readOnly)
-  const hiddenCount = useEditor((s) => Object.entries(s.pdf.pageEdits).filter(([k, v]) => v.hidden && k.startsWith(`${source.id}:`)).length)
-  const other = useEditor((s) => s.pdfPanel.other)
-  const tabs = useEditor((s) => s.pdfPanel.tabs)
-  const sync = useEditor((s) => s.pdfPanel.sync)
-  const [text, setText] = useState(String(page))
-  useEffect(() => setText(String(page)), [page])
-  const second = tabs.find((t) => t !== source.id)
-  const go = () => {
-    const n = Math.min(source.pages, Math.max(1, Math.round(Number(text))))
-    if (Number.isFinite(n)) setPdfPage(n)
-    setText(String(Number.isFinite(n) ? n : page))
-  }
-  const percent = zoom === null ? null : Math.round(zoom * 100)
-  const fitKind = useEditor((s) => s.pdfPanel.views[source.id]?.fit ?? 'width')
-  const twoOn = useEditor((s) => s.pdfPanel.views[source.id]?.two === true)
-  // With two pages showing, the arrows step by spread.
-  useSyncExternalStore(subscribeViews, viewsVersion)
-  const rows = liveViewOf(source.id)?.rows
-  const at = rows?.length ? nearestRow(rows, page) : -1
-  const atStart = rows?.length ? at <= 0 : page <= 1
-  const atEnd = rows?.length ? at >= rows.length - 1 : page >= source.pages
-  const spread = rows?.[at]
-  const shown = spread && spread.length > 1 ? `${spread[0]}–${spread[spread.length - 1]}` : null
-  return (
-    <div className="flex shrink-0 flex-wrap items-center gap-1 border-b border-line px-2 py-1 text-xs text-muted">
-      <button type="button" className={btn} aria-label={shown ? 'Previous spread' : 'Previous page'} onClick={() => turnPdf(-1)} disabled={atStart}>‹</button>
-      <label className="flex items-center gap-1">
-        <span className="sr-only">Page</span>
-        <input value={text} onChange={(e) => setText(e.target.value)} onBlur={go} onKeyDown={(e) => e.key === 'Enter' && go()} inputMode="numeric" aria-label="Page number" className="w-10 rounded border border-line bg-surface px-1 py-0.5 text-center text-ink" />
-        <span>of {source.pages}</span>
-        {shown && <span data-spread-label>(showing {shown})</span>}
-      </label>
-      <button type="button" className={btn} aria-label={shown ? 'Next spread' : 'Next page'} onClick={() => turnPdf(1)} disabled={atEnd}>›</button>
-      <span className="mx-1 h-4 w-px bg-line" />
-      <button type="button" className={btn} aria-label="Zoom out" title="Zoom out" onClick={() => setPdfZoom((zoom ?? 1) / 1.25)}><Icon name="zoomOut" size={15} /></button>
-      <button type="button" className="min-w-12 rounded px-1 py-1 hover:bg-bg" title="Fit to the width of the panel" onClick={() => setPdfFit('width')} aria-label={percent === null ? `Zoom: fit ${fitKind}` : `Zoom ${percent} percent. Click to fit the width`}>{percent === null ? (fitKind === 'page' ? 'Fit page' : fitKind === 'height' ? 'Fit height' : 'Fit') : `${percent}%`}</button>
-      <button type="button" className={btn} aria-label="Zoom in" title="Zoom in" onClick={() => setPdfZoom((zoom ?? 1) * 1.25)}><Icon name="zoomIn" size={15} /></button>
-      <button
-        type="button"
-        data-two-toggle
-        className={`${btn} ${twoOn ? 'bg-brand/15 text-ink' : ''}`}
-        aria-pressed={twoOn}
-        aria-label="Two pages side by side"
-        title={twoOn ? 'Back to one page' : 'Two pages side by side, like an open book (the panel goes full screen)'}
-        onClick={() => chooseLayout(source.id, { two: !twoOn })}
-      >
-        <Icon name="openBook" size={15} />
-      </button>
-      <ViewMenu sourceId={source.id} />
-      <span className="mx-1 h-4 w-px bg-line" />
-      <button type="button" className={`${btn} ${tool === 'capture' ? 'bg-brand/15 text-ink' : ''}`} aria-pressed={tool === 'capture'} aria-label="Capture area" title="Take part of a page as a picture, as a new topic (works on scans and handwriting)" disabled={readOnly} onClick={() => setPdfTool(tool === 'capture' ? 'select' : 'capture')}>
-        <Icon name="camera" size={15} />
-        <span className="ml-1 hidden sm:inline">Capture area</span>
-      </button>
-      <span className="mx-1 h-4 w-px bg-line" />
-      <button
-        type="button"
-        className={`${btn} ${other ? 'bg-brand/15 text-ink' : ''}`}
-        aria-pressed={!!other}
-        disabled={!other && !second}
-        title={other ? 'Back to one PDF' : second ? 'Show two PDFs side by side' : 'Open a second PDF to split the view'}
-        onClick={() => (other ? unsplitPdf() : second && splitPdf(second, 'right'))}
-      >
-        <Icon name="split" size={15} />
-        <span className="ml-1 hidden sm:inline">{other ? 'One PDF' : 'Split'}</span>
-      </button>
-      {other && (
-        <label className="flex items-center gap-1">
-          <input type="checkbox" checked={sync} onChange={(e) => setPdfSync(e.target.checked)} />
-          Sync scrolling
-        </label>
-      )}
-      {hiddenCount > 0 && (
-        <label className="ml-auto flex items-center gap-1">
-          <input type="checkbox" checked={showHidden} onChange={(e) => setShowHidden(e.target.checked)} />
-          Show {hiddenCount} hidden page{hiddenCount === 1 ? '' : 's'}
-        </label>
-      )}
-    </div>
-  )
-}
-
-function Menu({ children, onClose, right }: { children: React.ReactNode; onClose: () => void; right?: boolean }) {
-  return (
-    <>
-      <div className="fixed inset-0 z-40" onPointerDown={onClose} />
-      <div role="menu" className={`absolute top-full z-50 mt-1 min-w-56 max-w-[min(20rem,80vw)] rounded-ui border border-line bg-surface py-1 text-sm shadow-xl ${right ? 'right-0' : 'left-0'}`}>
-        {children}
-      </div>
-    </>
-  )
-}
-function MenuItem({ children, onClick, active, danger }: { children: React.ReactNode; onClick: () => void; active?: boolean; danger?: boolean }) {
-  return (
-    <button type="button" role="menuitem" onClick={onClick} className={`block w-full px-3 py-2 text-left hover:bg-brand/15 ${active ? 'bg-brand/10 font-semibold' : ''} ${danger ? 'text-bad' : ''}`}>
-      {children}
-    </button>
-  )
-}
-
 /** The pages (or the markup list) of the chosen PDF, or what to do when it is not here. */
 function Body({ source, showHidden, tab, active }: { source: PdfSource | undefined; showHidden: boolean; tab: 'pages' | 'markup'; active: boolean }) {
   const version = useSyncExternalStore(subscribeDevice, getDeviceVersion)
@@ -570,7 +395,24 @@ function Body({ source, showHidden, tab, active }: { source: PdfSource | undefin
       </div>
     )
   }
-  return tab === 'pages' ? <Viewer source={source} handle={access.handle} showHidden={showHidden} active={active} /> : <MarkupTab source={source} handle={access.handle} />
+  return (
+    <>
+      <Viewer source={source} handle={access.handle} showHidden={showHidden} active={active} />
+      {tab === 'markup' && active && (
+        <div role="complementary" aria-label="Markup list" data-markup-drawer className="absolute inset-y-0 right-0 z-30 flex w-[min(380px,92%)] flex-col border-l border-line bg-bg shadow-2xl">
+          <div className="flex shrink-0 items-center gap-2 border-b border-line bg-surface px-3 py-1">
+            <span className="flex-1 text-sm font-medium">Markup</span>
+            <button type="button" className={btn} aria-label="Close the markup list" onClick={() => setPdfTab('pages')}>
+              <Icon name="close" size={16} />
+            </button>
+          </div>
+          <div className="relative flex min-h-0 flex-1 flex-col">
+            <MarkupTab source={source} handle={access.handle} />
+          </div>
+        </div>
+      )}
+    </>
+  )
 }
 
 function Empty() {

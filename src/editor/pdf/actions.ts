@@ -18,6 +18,7 @@ import * as W from './workspace'
 import { nearestRow } from './spreads'
 import { liveViewOf } from './spreadState'
 import { beginCapture, endCapture } from './capture'
+import { loadPdfUi, savePdfUi } from './uiPrefs'
 import { resetDefaultLayout, saveDefaultLayout, startingLayout } from './layoutDefault'
 
 const get = useEditor.getState
@@ -72,9 +73,25 @@ function ensureWorkspace() {
 
 export const closePdfPanel = () => {
   rememberNow()
-  set({ pdfPanel: { ...get().pdfPanel, open: false, tool: 'select', markId: null, drawer: false, collapsed: false, focus: null } })
+  set({ pdfPanel: { ...get().pdfPanel, open: false, tool: 'select', markId: null, drawer: false, collapsed: false, focus: null, focusMode: false, markupBar: false } })
 }
 
+/** Focus mode: all controls hidden except a tiny handle. */
+export const setPdfFocusMode = (focusMode: boolean) => patch({ focusMode, ...(focusMode ? { drawer: false } : {}) })
+/** Shows or hides the floating markup bar (the Markup button). Hiding it also puts a drawing tool down. */
+export function setPdfMarkupBar(markupBar: boolean) {
+  const tool = get().pdfPanel.tool
+  patch({ markupBar, ...(!markupBar && tool !== 'select' && tool !== 'capture' ? { tool: 'select' as const } : {}) })
+}
+/** The thumbnail strip (kept on this device). */
+export function setPdfThumbs(thumbs: boolean) {
+  patch({ thumbs })
+  savePdfUi({ ...loadPdfUi(), thumbs })
+}
+/** The pen bar folds away after a few seconds without drawing (on by default; this turns it off). */
+export function setAutoCollapse(autoCollapse: boolean) {
+  savePdfUi({ ...loadPdfUi(), autoCollapse })
+}
 /** Opens or closes the panel's Outline drawer (full screen). */
 export const setPdfDrawer = (drawer: boolean) => patch({ drawer })
 export const setPdfToolSide = (toolSide: 'left' | 'right') => void (get().pdfPanel.toolSide !== toolSide && patch({ toolSide }))
@@ -185,10 +202,11 @@ export function setPdfTool(tool: PdfPanelState['tool']) {
     return
   }
   if (tool !== 'capture' && was === 'capture') endCapture()
+  const drawing = tool !== 'select' && tool !== 'capture'
   if (isShape(tool)) {
-    patch({ tool, shape: tool })
+    patch({ tool, shape: tool, markupBar: true })
     savePrefs({ ...loadPrefs(), shape: tool })
-  } else patch({ tool })
+  } else patch(drawing ? { tool, markupBar: true } : { tool })
 }
 /** Changes one tool's colour, size or strength; it is remembered for next time on this device. */
 export function setToolStyle(key: StyleKey, change: Partial<ToolStyle>) {

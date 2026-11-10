@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Clean reading interface: the page comes first (PDF panel, Part 2 Group A)
+- **One thin top bar** (44 px) replaces the rows above the page: close, the PDF's name (a drop-down of every PDF of the map, with Open a PDF, Split, Download and the rest), the page ("3 of 12": type a number to jump), the book button, **View**, **Capture area**, **Split**, **Markup**, **Focus**, **...** and the size button. On a narrow panel Split, Focus, Close and the arrows move into the **...** menu, which also holds Open a PDF, Sync scrolling, Page thumbnails, Markup list, Show hidden pages, "Pen bar folds away when idle", Make bigger and Hide the panel. Nothing was removed. Zoom (out, in, fit, percentages) is in the View menu.
+- The tab strip shows only when two or more PDFs are open and the panel is at least 700 px wide; otherwise the name drop-down lists them.
+- **Floating pen bar:** hidden until you press **Markup** (or pick a tool by its key). It is movable, collapses to a small button, and folds away by itself after about 4 seconds without activity (a setting in **...**; tap the small button to bring it back). The **Pages / Markup** tab row is gone: the **Markup list** is a drawer over the pages (**...**, then Markup list; Escape closes it).
+- **Page chip:** "Page 3 of 12" (or "Pages 3-4 of 12") floats over the page and fades after a moment.
+- **Focus mode:** hides every control except a tiny handle (top centre). Escape or the handle brings them back. At **Full screen** the app header and the map toolbar also step aside (Escape or the size button bring them back).
+- The "looks scanned or handwritten" note is now a small dismissible hint, shown once per PDF, instead of a permanent row.
+- **Page thumbnails** (optional, off by default, remembered): a strip beside the pages; only the thumbnails near the strip's view are drawn.
+- Measured at 1366x768 (page area starts): Normal 285 px down before, 141 px after; Full 249 px before, 44 px after; Focus 0 px of panel controls. See `docs/pdf-source-panel.md`.
+
 ### Two-page view makes room; Fit height; remembered layout (PDF panel)
 - Choosing **Two-page view** (View menu, or the new book button in the toolbar) takes the panel to Full screen so both pages show side by side; choosing Single-page view gives the earlier size back. A size you set by hand is never undone.
 - **Fit height** added to the View menu (the page height fills the pane). **Presentation mode** is listed but disabled until it is built.

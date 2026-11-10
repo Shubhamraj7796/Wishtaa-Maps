@@ -99,6 +99,9 @@ function Editor({ file }: { file: FileRecord }) {
   const { canUndo, canRedo, tool, levels, focusId, selected, rootId, title, panelOpen, painter, view, insertOpen, relationFrom, selectedObject, minimap, panelTab, readOnly, readPanelOpen } = useEditor()
   const isKb = file.type === 'kb'
   const pdfOpen = useEditor((s) => s.pdfPanel.open)
+  // The PDF at Full screen has the whole window: the app header and the map toolbar step aside (Esc or the size button bring them back).
+  const pdfFull = useEditor((s) => s.pdfPanel.open && s.pdfPanel.size === 'full' && !s.pdfPanel.collapsed)
+  const away = pdfFull ? ({ display: 'none' } as const) : undefined
   // After the app updated itself because the PDF viewer could not load, the PDF the person was opening comes back.
   const openedId = useEditor((s) => s.fileId)
   useEffect(() => {
@@ -144,7 +147,7 @@ function Editor({ file }: { file: FileRecord }) {
 
   return (
     <div className="flex h-full flex-col" data-mode={readOnly ? 'read' : 'edit'}>
-      <header className="flex h-12 shrink-0 items-center gap-2 overflow-x-auto whitespace-nowrap border-b border-line bg-surface px-3">
+      <header style={away} className="flex h-12 shrink-0 items-center gap-2 overflow-x-auto whitespace-nowrap border-b border-line bg-surface px-3">
         <EditorMenuButton />
         <Link to={backTo} aria-label="Back to files" title="Back to files" className="grid h-9 w-9 shrink-0 place-items-center rounded-ui hover:bg-bg">
           <ArrowLeft size={18} aria-hidden="true" />
@@ -188,6 +191,7 @@ function Editor({ file }: { file: FileRecord }) {
         </div>
       </header>
 
+      <div className="contents" style={away}>
       {readOnly ? (
         <ReadToolbar file={file} />
       ) : (
@@ -222,6 +226,7 @@ function Editor({ file }: { file: FileRecord }) {
         </div>
       </div>
       )}
+      </div>
 
       <div className="relative flex min-h-0 flex-1">
         <PasswordDialog />
