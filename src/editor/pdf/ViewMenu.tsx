@@ -5,6 +5,7 @@ import { chooseLayout, resetPdfLayout } from './actions'
 import { liveViewOf, subscribeViews, viewsVersion } from './spreadState'
 import { TWO_MIN_PANE, twoNote } from './spreads'
 import { DEFAULT_VIEW } from './workspace'
+import { DOC_COLOR_LABEL, DOC_COLORS, PAPER } from './docColor'
 
 const ZOOMS = [0.5, 0.75, 1.25, 1.5, 2, 3]
 
@@ -12,7 +13,7 @@ const zoomBtn = 'grid h-8 min-w-8 place-items-center rounded border border-line 
 const row = 'flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-brand/15 [@media(pointer:coarse)]:min-h-11'
 
 /**
- * The View menu of one PDF (in the panel's tool row, and in each pane of a split view): Single or Two pages, Show cover page,
+ * The View menu of one PDF (in the panel's tool row, and in each pane of a split view): Single or Two pages, First page alone,
  * Enable scrolling, right to left, and the zoom. The choices belong to this PDF on this device.
  */
 export function ViewMenu({ sourceId, compact = false }: { sourceId: string; compact?: boolean }) {
@@ -51,6 +52,12 @@ export function ViewMenu({ sourceId, compact = false }: { sourceId: string; comp
     </button>
   )
 
+  const heading = (text: string) => (
+    <div role="presentation" className="px-3 pb-0.5 pt-2 text-[11px] font-semibold uppercase tracking-wide text-muted first:pt-1">
+      {text}
+    </div>
+  )
+
   return (
     <div className="relative">
       <button
@@ -58,7 +65,7 @@ export function ViewMenu({ sourceId, compact = false }: { sourceId: string; comp
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label="View options"
-        title="View: Single or Two pages, cover page, scrolling, zoom"
+        title="View: Single or Two pages, first page alone, scrolling, document colour, zoom"
         data-view-button
         onClick={() => setOpen(!open)}
         className={`flex h-8 shrink-0 items-center gap-1 rounded px-1.5 text-sm hover:bg-bg [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:min-w-11 ${compact ? 'border border-line bg-surface shadow' : ''} ${open ? 'bg-brand/15 text-ink' : ''}`}
@@ -71,6 +78,7 @@ export function ViewMenu({ sourceId, compact = false }: { sourceId: string; comp
         <>
           <div className="fixed inset-0 z-40" onPointerDown={() => setOpen(false)} />
           <div role="menu" aria-label="View" data-view-menu className="absolute right-0 top-full z-50 mt-1 max-h-[75vh] w-72 max-w-[85vw] overflow-y-auto rounded-ui border border-line bg-surface py-1 text-ink shadow-xl sm:left-0 sm:right-auto">
+            {heading('Pages on screen')}
             {radio(!two, 'Single-page view', () => set({ two: false }))}
             {radio(two, 'Two-page view', () => set({ two: true }), 'Two pages of this PDF side by side, like an open book')}
             {note && (
@@ -78,10 +86,24 @@ export function ViewMenu({ sourceId, compact = false }: { sourceId: string; comp
                 {note}
               </p>
             )}
-            {check(v.cover === true, 'Show cover page', () => set({ cover: v.cover !== true }), 'Page 1 alone, then 2-3, 4-5 (off: 1-2, 3-4). Used in Two-page view')}
+            {check(v.cover === true, 'First page alone', () => set({ cover: v.cover !== true }), 'Page 1 alone, then 2-3, 4-5 (off: 1-2, 3-4). Used in Two-page view')}
+            {heading('Reading')}
             {check(!paged, 'Enable scrolling', () => set({ paged: !paged }), 'On: scroll through the pages. Off: one page or spread at a time (page buttons and arrow keys)')}
+            {two && check(v.flip1 === true, '1-page flipping', () => set({ flip1: v.flip1 !== true }), 'With scrolling off, a turn moves by one page (1-2, then 2-3), not a whole spread')}
             {check(v.rtl === true, 'Right-to-left reading', () => set({ rtl: v.rtl !== true }), 'The first page of a spread on the right')}
-            <hr className="my-1 border-line" />
+            {heading('Document colour')}
+            <div role="group" aria-label="Document colour" className="grid grid-cols-4 gap-1 px-3 pb-1">
+              {DOC_COLORS.map((c) => {
+                const on = (v.color ?? 'light') === c
+                return (
+                  <button key={c} type="button" role="menuitemradio" aria-checked={on} data-doc-color-choice={c} onClick={() => set({ color: c })} title={`${DOC_COLOR_LABEL[c]}: how the pages look on screen. The PDF, markup, captured pictures and downloads keep their own colours`} className={`flex flex-col items-center gap-1 rounded border px-1 py-1.5 text-xs [@media(pointer:coarse)]:min-h-11 ${on ? 'border-brand bg-brand/15 font-semibold' : 'border-line hover:bg-bg'}`}>
+                    <span aria-hidden="true" className="h-4 w-4 rounded-sm border border-line" style={{ background: PAPER[c], filter: c === 'grey' ? 'grayscale(1)' : undefined }} />
+                    {DOC_COLOR_LABEL[c]}
+                  </button>
+                )
+              })}
+            </div>
+            {heading('Zoom')}
             <div className="flex items-center gap-1 px-3 py-1" role="group" aria-label="Zoom">
               <button type="button" className={zoomBtn} aria-label="Zoom out" title="Zoom out" onClick={() => set({ zoom: Math.max(0.25, (v.zoom ?? 1) / 1.25) })}>
                 <Icon name="zoomOut" size={15} />
@@ -109,7 +131,7 @@ export function ViewMenu({ sourceId, compact = false }: { sourceId: string; comp
               <span aria-hidden="true" className="w-4" />
               Presentation mode <span className="text-xs text-muted">(coming soon)</span>
             </button>
-            <button type="button" role="menuitem" data-reset-layout onClick={() => (resetPdfLayout(sourceId), setOpen(false))} className={row} title="One page, scrolling, fit width for this PDF, and new PDFs start that way again">
+            <button type="button" role="menuitem" data-reset-layout onClick={() => (resetPdfLayout(sourceId), setOpen(false))} className={row} title="One page, scrolling, fit width, Light colour for this PDF, and new PDFs start that way again">
               <span aria-hidden="true" className="w-4" />
               Reset to default layout
             </button>

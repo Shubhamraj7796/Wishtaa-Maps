@@ -17,6 +17,16 @@ describe('the starting layout of new PDFs', () => {
     expect(loadDefaultLayout(s)).toEqual({ two: true, cover: true, fit: 'height' })
   })
 
+  it('remembers the document colour and 1-page flipping; Light is the default and is not stored', () => {
+    const s = store()
+    saveDefaultLayout({ color: 'dark', flip1: true }, s)
+    expect(loadDefaultLayout(s)).toEqual({ color: 'dark', flip1: true })
+    saveDefaultLayout({ color: 'light' }, s)
+    expect(loadDefaultLayout(s)).toEqual({})
+    s.setItem('wishtaamaps:pdf-default-layout', '{"color":"neon","flip1":"yes"}')
+    expect(loadDefaultLayout(s)).toEqual({})
+  })
+
   it('ignores a damaged or odd value', () => {
     const s = store()
     s.setItem('wishtaamaps:pdf-default-layout', '{"two":"yes","fit":"huge","rtl":true}')

@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Document colour, First page alone, 1-page flipping (PDF panel, Part 2 B1+B3, reduced scope)
+- **Document colour** in the View menu: Light (default), **Dark** (the page picture is inverted and the hue turned half way round), **Grey** and **Sepia**. It is display only: a CSS filter on the page picture and nothing else. The PDF file, the markup (drawn above the page picture, so it keeps its own colours and stays readable in Dark), captured and Add-as-topic pictures (drawn fresh from the PDF) and Download PDF with markup are untouched. Saved per PDF and per device; the last choice starts new PDFs on screens at least 900 px wide; **Reset to default layout** clears it.
+- **Show cover page** is now **First page alone** (the saved value is still `cover`).
+- **1-page flipping** (shown only when Two-page view is chosen): with Enable scrolling off, a turn moves by one page (1-2, 2-3, 3-4; with First page alone: 1, 2-3, 3-4). Scrolling mode is unchanged.
+- The View menu is grouped: Pages on screen, Reading, Document colour, Zoom.
+- Postponed (not built now): Horizontal scrolling direction and the 4-page (2x2) grid.
+
 ### Clean reading interface: the page comes first (PDF panel, Part 2 Group A)
 - **One thin top bar** (44 px) replaces the rows above the page: close, the PDF's name (a drop-down of every PDF of the map, with Open a PDF, Split, Download and the rest), the page ("3 of 12": type a number to jump), the book button, **View**, **Capture area**, **Split**, **Markup**, **Focus**, **...** and the size button. On a narrow panel Split, Focus, Close and the arrows move into the **...** menu, which also holds Open a PDF, Sync scrolling, Page thumbnails, Markup list, Show hidden pages, "Pen bar folds away when idle", Make bigger and Hide the panel. Nothing was removed. Zoom (out, in, fit, percentages) is in the View menu.
 - The tab strip shows only when two or more PDFs are open and the panel is at least 700 px wide; otherwise the name drop-down lists them.

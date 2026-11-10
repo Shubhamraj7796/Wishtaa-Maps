@@ -14,6 +14,7 @@ import { PageLayers } from './layers'
 import { SelectionBar } from './SelectionBar'
 import { FloatingTools } from './FloatingTools'
 import { Thumbs } from './Thumbs'
+import type { DocColor } from './docColor'
 import { hintSeen, markHintSeen } from './uiPrefs'
 import { SelectedMarkup } from './tools'
 import { pagePoint } from './layers'
@@ -64,6 +65,8 @@ export function Viewer({ source, handle, showHidden, active = true }: { source: 
   const paged = mine?.paged === true
   const cover = mine?.cover === true
   const rtl = mine?.rtl === true
+  const flip1 = mine?.flip1 === true
+  const docColor = mine?.color ?? 'light'
   const fitKind = mine?.fit ?? 'width'
   const split = !!panel.other
   const sync = panel.sync && split
@@ -149,7 +152,7 @@ export function Viewer({ source, handle, showHidden, active = true }: { source: 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [handle, infos, edits, showHidden, source.id])
   const byN = useMemo(() => new Map(items.map((i) => [i.n, i])), [items])
-  const rowPages = useMemo(() => buildRows(items.map((i) => i.n), two, cover), [items, two, cover])
+  const rowPages = useMemo(() => buildRows(items.map((i) => i.n), two, cover, two && paged && flip1), [items, two, cover, paged, flip1])
   const shapeOf = (row: number[], index: number) => rowShape(slotsOf(row, index, two, cover, rtl).map((n) => (n === null ? null : byN.get(n)?.shape ?? null)))
   // Paged shows one row: the one holding the page.
   const current = paged ? Math.min(rowPages.length - 1, nearestRow(rowPages, page)) : -1
@@ -390,7 +393,7 @@ export function Viewer({ source, handle, showHidden, active = true }: { source: 
 
   return (
     <div className="relative flex min-h-0 flex-1 flex-row">
-    {panel.thumbs && <Thumbs handle={handle} pages={items.map((i) => i.n)} page={page} ratio={thumbRatio} />}
+    {panel.thumbs && <Thumbs handle={handle} pages={items.map((i) => i.n)} page={page} ratio={thumbRatio} docColor={docColor} />}
     <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
     {noText && hint && (
       <p role="status" data-scan-hint className="absolute left-1/2 top-2 z-20 flex max-w-[92%] -translate-x-1/2 items-start gap-2 rounded-ui border border-line bg-surface px-3 py-1.5 text-xs text-muted shadow-lg">
@@ -402,7 +405,7 @@ export function Viewer({ source, handle, showHidden, active = true }: { source: 
         </button>
       </p>
     )}
-    <div ref={scroller} onScroll={onScroll} className="min-h-0 flex-1 overflow-auto bg-neutral-200 dark:bg-neutral-800" data-pdf-scroller data-layout={two ? 'two' : 'single'} data-paged={paged ? 'true' : 'false'} tabIndex={0} onKeyDown={onKeyDown} aria-label={`${source.name}, ${handle.pages} pages`}>
+    <div ref={scroller} onScroll={onScroll} className={`min-h-0 flex-1 overflow-auto ${docColor === 'dark' ? 'bg-neutral-900' : 'bg-neutral-200 dark:bg-neutral-800'}`} data-pdf-scroller data-layout={two ? 'two' : 'single'} data-paged={paged ? 'true' : 'false'} tabIndex={0} onKeyDown={onKeyDown} aria-label={`${source.name}, ${handle.pages} pages`}>
       <div className="relative" style={{ height: contentH, width: Math.max(viewW, ...rows.slice(start, end).map((r) => r.w + GUTTER * 2)) }}>
         {rows.slice(start, end).map((r, k) => {
           const i = start + k
@@ -414,7 +417,7 @@ export function Viewer({ source, handle, showHidden, active = true }: { source: 
                 ) : (
                   <div key={c.n} data-slot={c.n}>
                     {c.hidden && <div className="mb-1 text-center text-xs text-muted">Page {c.n} is hidden</div>}
-                    <Slot source={source} handle={handle} n={c.n} box={c.box} marked={marked?.page === c.n ? marked.rect : null} tool={tool} dim={c.hidden} />
+                    <Slot source={source} handle={handle} n={c.n} box={c.box} marked={marked?.page === c.n ? marked.rect : null} tool={tool} dim={c.hidden} docColor={docColor} />
                   </div>
                 )
               )}
@@ -440,7 +443,7 @@ export function Viewer({ source, handle, showHidden, active = true }: { source: 
 }
 
 /** One page of a row: it loads the page's text when it comes into view. */
-function Slot({ source, handle, n, box, marked, tool, dim }: { source: PdfSource; handle: PdfHandle; n: number; box: PageBox; marked: Rect | null; tool: string; dim: boolean }) {
+function Slot({ source, handle, n, box, marked, tool, dim, docColor }: { source: PdfSource; handle: PdfHandle; n: number; box: PageBox; marked: Rect | null; tool: string; dim: boolean; docColor: DocColor }) {
   const [lines, setLines] = useState<PageLines | null>(null)
   useEffect(() => {
     let live = true
@@ -462,7 +465,7 @@ function Slot({ source, handle, n, box, marked, tool, dim }: { source: PdfSource
   }
   return (
     <div className={dim ? 'opacity-40' : ''} onClick={choose}>
-      <PageView handle={handle} n={n} box={box} lines={lines} selectable={tool === 'select' || tool === 'highlight' || tool === 'underline' || tool === 'strike'} focus={marked}>
+      <PageView handle={handle} n={n} box={box} lines={lines} selectable={tool === 'select' || tool === 'highlight' || tool === 'underline' || tool === 'strike'} focus={marked} docColor={docColor}>
         <PageLayers source={source} handle={handle} n={n} box={box} lines={lines} />
       </PageView>
     </div>

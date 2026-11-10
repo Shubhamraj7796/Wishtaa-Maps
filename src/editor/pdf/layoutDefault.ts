@@ -1,7 +1,7 @@
 import { layoutFrom, type SourceView } from './workspace'
 
 /** The layout choices that can be remembered as the starting layout of new PDFs on this device. */
-export type Layout = Pick<SourceView, 'two' | 'cover' | 'paged' | 'rtl' | 'fit'>
+export type Layout = Pick<SourceView, 'two' | 'cover' | 'paged' | 'rtl' | 'fit' | 'flip1' | 'color'>
 
 const KEY = 'wishtaamaps:pdf-default-layout'
 /** New PDFs start in the remembered layout only on a screen at least this wide (a phone keeps one page). */

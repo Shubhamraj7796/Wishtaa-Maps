@@ -27,6 +27,35 @@ describe('Two-page view: which pages sit together', () => {
   })
 })
 
+describe('1-page flipping: every page starts a spread', () => {
+  it('without a cover: 1-2, 2-3, 3-4 ...', () => {
+    expect(buildRows(pages(4), true, false, true)).toEqual([[1, 2], [2, 3], [3, 4]])
+    expect(buildRows(pages(1), true, false, true)).toEqual([[1]])
+    expect(buildRows(pages(2), true, false, true)).toEqual([[1, 2]])
+  })
+
+  it('with the first page alone: 1, 2-3, 3-4 ...', () => {
+    expect(buildRows(pages(5), true, true, true)).toEqual([[1], [2, 3], [3, 4], [4, 5]])
+    expect(buildRows(pages(2), true, true, true)).toEqual([[1], [2]])
+    expect(buildRows(pages(1), true, true, true)).toEqual([[1]])
+  })
+
+  it('does nothing in Single-page view', () => {
+    expect(buildRows(pages(3), false, false, true)).toEqual([[1], [2], [3]])
+  })
+
+  it('the spread that starts with a page is the one shown for it', () => {
+    const rows = buildRows(pages(5), true, false, true)
+    expect(rowIndexOf(rows, 3)).toBe(2) // 3-4, not 2-3
+    expect(nearestRow(rows, 3)).toBe(2)
+    expect(rowIndexOf(rows, 5)).toBe(3) // the last spread, which only has it second
+    // Without flipping nothing changes: page 2 is in 1-2, page 3 starts 3-4.
+    const plain = buildRows(pages(5), true, false)
+    expect(rowIndexOf(plain, 2)).toBe(0)
+    expect(rowIndexOf(plain, 3)).toBe(1)
+  })
+})
+
 describe('Two-page view: left and right', () => {
   it('a pair: first page on the left; right to left swaps them', () => {
     expect(slotsOf([3, 4], 1, true, false, false)).toEqual([3, 4])
@@ -135,6 +164,18 @@ describe('the layout is remembered per PDF and per device', () => {
     s.setItem('wishtaamaps:pdf-workspace:f1', JSON.stringify({ v: 1, tabs: ['a'], active: 'a', other: null, side: 'left', ratio: 0.5, sync: false, views: { a: { page: 4, zoom: 1.5 } } }))
     const back = loadWorkspace('f1', new Set(['a']), s)
     expect(back?.views?.a).toEqual({ page: 4, zoom: 1.5 })
+  })
+
+  it('saves the document colour and 1-page flipping per PDF, and a save from before loads unchanged', () => {
+    let w = setView(base, 'a', { color: 'sepia', flip1: true, two: true })
+    w = setView(w, 'b', { color: 'light' })
+    const s = store()
+    saveWorkspace('f1', w, s)
+    const back = loadWorkspace('f1', new Set(['a', 'b']), s)
+    expect(back?.views?.a).toMatchObject({ color: 'sepia', flip1: true, two: true })
+    expect(back?.views?.b?.color).toBeUndefined() // Light is what no choice means
+    s.setItem('wishtaamaps:pdf-workspace:f2', JSON.stringify({ v: 1, tabs: ['a'], active: 'a', other: null, side: 'left', ratio: 0.5, sync: false, views: { a: { page: 2, zoom: null, color: 'purple', flip1: 3 } } }))
+    expect(loadWorkspace('f2', new Set(['a']), s)?.views?.a).toEqual({ page: 2, zoom: null })
   })
 
   it('ignores values that are not what they should be', () => {

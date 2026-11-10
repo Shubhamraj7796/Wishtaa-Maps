@@ -132,7 +132,7 @@ export function chooseLayout(id: string, change: Partial<W.SourceView>) {
 export function resetPdfLayout(id: string) {
   resetDefaultLayout()
   const wasTwo = W.viewOf(get().pdfPanel, id).two === true
-  work((p) => W.setView(p, id, { two: false, cover: false, paged: false, rtl: false, fit: 'width', zoom: null }))
+  work((p) => W.setView(p, id, { two: false, cover: false, paged: false, rtl: false, fit: 'width', flip1: false, color: 'light', zoom: null }))
   if (wasTwo) restoreWidth(id)
 }
 

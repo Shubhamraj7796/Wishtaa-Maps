@@ -3,6 +3,7 @@ import type { PdfHandle } from '@/core/pdf/engine'
 import type { PageLines } from '@/core/pdf/text'
 import type { Rect, Turn } from '@/core/pdf/types'
 import { releaseCanvas, renderPage } from './render'
+import { docFilter, PAPER, type DocColor } from './docColor'
 
 /** How a page is placed: the page as it is READ, in CSS pixels; and how the person has turned it. */
 export interface PageBox {
@@ -36,6 +37,7 @@ export const PageView = memo(function PageView({
   lines,
   selectable,
   focus,
+  docColor,
   children,
 }: {
   handle: PdfHandle
@@ -47,6 +49,8 @@ export const PageView = memo(function PageView({
   selectable: boolean
   /** A passage to mark for a moment (a source link was followed). */
   focus: Rect | null
+  /** Document colour: the filter goes on the page PICTURE only; the layers above keep their own colours. */
+  docColor?: DocColor
   /** Layers drawn above the text (markup, the tool's own drawing). */
   children?: ReactNode
 }) {
@@ -77,9 +81,9 @@ export const PageView = memo(function PageView({
   }, [])
 
   return (
-    <div className="relative mx-auto bg-white shadow" style={{ width: shown.w, height: shown.h }} data-page={n} aria-label={`Page ${n}`}>
+    <div className="relative mx-auto shadow" style={{ width: shown.w, height: shown.h, background: PAPER[docColor ?? 'light'] }} data-doc-color={docColor ?? 'light'} data-page={n} aria-label={`Page ${n}`}>
       <div style={turnStyle(box)}>
-        <canvas ref={canvas} className="absolute left-0 top-0 h-full w-full" aria-hidden="true" />
+        <canvas ref={canvas} className="absolute left-0 top-0 h-full w-full" style={{ filter: docFilter(docColor) }} data-page-picture aria-hidden="true" />
         {!drawn && <div className="absolute inset-0 grid place-items-center text-xs text-neutral-400">Page {n}</div>}
         {lines && <TextLayer lines={lines} scale={box.scale} selectable={selectable} />}
         {focus && (

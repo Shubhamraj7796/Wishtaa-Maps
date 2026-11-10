@@ -20,9 +20,22 @@ export function twoNote(chosen: boolean, paneWidth: number): string | null {
 }
 
 /** Groups page numbers into rows. With `cover`, the first page is alone and the pairs start at the second. */
-export function buildRows(pages: readonly number[], two: boolean, cover: boolean): number[][] {
+export function buildRows(pages: readonly number[], two: boolean, cover: boolean, overlap = false): number[][] {
   if (!two) return pages.map((n) => [n])
   const rows: number[][] = []
+  // 1-page flipping: every page starts a spread (1-2, 2-3, 3-4, ...), so a turn moves by one page.
+  if (overlap) {
+    let from = 0
+    if (cover && pages.length) {
+      rows.push([pages[0] as number])
+      from = 1
+    }
+    for (let i = from; i < pages.length; i++) {
+      if (i + 1 < pages.length) rows.push([pages[i] as number, pages[i + 1] as number])
+      else if (i === from) rows.push([pages[i] as number])
+    }
+    return rows
+  }
   let i = 0
   if (cover && pages.length) {
     rows.push([pages[0] as number])
@@ -43,7 +56,10 @@ export function slotsOf(row: readonly number[], index: number, two: boolean, cov
 }
 
 /** The row that holds page `n`, or -1 (the page is hidden or does not exist). */
-export const rowIndexOf = (rows: readonly (readonly number[])[], n: number) => rows.findIndex((r) => r.includes(n))
+export function rowIndexOf(rows: readonly (readonly number[])[], n: number): number {
+  const starts = rows.findIndex((r) => r[0] === n) // with 1-page flipping a page is in two spreads; the one that starts with it is the one being shown
+  return starts >= 0 ? starts : rows.findIndex((r) => r.includes(n))
+}
 
 /** The row to show for page `n`: the one that holds it, or the last one that starts before it. */
 export function nearestRow(rows: readonly (readonly number[])[], n: number): number {

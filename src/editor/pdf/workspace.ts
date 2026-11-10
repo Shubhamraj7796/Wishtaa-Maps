@@ -3,6 +3,8 @@
  * left (page, zoom, place on the page). These are small pure steps on the panel state so they can be tested without a screen. The
  * workspace is remembered per map and per device (local storage); the PDF files themselves are not touched.
  */
+import { isDocColor, type DocColor } from './docColor'
+
 export interface SourceView {
   /** The page at the top of the view (1-based). */
   page: number
@@ -23,6 +25,10 @@ export interface SourceView {
   rtl?: boolean
   /** What "no zoom" fits: the width of the pane (default) or the whole page or spread. */
   fit?: 'width' | 'page' | 'height'
+  /** In Two-page view with scrolling off, a turn moves by one page instead of a whole spread ("1-page flipping"). */
+  flip1?: boolean
+  /** Document colour: how the pages look on screen (absent = Light). Display only. */
+  color?: DocColor
 }
 
 /** The layout choices of a view, only the ones that are set (so old saves and new ones stay small). */
@@ -32,14 +38,18 @@ const layoutOf = (v: SourceView) => ({
   ...(v.paged ? { paged: true } : {}),
   ...(v.rtl ? { rtl: true } : {}),
   ...(v.fit === 'page' || v.fit === 'height' ? { fit: v.fit } : {}),
+  ...(v.flip1 ? { flip1: true } : {}),
+  ...(isDocColor(v.color) && v.color !== 'light' ? { color: v.color } : {}),
 })
 /** The valid layout choices out of anything (a saved file, a stored default): only the ones that are set. */
-export const layoutFrom = (v: Partial<SourceView>): Pick<SourceView, 'two' | 'cover' | 'paged' | 'rtl' | 'fit'> => ({
+export const layoutFrom = (v: Partial<SourceView>): Pick<SourceView, 'two' | 'cover' | 'paged' | 'rtl' | 'fit' | 'flip1' | 'color'> => ({
   ...(v.two === true ? { two: true } : {}),
   ...(v.cover === true ? { cover: true } : {}),
   ...(v.paged === true ? { paged: true } : {}),
   ...(v.rtl === true ? { rtl: true } : {}),
   ...(v.fit === 'page' || v.fit === 'height' ? { fit: v.fit } : {}),
+  ...(v.flip1 === true ? { flip1: true } : {}),
+  ...(isDocColor(v.color) && v.color !== 'light' ? { color: v.color } : {}),
 })
 
 export const DEFAULT_VIEW: SourceView = { page: 1, zoom: null }

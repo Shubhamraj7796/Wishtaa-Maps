@@ -77,7 +77,7 @@ describe('View menu: Single-page and Two-page view', () => {
     await open()
     openMenu()
     view(/Two-page view/)
-    check(/Show cover page/)
+    check(/First page alone/)
     expect(rows().slice(0, 3)).toEqual(['1', '2-3', '4-5'])
     // The cover has an empty half on its left, so it sits on the right.
     const cover = document.querySelector('[data-row="1"]') as HTMLElement
@@ -92,7 +92,7 @@ describe('View menu: Single-page and Two-page view', () => {
     view(/Two-page view/)
     check(/Right-to-left/)
     expect(slots('1-2')).toEqual([2, 1])
-    check(/Show cover page/)
+    check(/First page alone/)
     const cover = document.querySelector('[data-row="1"]') as HTMLElement
     expect((cover.children[0] as HTMLElement).dataset.slot).toBe('1')
   })
@@ -199,7 +199,7 @@ describe('View menu: Enable scrolling off (paged)', () => {
     await open()
     openMenu()
     view(/Two-page view/)
-    check(/Show cover page/)
+    check(/First page alone/)
     check(/Enable scrolling/)
     act(() => showSource({ sourceId: id(), page: 3 }))
     expect(rows()).toEqual(['2-3'])
@@ -327,7 +327,7 @@ describe('the last chosen layout is remembered for new PDFs (Part 1)', () => {
     await open()
     openMenu()
     view(/Two-page view/)
-    check(/Show cover page/)
+    check(/First page alone/)
     expect(localStorage.getItem('wishtaamaps:pdf-default-layout')).toContain('"two":true')
     await act(async () => void (await addPdfFile(await file('Second.pdf'))))
     const second = Object.values(st().pdf.sources).find((s) => s.name === 'Second.pdf') as { id: string }
@@ -354,6 +354,140 @@ describe('the last chosen layout is remembered for new PDFs (Part 1)', () => {
     } finally {
       Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1024 })
     }
+  })
+})
+
+describe('Document colour (Part 2, B3): display only', () => {
+  const pictures = () => [...document.querySelectorAll<HTMLCanvasElement>('[data-page-picture]')]
+  const pick = (name: string) => fireEvent.click(document.querySelector(`[data-doc-color-choice="${name}"]`) as HTMLElement)
+
+  it('Light is the default: no filter, white paper', async () => {
+    await open()
+    expect(pictures().length).toBeGreaterThan(0)
+    for (const c of pictures()) expect(c.style.filter).toBe('')
+    expect((document.querySelector('[data-page="1"]') as HTMLElement).style.background).toMatch(/255, 255, 255|#fff/)
+  })
+
+  it('Dark inverts with a half turn of hue, Grey and Sepia tint, Light clears; saved per PDF', async () => {
+    await open()
+    openMenu()
+    pick('dark')
+    for (const c of pictures()) expect(c.style.filter).toBe('invert(1) hue-rotate(180deg)')
+    expect(st().pdfPanel.views[id()]?.color).toBe('dark')
+    pick('grey')
+    for (const c of pictures()) expect(c.style.filter).toBe('grayscale(1)')
+    pick('sepia')
+    for (const c of pictures()) expect(c.style.filter).toContain('sepia(')
+    pick('light')
+    for (const c of pictures()) expect(c.style.filter).toBe('')
+    expect(screen.getByRole('menuitemradio', { name: /Light/ }).getAttribute('aria-checked')).toBe('true')
+  })
+
+  it('the filter is on the page picture ONLY: the page, the text and the markup above it keep their colours', async () => {
+    await open()
+    openMenu()
+    pick('dark')
+    const page = document.querySelector('[data-page="1"]') as HTMLElement
+    const filtered = [page, ...page.querySelectorAll<HTMLElement>('*')].filter((e) => e.style.filter)
+    expect(filtered).toHaveLength(1)
+    expect(filtered[0]?.tagName).toBe('CANVAS')
+    let p: HTMLElement | null = page
+    while (p && p !== document.body) {
+      expect(p.style.filter).toBe('')
+      p = p.parentElement
+    }
+  })
+
+  it('markup stays readable in Dark: its layers are not inside the filtered element', async () => {
+    await open()
+    openMenu()
+    pick('dark')
+    const picture = document.querySelector('[data-page="1"] [data-page-picture]') as HTMLElement
+    const layers = document.querySelectorAll('[data-page="1"] [data-capture-layer], [data-page="1"] svg, [data-page="1"] [data-text-layer]')
+    for (const l of layers) expect(picture.contains(l)).toBe(false)
+  })
+
+  it('the colour is a view setting only: it does not touch the PDF data kept in the map', async () => {
+    await open()
+    const before = JSON.stringify(st().pdf)
+    openMenu()
+    pick('dark')
+    expect(JSON.stringify(st().pdf)).toBe(before)
+  })
+
+  it('the last colour starts new PDFs on a wide screen; Reset to default layout clears it', async () => {
+    await open()
+    openMenu()
+    pick('sepia')
+    expect(localStorage.getItem('wishtaamaps:pdf-default-layout')).toContain('"color":"sepia"')
+    await act(async () => void (await addPdfFile(await file('Second.pdf'))))
+    const second = Object.values(st().pdf.sources).find((s) => s.name === 'Second.pdf') as { id: string }
+    expect(st().pdfPanel.views[second.id]?.color).toBe('sepia')
+    if (!document.querySelector('[data-view-menu]')) openMenu()
+    fireEvent.click(screen.getByRole('menuitem', { name: /Reset to default layout/ }))
+    expect(st().pdfPanel.views[second.id]?.color).toBe('light')
+    expect(localStorage.getItem('wishtaamaps:pdf-default-layout')).toBeNull()
+  })
+})
+
+describe('First page alone and 1-page flipping (Part 2, B1)', () => {
+  it('Show cover page is now First page alone, and the saved value is still cover', async () => {
+    await open()
+    openMenu()
+    view(/Two-page view/)
+    expect(screen.queryByRole('menuitemcheckbox', { name: /Show cover page/ })).toBeNull()
+    check(/First page alone/)
+    expect(st().pdfPanel.views[id()]?.cover).toBe(true)
+  })
+
+  it('1-page flipping is offered only when two pages are chosen', async () => {
+    await open()
+    openMenu()
+    expect(screen.queryByRole('menuitemcheckbox', { name: /1-page flipping/ })).toBeNull()
+    view(/Two-page view/)
+    expect(screen.getByRole('menuitemcheckbox', { name: /1-page flipping/ })).toBeTruthy()
+    view(/Single-page view/)
+    expect(screen.queryByRole('menuitemcheckbox', { name: /1-page flipping/ })).toBeNull()
+  })
+
+  it('with scrolling off, a turn moves by one page: 1-2, 2-3, 3-4; the page box follows', async () => {
+    await open()
+    openMenu()
+    view(/Two-page view/)
+    check(/Enable scrolling/)
+    check(/1-page flipping/)
+    expect(rows()).toEqual(['1-2'])
+    fireEvent.click(screen.getByRole('button', { name: 'Next spread' }))
+    expect(rows()).toEqual(['2-3'])
+    fireEvent.click(screen.getByRole('button', { name: 'Next spread' }))
+    expect(rows()).toEqual(['3-4'])
+    expect(st().pdfPanel.page).toBe(3)
+    fireEvent.click(screen.getByRole('button', { name: 'Previous spread' }))
+    expect(rows()).toEqual(['2-3'])
+    fireEvent.keyDown(scroller(), { key: 'ArrowRight' })
+    expect(rows()).toEqual(['3-4'])
+  })
+
+  it('with the first page alone: 1, then 2-3, 3-4', async () => {
+    await open()
+    openMenu()
+    view(/Two-page view/)
+    check(/First page alone/)
+    check(/Enable scrolling/)
+    check(/1-page flipping/)
+    expect(rows()).toEqual(['1'])
+    fireEvent.click(screen.getByRole('button', { name: /^Next (page|spread)$/ }))
+    expect(rows()).toEqual(['2-3'])
+    fireEvent.click(screen.getByRole('button', { name: /^Next (page|spread)$/ }))
+    expect(rows()).toEqual(['3-4'])
+  })
+
+  it('does nothing while scrolling is on (the continuous column still has 1-2, 3-4)', async () => {
+    await open()
+    openMenu()
+    view(/Two-page view/)
+    check(/1-page flipping/)
+    expect(rows().slice(0, 2)).toEqual(['1-2', '3-4'])
   })
 })
 

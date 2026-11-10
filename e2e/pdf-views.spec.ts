@@ -52,7 +52,7 @@ const drawn = (page: Page) => page.evaluate(() => [...document.querySelectorAll<
 const menu = (page: Page) => page.getByRole('button', { name: 'View options' }).first()
 const pick = async (page: Page, name: RegExp | string) => {
   if (!(await page.locator('[data-view-menu]').isVisible())) await menu(page).click()
-  await page.getByRole(/cover|scrolling|Right/.test(String(name)) ? 'menuitemcheckbox' : 'menuitemradio', { name }).click()
+  await page.getByRole(/cover|alone|scrolling|Right/.test(String(name)) ? 'menuitemcheckbox' : 'menuitemradio', { name }).click()
   await page.keyboard.press('Escape') // close the menu so it does not cover the page
 }
 
@@ -80,11 +80,11 @@ for (const size of SIZES) {
     await page.screenshot({ path: join(DIR, `${size.name}-2-two-pages.png`) })
 
     // Cover page: 1 alone on the right, then 2-3.
-    await pick(page, /Show cover page/)
+    await pick(page, /First page alone/)
     await expect.poll(() => rows(page).then((r) => r.slice(0, 2).join(','))).toMatch(/^1(,2-3)?$/)
     await expect.poll(() => rows(page).then((r) => r[0])).toBe('1')
     await page.screenshot({ path: join(DIR, `${size.name}-3-cover.png`) })
-    await pick(page, /Show cover page/)
+    await pick(page, /First page alone/)
 
     // Capture on the right-hand page of the spread makes a topic that links to page 2.
     await page.getByRole('button', { name: /capture area/i }).click()
