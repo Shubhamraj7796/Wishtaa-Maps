@@ -18,9 +18,14 @@ change any code until they reply "go".** The plan is in plain language, short en
 changes that are trivial and easy to undo. Writing or updating documentation is not a code change.
 
 ## 2. After "go": small parts
-One commit per part, tests green, push to main, then a short report: what changed, measured numbers where relevant, what was NOT tested on
+One commit per part, tests green, then a short report: what changed, measured numbers where relevant, what was NOT tested on
 real devices, and what the owner should test (exact clicks, desktop and tablet). Every commit message ends with the attribution line the
 session gives (currently `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`).
+
+## 2b. Never push without the owner's agreement
+**Commit locally, then STOP and ask.** Run `git push` (to `main` or anywhere) only after the owner says so for that push ("push", "go live",
+"deploy"). This includes documentation and rule changes. A task that lists "push to main" counts for that task only, never for later work.
+If unsure, do not push and ask. Pushing to `main` deploys https://maps.wishtaa.com through Vercel.
 
 ## 3. Never guess about the current state
 Look at the code, `git log` and `docs/` first. If something is unknown, say so. Do not claim something works on a real device, a real
