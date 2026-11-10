@@ -14,7 +14,7 @@ change any code until they reply "go".** The plan is in plain language, short en
 - **How I will test it:** exact clicks on desktop and tablet.
 - **Cost:** roughly how much work this is, and what could be postponed to keep it small.
 
-No code in the plan. If the request is tiny (a typo, a colour), a two-line plan is enough, and work may continue without waiting only for
+**Always give the plan inside ONE fenced code block (plain text), so it can be copied and pasted in one click.** No code in the plan. If the request is tiny (a typo, a colour), a two-line plan is enough, and work may continue without waiting only for
 changes that are trivial and easy to undo. Writing or updating documentation is not a code change.
 
 ## 2. After "go": small parts
