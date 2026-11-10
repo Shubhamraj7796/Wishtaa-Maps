@@ -205,3 +205,32 @@ text box, arrow) spread over the pages:
 `src/core/pdf/` (types, geometry, text helpers, engine around pdf.js, device store, export, test kit) and `src/editor/markup/MarkupToolbar.tsx` (the floating toolbar, shared with the picture viewer) and `src/editor/pdf/` (panel,
 viewer, page view, layers, tools, selection, topics, capture, markup, export actions). Tests: `src/core/pdf/*.test.ts` and
 `src/editor/pdf/*.test.tsx`.
+
+## Several PDFs at once: tabs and split view
+
+**Tabs.** A strip under the panel's header lists every PDF open in this map: name, a close button (the PDF stays in the map, only the
+tab goes), drag to reorder, and **+** to open another from this device or Google Drive. **+ ▸ Recent PDFs** lists the PDFs of this map
+that are closed and the ones this device has kept. Each tab keeps its own **page, zoom and place on the page**; switching away and back
+puts you exactly where you were. Open tabs, their order, the split and each PDF's place are remembered **per map and per device**
+(local storage, key `wishtaamaps:pdf-workspace:<map id>`); PDFs the map no longer has are dropped.
+
+**Split view.** Two PDFs side by side (one above the other when the PDF area is narrower than about 560 px, as on a phone). Drag a tab
+onto the **left or right half** of the PDF area, or press **Split** in the controls row (or "Split view with…" in the PDF menu, for touch
+and keyboard); **One PDF** or dropping a tab back on the strip merges. Each pane has its own page, zoom and scroll; click a pane to make it the
+**active** one (marked by a coloured top edge): the page box, zoom, markup tools, selection bar, Add as topic and Capture all work on the
+active pane, so they work in every pane and tab. **Sync scrolling** (checkbox, shown when split) makes the other pane follow by page and
+position. The divider between panes is dragged (mouse, finger, pen) or moved with the arrow keys.
+
+**Wide screens.** In **Wide** and **Full screen** (and when the area is at least 900 px), the PDF menu offers **Show the Outline beside
+the PDFs**: PDF A | PDF B | Outline, with a draggable divider each; its width is remembered. (The Map itself cannot be put inside the PDF area; in
+Normal size the PDF area sits beside it as before.)
+
+**"p. N" badges.** Following a topic's link opens that PDF in its tab (a closed tab is reopened), or just focuses the pane when it is
+already showing, and goes to the page and passage. When the file is not on this device the pane shows **Reopen PDF**.
+
+**Memory.** Only the pages near the screen of the panes in view are drawn, and the page renderer (two at a time) is shared by all
+panes. One memory budget covers all PDFs: the documents on screen stay open, the **two most recently used** others are kept for a quick
+return, and every other one is closed and opened again from this device's copy when its tab is shown (`trimOpenPdfs` in `runtime.ts`).
+Measured on the production build (Chromium, 5 PDFs of 200 pages, see `e2e/pdf-tabs.spec.ts`): JS heap about 10 MB after visiting all
+five tabs twice; at most 3 to 6 page bitmaps alive (one pane to two panes); 60 frames per second while scrolling one pane, two panes
+and synced panes (worst frame 17 to 33 ms).

@@ -27,6 +27,7 @@ export interface SearchState {
 /** Where a new picture goes: onto a topic, as a new child topic, or in place of the topic's picture. */
 export type PictureTarget = { kind: 'topic'; id: string } | { kind: 'child'; parentId: string } | { kind: 'replace'; id: string }
 /** What the pointer does on a PDF page. */
+import type { SourceView } from './pdf/workspace'
 export type PdfTool = 'select' | 'eraser' | 'highlight' | 'underline' | 'strike' | 'pen' | 'text' | 'rect' | 'ellipse' | 'line' | 'arrow' | 'whiteout' | 'link' | 'capture'
 
 export interface PdfPanelState {
@@ -55,11 +56,25 @@ export interface PdfPanelState {
   focus: { sourceId: string; page: number; rect?: Rect; at: number } | null
   /** The markup chosen on the page (it shows its own small bar). */
   markId: string | null
+  /** Every PDF open in a tab, in order. The PDF stays in the map when its tab is closed. */
+  tabs: string[]
+  /** The PDF in the other pane when two are side by side (the active one is `sourceId`). */
+  other: string | null
+  /** Which side the active pane is on. */
+  activeSide: 'left' | 'right'
+  /** Where each open PDF was left: page, zoom and place on the page. */
+  views: Record<string, SourceView>
+  /** The share of the PDF area the left (or top) pane takes when split. */
+  ratio: number
+  /** Scrolling one pane scrolls the other. */
+  sync: boolean
+  /** On wide screens: the Outline in a third column beside the PDFs. */
+  outlineColumn: boolean
 }
 
 export const closedPdfPanel = (): PdfPanelState => {
   const prefs = loadPrefs()
-  return { open: false, sourceId: null, page: 1, tab: 'pages', tool: 'select', styles: prefs.styles, shape: prefs.shape, size: 'normal', collapsed: false, drawer: false, toolSide: prefs.bar?.side ?? 'left', zoom: null, focus: null, markId: null }
+  return { open: false, sourceId: null, page: 1, tab: 'pages', tool: 'select', styles: prefs.styles, shape: prefs.shape, size: 'normal', collapsed: false, drawer: false, toolSide: prefs.bar?.side ?? 'left', zoom: null, focus: null, markId: null, tabs: [], other: null, activeSide: 'left', views: {}, ratio: 0.5, sync: false, outlineColumn: false }
 }
 
 export type PictureSource = 'upload' | 'camera' | 'gallery' | 'paste' | 'capture' | 'drop'

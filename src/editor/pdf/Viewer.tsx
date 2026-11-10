@@ -5,7 +5,7 @@ import type { PageLines } from '@/core/pdf/text'
 import { editKey, NO_EDIT, type PdfSource, type Rect, type Turn } from '@/core/pdf/types'
 import { offsets, rowAt, windowFor } from '../outlineLayout'
 import { useEditor } from '../store'
-import { setPdfPage, setPdfZoom } from './actions'
+import { reportView, setViewOf } from './actions'
 import { PageView, shownPx, type PageBox } from './PageView'
 import { PageLayers } from './layers'
 import { SelectionBar } from './SelectionBar'
@@ -22,8 +22,13 @@ const PX_PER_POINT = 96 / 72
 const A4: PageInfo = { w: 595, h: 842, own: 0 }
 
 /** The pages of one PDF as a long scrolling column. Only the pages near the screen exist; the rest are empty space of the right height. */
-export function Viewer({ source, handle, showHidden }: { source: PdfSource; handle: PdfHandle; showHidden: boolean }) {
+export function Viewer({ source, handle, showHidden, active = true }: { source: PdfSource; handle: PdfHandle; showHidden: boolean; active?: boolean }) {
   const panel = useEditor((s) => s.pdfPanel)
+  // Each PDF has its own page, zoom and place: this pane reads and writes only its own view.
+  const mine = useEditor((s) => s.pdfPanel.views[source.id])
+  const page = mine?.page ?? 1
+  const zoom = mine?.zoom ?? null
+  const sync = panel.sync && !!panel.other
   const edits = useEditor((s) => s.pdf.pageEdits)
   const tool = useEditor((s) => s.pdfPanel.tool)
   const scroller = useRef<HTMLDivElement>(null)
@@ -76,7 +81,7 @@ export function Viewer({ source, handle, showHidden }: { source: PdfSource; hand
   const first = infos.get(1) ?? A4
   const firstShown = rotationOf(1) % 180 ? { w: first.h, h: first.w } : { w: first.w, h: first.h }
   const fit = Math.max(0.2, (viewW - GUTTER * 2) / firstShown.w)
-  const scale = panel.zoom ? panel.zoom * PX_PER_POINT : fit
+  const scale = zoom ? zoom * PX_PER_POINT : fit
 
   const pages = useMemo(() => {
     const out: { n: number; box: PageBox; hidden: boolean }[] = []
@@ -135,13 +140,62 @@ export function Viewer({ source, handle, showHidden }: { source: PdfSource; hand
       if (pg) anchor.current = { n: pg.n, frac: Math.max(0, Math.min(1, (el.scrollTop - (starts[at] as number)) / Math.max(1, (starts[at + 1] as number) - (starts[at] as number) - GAP))) }
       const i = Math.min(pages.length - 1, rowAt(starts, el.scrollTop + viewH / 3))
       const n = pages[i]?.n
+      const moved = performance.now() > quiet.current // a scroll this pane was told to make (Sync scrolling) is not reported back
       if (n && n !== lastPage.current) {
         lastPage.current = n
-        setPdfPage(n)
+        reportView(source.id, { page: n })
+      }
+      // The place on the page is remembered when scrolling pauses (and at once while another pane follows this one).
+      if (moved && anchor.current) {
+        if (sync) reportView(source.id, { anchor: anchor.current })
+        else {
+          if (idle.current) clearTimeout(idle.current)
+          const a = anchor.current
+          idle.current = setTimeout(() => reportView(source.id, { anchor: a }), 250)
+        }
       }
     })
   }
-  useEffect(() => () => cancelAnimationFrame(frame.current), [])
+  const quiet = useRef(0)
+  const idle = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(
+    () => () => {
+      cancelAnimationFrame(frame.current)
+      if (idle.current) clearTimeout(idle.current)
+    },
+    []
+  )
+
+  // Back in this tab (or after a reload): the place it was left, then Sync scrolling requests from the other pane.
+  const restored = useRef(false)
+  useEffect(() => {
+    if (restored.current || !pages.length || !scroller.current) return
+    restored.current = true
+    const a = mine?.anchor
+    if (a) goToAnchor(a.n, a.frac)
+    else if (page > 1) {
+      anchor.current = { n: page, frac: 0 }
+      goTo(page)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pages.length])
+  const goToAnchor = (n: number, frac: number) => {
+    const el = scroller.current
+    const i = pages.findIndex((p) => p.n === n)
+    if (!el || i < 0) return
+    lastPage.current = n
+    anchor.current = { n, frac } // so a change of width or zoom that follows (the pane is measured just after it appears) keeps this place
+    el.scrollTop = (starts[i] as number) + frac * ((starts[i + 1] as number) - (starts[i] as number) - GAP)
+    setScrollTop(el.scrollTop)
+  }
+  const syncAt = mine?.syncTo?.at
+  useEffect(() => {
+    const s = mine?.syncTo
+    if (!s) return
+    quiet.current = performance.now() + 200
+    goToAnchor(s.n, s.frac)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [syncAt])
 
   // The page was changed from outside (the page box, a link): go there.
   const goTo = (n: number, withinPage = 0) => {
@@ -153,9 +207,9 @@ export function Viewer({ source, handle, showHidden }: { source: PdfSource; hand
     setScrollTop(el.scrollTop)
   }
   useEffect(() => {
-    if (panel.page !== lastPage.current) goTo(panel.page)
+    if (restored.current && page !== lastPage.current) goTo(page)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [panel.page, pages.length])
+  }, [page, pages.length])
 
   // Following a source link: scroll so the passage is in the upper part of the view, and mark it for a moment.
   const [marked, setMarked] = useState<{ page: number; rect: Rect; at: number } | null>(null)
@@ -182,12 +236,12 @@ export function Viewer({ source, handle, showHidden }: { source: PdfSource; hand
     const onWheel = (e: WheelEvent) => {
       if (!e.ctrlKey && !e.metaKey) return
       e.preventDefault()
-      const now = (panel.zoom ?? fit / PX_PER_POINT) * Math.exp(-e.deltaY * 0.0025)
-      setPdfZoom(now)
+      const now = (zoom ?? fit / PX_PER_POINT) * Math.exp(-e.deltaY * 0.0025)
+      setViewOf(source.id, { zoom: Math.min(4, Math.max(0.25, now)) })
     }
     el.addEventListener('wheel', onWheel, { passive: false })
     return () => el.removeEventListener('wheel', onWheel)
-  }, [panel.zoom, fit])
+  }, [zoom, fit, source.id])
 
   return (
     <div className="relative flex min-h-0 flex-1 flex-col">
@@ -210,8 +264,8 @@ export function Viewer({ source, handle, showHidden }: { source: PdfSource; hand
       </div>
     </div>
     <SelectionBar sourceId={source.id} root={scroller} />
-    {!readOnly && <SelectedMarkup />}
-    {!readOnly && <FloatingTools source={source} />}
+    {!readOnly && active && <SelectedMarkup />}
+    {!readOnly && active && <FloatingTools source={source} />}
     </div>
   )
 }

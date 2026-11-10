@@ -2,7 +2,8 @@ import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import type { PdfSource } from '@/core/pdf/types'
 import { Icon } from '@/ui/icons'
 import { useEditor } from '../store'
-import { addPdfFiles, closePdfPanel, openPdfFromDrive, pickPdfFromDevice, refetchFromDrive, removePdfFromDevice, removePdfSource, reopenPdf, setPdfCollapsed, setPdfDrawer, setPdfPage, setPdfSize, setPdfTab, setPdfTool, setPdfZoom, showPdf, showSource } from './actions'
+import { addPdfFiles, closePdfPanel, focusPdfPane, openPdfFromDrive, openPdfTab, pickPdfFromDevice, refetchFromDrive, removePdfFromDevice, removePdfSource, reopenPdf, setPdfCollapsed, setPdfDrawer, setPdfOutlineColumn, setPdfPage, setPdfRatio, setPdfSize, setPdfSync, setPdfTab, setPdfTool, setPdfZoom, showSource, splitPdf, unsplitPdf } from './actions'
+import { SplitDropZones, Tabs } from './Tabs'
 import { accessPdf, bumpDevice, getDeviceVersion, rememberPassword, subscribeDevice, type PdfAccess } from './runtime'
 import { downloadMarkedPdf, saveCopyToDrive } from './exportActions'
 import { OutlineDialog } from './OutlineDialog'
@@ -173,11 +174,31 @@ export default function PdfPanel({ mode }: { mode: 'side' | 'sheet' }) {
           {menu === 'source' && (
             <Menu onClose={() => setMenu(null)}>
               {list.map((s) => (
-                <MenuItem key={s.id} onClick={() => (showPdf(s.id), setMenu(null))} active={s.id === panel.sourceId}>
+                <MenuItem key={s.id} onClick={() => (openPdfTab(s.id), setMenu(null))} active={s.id === panel.sourceId || s.id === panel.other}>
                   {s.name} <span className="text-xs text-muted">· {s.pages} pages</span>
                 </MenuItem>
               ))}
               {!list.length && <div className="px-3 py-2 text-xs text-muted">No PDFs in this map yet.</div>}
+              {list.length > 1 && (
+                <>
+                  <hr className="my-1 border-line" />
+                  {panel.other ? (
+                    <MenuItem onClick={() => (unsplitPdf(), setMenu(null))}>One PDF (merge the split view)</MenuItem>
+                  ) : (
+                    list
+                      .filter((s) => s.id !== panel.sourceId)
+                      .map((s) => (
+                        <MenuItem key={`split-${s.id}`} onClick={() => (splitPdf(s.id, 'right'), setMenu(null))}>
+                          Split view with {s.name}
+                        </MenuItem>
+                      ))
+                  )}
+                  {panel.other && <MenuItem onClick={() => (setPdfSync(!panel.sync), setMenu(null))}>{panel.sync ? 'Turn off Sync scrolling' : 'Sync scrolling'}</MenuItem>}
+                </>
+              )}
+              {size !== 'normal' && (
+                <MenuItem onClick={() => (setPdfOutlineColumn(!panel.outlineColumn), setMenu(null))}>{panel.outlineColumn ? 'Hide the Outline column' : 'Show the Outline beside the PDFs'}</MenuItem>
+              )}
               {source && (
                 <>
                   <hr className="my-1 border-line" />
@@ -224,6 +245,7 @@ export default function PdfPanel({ mode }: { mode: 'side' | 'sheet' }) {
         </button>
       </div>
 
+      <Tabs />
       {source && <Controls source={source} showHidden={showHidden} setShowHidden={setShowHidden} />}
       <div role="tablist" aria-label="PDF panel" className="flex shrink-0 gap-1 border-b border-line px-2 py-1 text-xs">
         {(['pages', 'markup'] as const).map((t) => (
@@ -232,7 +254,7 @@ export default function PdfPanel({ mode }: { mode: 'side' | 'sheet' }) {
           </button>
         ))}
       </div>
-      <Body source={source} showHidden={showHidden} tab={panel.tab} />
+      <Panes showHidden={showHidden} />
       {outline && source && <OutlineLoader source={source} onClose={() => setOutline(false)} />}
       {mode === 'side' && !full && (
         <div role="separator" tabIndex={0} aria-orientation="vertical" aria-label="Resize the PDF panel (drag, or use the left and right arrow keys; double-click for Wide)" aria-valuenow={Math.round(side)} onKeyDown={onDividerKey} onDoubleClick={toggleWide} onPointerDown={startResize} className="absolute inset-y-0 -right-1.5 z-10 w-3 cursor-col-resize touch-none hover:bg-brand/30 focus:bg-brand/40 [@media(pointer:coarse)]:-right-2.5 [@media(pointer:coarse)]:w-5" />
@@ -275,6 +297,127 @@ function OutlineDrawer() {
   )
 }
 
+const OUTLINE_COL = 'wishtaamaps:pdf-outline-column'
+const loadOutlineWidth = () => {
+  try {
+    const v = Number(localStorage.getItem(OUTLINE_COL))
+    return Number.isFinite(v) && v >= 240 ? v : 340
+  } catch {
+    return 340
+  }
+}
+
+/**
+ * The PDF area: one PDF, or two side by side (one above the other when the area is narrow), each with its own page, zoom and scroll.
+ * Clicking a pane makes it the active one, which the tools and the page box work on. On wide areas the Outline can be a third column.
+ * The dividers are dragged with a mouse, finger or pen, or moved with the arrow keys.
+ */
+function Panes({ showHidden }: { showHidden: boolean }) {
+  const p = useEditor((s) => s.pdfPanel)
+  const sources = useEditor((s) => s.pdf.sources)
+  const box = useRef<HTMLDivElement>(null)
+  const [dims, setDims] = useState({ w: 1000, h: 600 })
+  const [outlineW, setOutlineW] = useState(loadOutlineWidth)
+  const outlineWidthNow = useRef(outlineW)
+  outlineWidthNow.current = outlineW
+  useEffect(() => {
+    const el = box.current
+    if (!el) return
+    const measure = () => setDims({ w: el.clientWidth || 1000, h: el.clientHeight || 600 })
+    measure()
+    if (typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+  const stacked = dims.w < 560
+  const wide = p.size !== 'normal' && dims.w >= 900
+  const thirdColumn = p.outlineColumn && wide && p.tab === 'pages'
+  const split = !!p.other && p.tab === 'pages' && !!sources[p.other]
+  const left = p.activeSide === 'left' ? p.sourceId : p.other
+  const right = p.activeSide === 'left' ? p.other : p.sourceId
+  const order = split ? [left, right] : [p.sourceId]
+
+  const drag = (axis: 'ratio' | 'outline') => (e: React.PointerEvent) => {
+    e.preventDefault()
+    const el = box.current
+    if (!el) return
+    const rect = el.getBoundingClientRect()
+    const move = (ev: PointerEvent) => {
+      if (axis === 'ratio') {
+        const room = (thirdColumn ? rect.width - outlineW : rect.width) || 1
+        setPdfRatio(stacked ? (ev.clientY - rect.top) / (rect.height || 1) : (ev.clientX - rect.left) / room)
+      } else setOutlineW(Math.round(Math.min(560, Math.max(240, rect.right - ev.clientX))))
+    }
+    const up = () => {
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', up)
+      window.removeEventListener('pointercancel', up)
+      try {
+        localStorage.setItem(OUTLINE_COL, String(outlineWidthNow.current))
+      } catch {
+        /* not remembered */
+      }
+    }
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', up)
+    window.addEventListener('pointercancel', up)
+  }
+  const keys = (axis: 'ratio' | 'outline') => (e: React.KeyboardEvent) => {
+    const step = e.shiftKey ? 0.1 : 0.03
+    const dir = e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : 0
+    if (!dir) return
+    e.preventDefault()
+    if (axis === 'ratio') setPdfRatio(p.ratio + dir * step)
+    else setOutlineW((w) => Math.round(Math.min(560, Math.max(240, w - dir * (e.shiftKey ? 60 : 20)))))
+  }
+
+  return (
+    <div ref={box} data-pdf-area className={`relative flex min-h-0 flex-1 ${stacked ? 'flex-col' : 'flex-row'}`}>
+      <div className={`relative flex min-h-0 min-w-0 flex-1 ${stacked ? 'flex-col' : 'flex-row'}`} data-pdf-panes>
+        {order.map((id, i) => {
+          const s = id ? sources[id] : undefined
+          const isActive = id === p.sourceId
+          return (
+            <div key={id ?? 'none'} className="contents">
+              {i === 1 && (
+                <div
+                  role="separator"
+                  tabIndex={0}
+                  aria-orientation={stacked ? 'horizontal' : 'vertical'}
+                  aria-label="Resize the two PDFs (drag, or use the arrow keys)"
+                  aria-valuenow={Math.round(p.ratio * 100)}
+                  onPointerDown={drag('ratio')}
+                  onKeyDown={keys('ratio')}
+                  className={`z-10 shrink-0 touch-none bg-line hover:bg-brand/40 focus:bg-brand/50 ${stacked ? 'h-1.5 cursor-row-resize [@media(pointer:coarse)]:h-3' : 'w-1.5 cursor-col-resize [@media(pointer:coarse)]:w-3'}`}
+                />
+              )}
+              <div
+                data-pdf-pane={id ?? ''}
+                data-active={isActive ? 'true' : 'false'}
+                onPointerDownCapture={() => id && !isActive && focusPdfPane(id)}
+                className={`relative flex min-h-0 min-w-0 flex-col ${split ? (isActive ? 'border-t-2 border-brand' : 'border-t-2 border-transparent') : ''}`}
+                style={split ? { flex: `${i === 0 ? p.ratio : 1 - p.ratio} 1 0%` } : { flex: '1 1 0%' }}
+              >
+                <Body key={id ?? 'none'} source={s} showHidden={showHidden} tab={p.tab} active={isActive} />
+              </div>
+            </div>
+          )
+        })}
+        <SplitDropZones />
+      </div>
+      {thirdColumn && (
+        <>
+          <div role="separator" tabIndex={0} aria-orientation="vertical" aria-label="Resize the Outline column (drag, or use the arrow keys)" aria-valuenow={outlineW} onPointerDown={drag('outline')} onKeyDown={keys('outline')} className="z-10 w-1.5 shrink-0 cursor-col-resize touch-none bg-line hover:bg-brand/40 focus:bg-brand/50 [@media(pointer:coarse)]:w-3" />
+          <div role="complementary" aria-label="Outline" data-outline-column className="relative min-h-0 shrink-0 overflow-auto bg-bg" style={{ width: outlineW }}>
+            <OutlineView />
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
 /** The page box and the zoom buttons. */
 function Controls({ source, showHidden, setShowHidden }: { source: PdfSource; showHidden: boolean; setShowHidden: (b: boolean) => void }) {
   const page = useEditor((s) => s.pdfPanel.page)
@@ -282,8 +425,12 @@ function Controls({ source, showHidden, setShowHidden }: { source: PdfSource; sh
   const tool = useEditor((s) => s.pdfPanel.tool)
   const readOnly = useEditor((s) => s.readOnly)
   const hiddenCount = useEditor((s) => Object.entries(s.pdf.pageEdits).filter(([k, v]) => v.hidden && k.startsWith(`${source.id}:`)).length)
+  const other = useEditor((s) => s.pdfPanel.other)
+  const tabs = useEditor((s) => s.pdfPanel.tabs)
+  const sync = useEditor((s) => s.pdfPanel.sync)
   const [text, setText] = useState(String(page))
   useEffect(() => setText(String(page)), [page])
+  const second = tabs.find((t) => t !== source.id)
   const go = () => {
     const n = Math.min(source.pages, Math.max(1, Math.round(Number(text))))
     if (Number.isFinite(n)) setPdfPage(n)
@@ -308,6 +455,24 @@ function Controls({ source, showHidden, setShowHidden }: { source: PdfSource; sh
         <Icon name="camera" size={15} />
         <span className="ml-1 hidden sm:inline">Capture area</span>
       </button>
+      <span className="mx-1 h-4 w-px bg-line" />
+      <button
+        type="button"
+        className={`${btn} ${other ? 'bg-brand/15 text-ink' : ''}`}
+        aria-pressed={!!other}
+        disabled={!other && !second}
+        title={other ? 'Back to one PDF' : second ? 'Show two PDFs side by side' : 'Open a second PDF to split the view'}
+        onClick={() => (other ? unsplitPdf() : second && splitPdf(second, 'right'))}
+      >
+        <Icon name="split" size={15} />
+        <span className="ml-1 hidden sm:inline">{other ? 'One PDF' : 'Split'}</span>
+      </button>
+      {other && (
+        <label className="flex items-center gap-1">
+          <input type="checkbox" checked={sync} onChange={(e) => setPdfSync(e.target.checked)} />
+          Sync scrolling
+        </label>
+      )}
       {hiddenCount > 0 && (
         <label className="ml-auto flex items-center gap-1">
           <input type="checkbox" checked={showHidden} onChange={(e) => setShowHidden(e.target.checked)} />
@@ -337,7 +502,7 @@ function MenuItem({ children, onClick, active, danger }: { children: React.React
 }
 
 /** The pages (or the markup list) of the chosen PDF, or what to do when it is not here. */
-function Body({ source, showHidden, tab }: { source: PdfSource | undefined; showHidden: boolean; tab: 'pages' | 'markup' }) {
+function Body({ source, showHidden, tab, active }: { source: PdfSource | undefined; showHidden: boolean; tab: 'pages' | 'markup'; active: boolean }) {
   const version = useSyncExternalStore(subscribeDevice, getDeviceVersion)
   const [access, setAccess] = useState<PdfAccess | null>(null)
   const [fraction, setFraction] = useState(0)
@@ -376,7 +541,7 @@ function Body({ source, showHidden, tab }: { source: PdfSource | undefined; show
       </div>
     )
   }
-  return tab === 'pages' ? <Viewer source={source} handle={access.handle} showHidden={showHidden} /> : <MarkupTab source={source} handle={access.handle} />
+  return tab === 'pages' ? <Viewer source={source} handle={access.handle} showHidden={showHidden} active={active} /> : <MarkupTab source={source} handle={access.handle} />
 }
 
 function Empty() {

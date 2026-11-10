@@ -52,6 +52,24 @@ export const getDeviceVersion = () => deviceVersion
 
 /** Open documents, by the PDF's hash (one open copy however many maps or panels use it). */
 const open = new Map<string, Promise<PdfHandle>>()
+/** Hashes in the order they were last shown (newest last): the memory budget lets go of the oldest background ones. */
+let used: string[] = []
+/** How many documents that are NOT on screen may stay open, so switching back to a recent tab is instant. */
+export const BACKGROUND_DOCUMENTS = 2
+const touch = (hash: string) => (used = [...used.filter((h) => h !== hash), hash])
+
+/**
+ * One memory budget for all open PDFs: the documents on screen stay, the few most recently used others are kept for a quick return, and
+ * every other one is closed (it opens again from this device's copy when its tab is shown). Pages are drawn only for the panes in view,
+ * and the page renderer is shared, so five PDFs of 200 pages cost no more than one while only one or two are showing.
+ */
+export function trimOpenPdfs(showing: readonly string[]) {
+  for (const h of showing) touch(h)
+  const keep = new Set([...showing, ...used.filter((h) => !showing.includes(h)).slice(-BACKGROUND_DOCUMENTS)])
+  for (const h of [...open.keys()]) if (!keep.has(h)) void closePdf(h)
+  used = used.filter((h) => keep.has(h))
+}
+export const openDocumentCount = () => open.size
 
 /** Passwords typed this session, by the PDF's hash. They are kept in memory only, never in the map or on disk. */
 const passwords = new Map<string, string>()
@@ -62,6 +80,7 @@ export type PdfAccess = { state: 'ready'; handle: PdfHandle } | { state: 'missin
 /** The open document for a source: from this device's copy. `missing` when this device does not hold the file (it asks for it again). */
 export async function accessPdf(source: PdfSource, onProgress?: (fraction: number) => void): Promise<PdfAccess> {
   try {
+    touch(source.hash)
     let h = open.get(source.hash)
     if (!h) {
       h = (async () => {

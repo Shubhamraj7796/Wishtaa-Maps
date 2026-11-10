@@ -6,20 +6,69 @@ import { editKey, PDF_LIMITS, type PdfSource, type SourceRef } from '@/core/pdf/
 import { mapDoc } from '../mapdoc'
 import { showNotice } from '../notice'
 import { mayEdit } from '../readmode'
-import { useEditor, closedPdfPanel, type PdfPanelState } from '../store'
+import { useEditor, type PdfPanelState } from '../store'
 import { driveAuth, driveClient, driveConfig } from '@/app/drive'
 import { pickPdfFiles } from '@/core/drive/picker'
 import { askPassword } from './password'
 import { rememberSize, type PanelSize } from './layout'
 import { isShape, loadPrefs, sanitizeStyle, savePrefs, type Shape as PanelShape, type StyleKey, type ToolStyle } from './toolPrefs'
-import { bumpDevice, closePdf, loadPdfjs, pdfStore, rememberPassword } from './runtime'
+import { bumpDevice, closePdf, loadPdfjs, pdfStore, rememberPassword, trimOpenPdfs } from './runtime'
+import * as W from './workspace'
 
 const get = useEditor.getState
 const set = useEditor.setState
 
 const patch = (p: Partial<PdfPanelState>) => set({ pdfPanel: { ...get().pdfPanel, ...p } })
 
-export const closePdfPanel = () => set({ pdfPanel: { ...closedPdfPanel(), zoom: get().pdfPanel.zoom } })
+/** Changes the workspace (tabs, panes, views) and remembers it for this map on this device. */
+function work(step: (p: PdfPanelState) => PdfPanelState) {
+  if (!get().pdfPanel.tabs.length) ensureWorkspace() // the first change after opening a map brings back what was open last time
+  set({ pdfPanel: step(get().pdfPanel) })
+  rememberSoon()
+}
+let rememberTimer: ReturnType<typeof setTimeout> | null = null
+function rememberSoon() {
+  if (rememberTimer) clearTimeout(rememberTimer)
+  rememberTimer = setTimeout(rememberNow, 300)
+  trimOpenPdfs(shownHashes())
+}
+export function rememberNow() {
+  if (rememberTimer) clearTimeout(rememberTimer)
+  rememberTimer = null
+  const fileId = get().fileId
+  const p = get().pdfPanel
+  if (fileId && (p.tabs.length || p.sourceId)) W.saveWorkspace(fileId, p)
+}
+/** The files of the PDFs that are showing now (their documents stay open; background tabs are let go). */
+const shownHashes = () => {
+  const p = get().pdfPanel
+  const srcs = get().pdf.sources
+  return [p.sourceId, p.other].flatMap((id) => (id && srcs[id] ? [srcs[id]!.hash] : []))
+}
+
+/** Restores this map's open PDFs, their order and where each was left (once per opening of the map), and keeps only PDFs the map still has. */
+function ensureWorkspace() {
+  const p = get().pdfPanel
+  const valid = new Set(Object.keys(get().pdf.sources))
+  let next: PdfPanelState = p
+  const fileId = get().fileId
+  if (!p.tabs.length && fileId) {
+    const saved = W.loadWorkspace(fileId, valid)
+    if (saved) next = { ...p, ...saved } as PdfPanelState
+  }
+  next = W.prune(next, valid)
+  if (!next.sourceId || !valid.has(next.sourceId)) {
+    const first = Object.values(get().pdf.sources).sort((a, b) => a.addedAt - b.addedAt)[0]?.id ?? null
+    next = W.mirrorOf(first ? W.activate({ ...next, sourceId: null }, first) : next)
+  }
+  if (next.sourceId && !next.tabs.includes(next.sourceId)) next = W.openTab(next, next.sourceId)
+  set({ pdfPanel: next })
+}
+
+export const closePdfPanel = () => {
+  rememberNow()
+  set({ pdfPanel: { ...get().pdfPanel, open: false, tool: 'select', markId: null, drawer: false, collapsed: false, focus: null } })
+}
 
 /** Opens or closes the panel's Outline drawer (full screen). */
 export const setPdfDrawer = (drawer: boolean) => patch({ drawer })
@@ -35,11 +84,37 @@ export function setPdfSize(size: PanelSize) {
 export function togglePdfPanel() {
   const p = get().pdfPanel
   if (p.open) return closePdfPanel()
-  const first = p.sourceId && get().pdf.sources[p.sourceId] ? p.sourceId : (Object.values(get().pdf.sources).sort((a, b) => a.addedAt - b.addedAt)[0]?.id ?? null)
-  patch({ open: true, sourceId: first })
+  ensureWorkspace()
+  patch({ open: true })
 }
-export const setPdfPage = (page: number) => patch({ page: Math.max(1, Math.round(page)) })
-export const setPdfZoom = (zoom: number | null) => patch({ zoom: zoom === null ? null : Math.min(4, Math.max(0.25, zoom)) })
+/** The page of the active PDF (the page box, the arrows). */
+export const setPdfPage = (page: number) => work((p) => (p.sourceId ? W.setView(p, p.sourceId, { page: Math.max(1, Math.round(page)), anchor: undefined }) : p))
+export const setPdfZoom = (zoom: number | null) => work((p) => (p.sourceId ? W.setView(p, p.sourceId, { zoom: zoom === null ? null : Math.min(4, Math.max(0.25, zoom)) }) : p))
+/** A pane reports where it is (scrolling): the page and the place on it. Another pane follows when Sync scrolling is on. */
+export function reportView(id: string, change: { page?: number; anchor?: { n: number; frac: number } }) {
+  work((p) => W.setView(p, id, change))
+  const p = get().pdfPanel
+  if (p.sync && p.other && change.anchor) {
+    const target = id === p.sourceId ? p.other : id === p.other ? p.sourceId : null
+    if (target) set({ pdfPanel: W.setView(get().pdfPanel, target, { syncTo: { ...change.anchor, at: Date.now() } }) })
+  }
+}
+/** Zoom of one pane (Ctrl + wheel, pinch) even when it is not the active one. */
+export const setViewOf = (id: string, change: Partial<W.SourceView>) => work((p) => W.setView(p, id, change))
+
+// ---- tabs and panes
+/** Opens a PDF of the map as a tab and shows it in the active pane. */
+export const openPdfTab = (id: string) => void (get().pdf.sources[id] && work((p) => ({ ...W.activate(p, id), open: true, tab: 'pages' })))
+export const closePdfTab = (id: string) => work((p) => W.closeTab(p, id))
+export const reorderPdfTab = (id: string, to: number) => work((p) => W.reorder(p, id, to))
+/** The pane with this PDF becomes the active one (a click on it): tools and the page box work on it. */
+export const focusPdfPane = (id: string) => void (get().pdfPanel.sourceId !== id && work((p) => W.activate(p, id)))
+/** Puts a PDF in the left or right half (a tab dropped there, or the Split button). */
+export const splitPdf = (id: string, side: 'left' | 'right') => work((p) => ({ ...W.splitWith(p, id, side), open: true }))
+export const unsplitPdf = (keep?: string) => work((p) => W.unsplit(p, keep ?? p.sourceId))
+export const setPdfSync = (sync: boolean) => work((p) => ({ ...p, sync }))
+export const setPdfRatio = (ratio: number) => work((p) => ({ ...p, ratio: Math.min(0.8, Math.max(0.2, ratio)) }))
+export const setPdfOutlineColumn = (outlineColumn: boolean) => patch({ outlineColumn })
 export const setPdfTab = (tab: PdfPanelState['tab']) => patch({ tab })
 /** The Shapes button remembers the shape last used, wherever it was used (PDF or picture). */
 export function rememberShape(shape: PanelShape) {
@@ -61,7 +136,7 @@ export function setToolStyle(key: StyleKey, change: Partial<ToolStyle>) {
 
 /** Shows a PDF (opens the panel on it). */
 export function showPdf(sourceId: string, page = 1) {
-  patch({ open: true, sourceId, page, tab: 'pages' })
+  work((p) => ({ ...W.setView(W.activate(p, sourceId), sourceId, { page, anchor: undefined }), open: true, tab: 'pages' }))
 }
 
 /** Shows (and marks) a place in a PDF: from "p. 12" on a topic, or a markup in the list. */
@@ -71,7 +146,8 @@ export function showSource(ref: SourceRef) {
     showNotice('The PDF this came from is no longer in this map.')
     return
   }
-  patch({ open: true, sourceId: ref.sourceId, page: ref.page, tab: 'pages', focus: { sourceId: ref.sourceId, page: ref.page, ...(ref.rect ? { rect: ref.rect } : {}), at: Date.now() } })
+  // The PDF opens in its tab (or its pane, when it is already showing) and goes to the passage.
+  work((p) => ({ ...W.setView(W.activate(p, ref.sourceId), ref.sourceId, { page: ref.page, anchor: undefined }), open: true, tab: 'pages', focus: { sourceId: ref.sourceId, page: ref.page, ...(ref.rect ? { rect: ref.rect } : {}), at: Date.now() } }))
 }
 
 /**
@@ -179,10 +255,12 @@ export function removePdfSource(sourceId: string) {
     for (const [k, m] of mapDoc.markup) if (m.sourceId === sourceId) mapDoc.markup.delete(k)
     for (const k of [...mapDoc.pageEdits.keys()]) if (k.startsWith(`${sourceId}:`)) mapDoc.pageEdits.delete(k)
   }, LOCAL)
-  if (get().pdfPanel.sourceId === sourceId) {
-    const next = Object.keys(get().pdf.sources).find((id) => id !== sourceId) ?? null
-    patch({ sourceId: next, open: next !== null, page: 1 })
-  }
+  work((p) => {
+    const next = W.closeTab(p, sourceId)
+    const { [sourceId]: _gone, ...views } = next.views
+    void _gone
+    return { ...next, views, open: next.sourceId !== null && next.open }
+  })
 }
 
 /** Turns a page (one undo step), or hides / shows it. Nothing in the file changes. */
