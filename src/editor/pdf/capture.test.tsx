@@ -12,12 +12,13 @@ import { fakeCodec, source as pictureSource } from '../../test/fakeCodec'
 import { installMemoryLocalStorage } from '../../test/memoryStorage'
 import * as A from '../actions'
 import { imageStore } from '../images'
-import { enterReadMode } from '../readmode'
+import { enterEditMode, enterReadMode } from '../readmode'
 import { setPictureCodec } from '../pictures/flow'
 import { closeFile, mapDoc, openFile } from '../session'
 import { closedPdfPanel, useEditor } from '../store'
 import { setPdfTool } from './actions'
-import { beginPickTarget, captureArea, setCaptureKeep, setCaptureMode } from './capture'
+import { beginPickTarget, captureArea, setCaptureKeep, setCaptureMode, setCaptureOption } from './capture'
+import { loadCaptureOptions } from '../store'
 import { CaptureBar } from './CaptureBar'
 
 // Drawing the page needs a real canvas; here a rectangle just becomes a "picture" of the size the test chooses.
@@ -300,10 +301,97 @@ describe('size, the Compressed or Original question, and Read mode', () => {
 
   it('Read mode: a capture writes nothing', async () => {
     start(chapter)
-    act(() => enterReadMode('user'))
+    await act(async () => void (await enterReadMode('user')))
     const before = JSON.stringify(st().topics)
     await take()
     expect(JSON.stringify(st().topics)).toBe(before)
     expect(mapDoc.undo.undoStack.length).toBe(0)
+    act(() => void enterEditMode()) // leave nothing behind for the next test
+  })
+})
+
+describe('optional titles (both off by default)', () => {
+  // A page with text: two lines inside the rectangle (x 0.1..0.6, y 0.2..0.5 of 595 x 842) and one far outside.
+  const withText = (lines: { text: string; x: number; y: number; w: number; h: number }[]) => ({ text: async () => ({ page: 12, w: 595, h: 842, lines }) }) as unknown as PdfHandle
+  const inside = [
+    { text: 'Depreciation is allocated', x: 70, y: 180, w: 220, h: 12 },
+    { text: 'over the useful life.', x: 70, y: 196, w: 150, h: 12 },
+    { text: 'Far away text', x: 70, y: 700, w: 100, h: 12 },
+  ]
+  const takeWith = async (h: PdfHandle) => void (await act(async () => void (await captureArea(src, h, 12, rect))))
+
+  it('off by default: the new topic has no title', async () => {
+    expect(cap().nameFromPage).toBe(false)
+    expect(cap().textAsTitle).toBe(false)
+    start(chapter)
+    await takeWith(withText(inside))
+    expect(kids(chapter)[0]?.text).toBe('')
+  })
+
+  it('"Name the topic from the page": the PDF name without .pdf and the page', async () => {
+    start(chapter)
+    act(() => setCaptureOption('nameFromPage', true))
+    await takeWith(withText(inside))
+    expect(kids(chapter)[0]?.text).toBe('Audit may 24, p. 12')
+  })
+
+  it('"Add the text inside the rectangle as the title": only what is inside the capture area', async () => {
+    start(chapter)
+    act(() => setCaptureOption('textAsTitle', true))
+    await takeWith(withText(inside))
+    expect(kids(chapter)[0]?.text).toBe('Depreciation is allocated over the useful life.')
+  })
+
+  it('a scanned PDF (no text) or a text layer that fails: no title, or the page name when that is on', async () => {
+    start(chapter)
+    act(() => (setCaptureOption('textAsTitle', true), setCaptureKeep(true)))
+    await takeWith(withText([]))
+    await takeWith({ text: async () => Promise.reject(new Error('no text layer')) } as unknown as PdfHandle)
+    expect(kids(chapter).map((x) => x.text)).toEqual(['', ''])
+    act(() => setCaptureOption('nameFromPage', true))
+    await takeWith(withText([]))
+    expect(kids(chapter)[2]?.text).toBe('Audit may 24, p. 12')
+  })
+
+  it('with both on, the text wins when there is some', async () => {
+    start(chapter)
+    act(() => (setCaptureOption('textAsTitle', true), setCaptureOption('nameFromPage', true)))
+    await takeWith(withText(inside))
+    expect(kids(chapter)[0]?.text).toBe('Depreciation is allocated over the useful life.')
+  })
+
+  it('titles apply to every Add as mode, and the topic still has its picture and link', async () => {
+    start(chapter)
+    act(() => (setCaptureOption('nameFromPage', true), setCaptureMode('branch')))
+    await takeWith(withText(inside))
+    const made = kids(st().rootId).find((x) => x.text === 'Audit may 24, p. 12')
+    expect(made?.image).toBeTruthy()
+    expect(made?.source).toMatchObject({ sourceId: 'pdf1', page: 12 })
+  })
+
+  it('the choices are remembered on this device and used by the next capture session', () => {
+    act(() => setCaptureOption('nameFromPage', true))
+    expect(loadCaptureOptions()).toEqual({ nameFromPage: true, textAsTitle: false })
+    act(() => setPdfTool('select'))
+    act(() => setPdfTool('capture'))
+    expect(cap().nameFromPage).toBe(true)
+    act(() => setCaptureOption('nameFromPage', false))
+    expect(loadCaptureOptions()).toEqual({ nameFromPage: false, textAsTitle: false })
+  })
+
+  it('the capture bar menu has both options, and Escape closes the menu before it ends capture', async () => {
+    start(chapter)
+    render(<CaptureBar />)
+    fireEvent.click(await screen.findByRole('button', { name: 'More capture options' }))
+    const menu = document.querySelector('[data-capture-menu]') as HTMLElement
+    expect(menu).toBeTruthy()
+    fireEvent.click(screen.getByRole('checkbox', { name: /Name the topic from the page/ }))
+    fireEvent.click(screen.getByRole('checkbox', { name: /text inside the rectangle/ }))
+    expect([cap().nameFromPage, cap().textAsTitle]).toEqual([true, true])
+    fireEvent.keyDown(window, { key: 'Escape' })
+    expect(document.querySelector('[data-capture-menu]')).toBeNull()
+    expect(st().pdfPanel.tool).toBe('capture') // only the menu closed
+    fireEvent.keyDown(window, { key: 'Escape' })
+    expect(st().pdfPanel.tool).toBe('select')
   })
 })

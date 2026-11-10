@@ -102,3 +102,50 @@ for (const size of SIZES) {
     await context.close()
   })
 }
+
+test('titles from the capture bar menu, and Read mode has no capture (desktop)', async ({ browser }) => {
+  const context = await browser.newContext({ viewport: { width: 1366, height: 800 }, serviceWorkers: 'block' })
+  const page = await context.newPage()
+  await openMapWithPdf(page, await makePdf())
+  await page.getByRole('button', { name: /capture area/i }).click()
+  await page.getByRole('button', { name: 'More capture options' }).click()
+  await expect(page.locator('[data-capture-menu]')).toBeVisible()
+  await page.screenshot({ path: join(DIR, 'desktop-4-title-menu.png') })
+  await page.getByRole('checkbox', { name: /Name the topic from the page/ }).check()
+  await page.getByRole('checkbox', { name: /text inside the rectangle/ }).check()
+  await page.keyboard.press('Escape') // closes the menu only
+  await expect(page.locator('[data-capture-menu]')).toHaveCount(0)
+  await expect(page.locator('[data-capture-bar]')).toBeVisible()
+  await drag(page)
+  await answerQuestion(page)
+  await expect(page.getByText(/Added topic 1 under/)).toBeVisible({ timeout: 20_000 })
+  // The page has text inside the rectangle, so the title is that text; the other option is the fallback.
+  await expect.poll(() => page.locator('[data-topic]', { hasText: /capture, p\. 1|quick brown/ }).count()).toBeGreaterThan(0)
+  await page.screenshot({ path: join(DIR, 'desktop-5-titled.png') })
+
+  // Read mode: no capture.
+  await page.getByRole('button', { name: 'Read', exact: true }).click()
+  await expect(page.getByRole('button', { name: /capture area/i })).toBeDisabled()
+  await context.close()
+})
+
+test('capture with a finger: touch events draw the rectangle (tablet)', async ({ browser }) => {
+  const context = await browser.newContext({ viewport: { width: 820, height: 1100 }, hasTouch: true, serviceWorkers: 'block' })
+  const page = await context.newPage()
+  await openMapWithPdf(page, await makePdf())
+  const topics = () => page.locator('[data-topic]').count()
+  const start = await topics()
+  await page.getByRole('button', { name: /capture area/i }).click()
+  const box = await page.locator('[data-capture-layer]').first().boundingBox()
+  if (!box) throw new Error('no capture layer')
+  const cdp = await context.newCDPSession(page)
+  const point = (fx: number, fy: number) => ({ x: Math.round(box.x + box.width * fx), y: Math.round(box.y + box.height * fy), id: 1 })
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [point(0.4, 0.1)] })
+  for (let i = 1; i <= 6; i++) await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [point(0.4 + (0.55 * i) / 6, 0.1 + (0.2 * i) / 6)] })
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
+  await answerQuestion(page)
+  await expect(page.getByText(/Added topic 1 under/)).toBeVisible({ timeout: 20_000 })
+  await expect.poll(topics).toBe(start + 1)
+  await page.screenshot({ path: join(DIR, 'tablet-6-finger-capture.png') })
+  await context.close()
+})

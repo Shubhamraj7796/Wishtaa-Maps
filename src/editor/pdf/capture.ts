@@ -9,7 +9,8 @@ import { mapDoc } from '../mapdoc'
 import { showNotice } from '../notice'
 import { prepareCapturedPicture } from '../pictures/flow'
 import { mayEdit } from '../readmode'
-import { useEditor, closedCapture, type CaptureMode, type CaptureState } from '../store'
+import { textInRect } from '@/core/pdf/text'
+import { useEditor, closedCapture, saveCaptureOptions, type CaptureMode, type CaptureState } from '../store'
 import { renderRegion } from './render'
 
 const get = useEditor.getState
@@ -44,6 +45,15 @@ export function leaveCapture() {
 
 export const setCaptureMode = (mode: CaptureMode) => patch({ mode })
 export const setCaptureKeep = (keep: boolean) => patch({ keep })
+/** The two optional ways to give a new topic a title (both off by default; remembered on this device). */
+export function setCaptureOption(key: 'nameFromPage' | 'textAsTitle', on: boolean) {
+  patch({ [key]: on })
+  const { nameFromPage, textAsTitle } = get().pdfPanel.capture
+  saveCaptureOptions({ nameFromPage, textAsTitle })
+}
+
+/** "Audit may 24, p. 3": the PDF's name without .pdf, and the page. */
+export const pageTitle = (sourceName: string, page: number) => `${sourceName.replace(/\.pdf$/i, '').trim() || 'PDF'}, p. ${page}`
 /** "Change": the next topic chosen in the map or the Outline becomes the target. */
 export function beginPickTarget() {
   patch({ picking: true })
@@ -90,6 +100,10 @@ export async function captureArea(source: PdfSource, handle: PdfHandle, n: numbe
     const root = s.rootId
     const target = cap.targetId && s.topics[cap.targetId] ? cap.targetId : root
     const size = defaultDisplaySize(placed.width, placed.height, useSettings.getState().capturedPictureWidth)
+    // The title (optional, off by default): the text inside the rectangle when the PDF has some, else the name from the page, else none.
+    let title = ''
+    if (cap.textAsTitle) title = await handle.text(n).then((l) => textInRect(l, rect), () => '')
+    if (!title && cap.nameFromPage) title = pageTitle(source.name, n)
     let made = ''
     let beside = false
     mapDoc.ydoc.transact(() => {
@@ -97,10 +111,10 @@ export async function captureArea(source: PdfSource, handle: PdfHandle, n: numbe
       if (cap.mode === 'sibling' && target !== root) {
         const prev = cap.lastNewId ? s.topics[cap.lastNewId] : undefined
         const after = prev && prev.parentId === s.topics[target]?.parentId ? prev.id : target // captures in a row keep their order
-        id = addSibling(mapDoc, after, '')
+        id = addSibling(mapDoc, after, title)
         beside = id !== null
       }
-      id ??= addChild(mapDoc, cap.mode === 'branch' ? root : target, '')
+      id ??= addChild(mapDoc, cap.mode === 'branch' ? root : target, title)
       setImage(mapDoc, id, { imageId: placed.id, width: size.width, height: size.height })
       setSource(mapDoc, id, { sourceId: source.id, page: n, rect })
       made = id

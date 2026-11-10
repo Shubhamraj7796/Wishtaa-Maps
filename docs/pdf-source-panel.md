@@ -260,4 +260,15 @@ it, and it uploads once to Drive. **Compressed or Original** is asked **once per
 used for the rest. Every captured picture gets the same tidy width, **320 px** by default (Preferences, "Captured picture width", 120 to
 1200), aspect kept, never enlarged; any picture can be resized later. Read mode has no capture and writes nothing.
 
-Not yet built (later groups): naming topics from the page, selected text as the title, the clips tray.
+**Titles (Group B, both off by default, remembered on this device).** The **...** button in the capture bar opens "Give the new topic a title":
+
+- **Name the topic from the page:** "<PDF name without .pdf>, p. <page>", for example "Audit may 24, p. 3".
+- **Add the text inside the rectangle as the title:** the text-layer lines whose middle is inside the rectangle and at least half of whose
+  width is (hyphenated breaks mended, up to 200 characters). A scan (no text layer) or a failed text read gives no title. With both on, the
+  text wins when there is some, otherwise the page name. Titles apply in every Add as mode. Esc closes the menu first.
+
+Touch: the capture rectangle uses pointer events with the page's touch scrolling turned off (`touch-none`), so a finger or pen draws it
+instead of scrolling; the bar's buttons are 44 px on touch screens. Checked with synthetic touch events in a real Chromium (see
+`e2e/pdf-capture.spec.ts`); **not** yet tried on a physical tablet.
+
+Not yet built (later group): the clips tray.

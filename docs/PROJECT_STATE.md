@@ -35,7 +35,7 @@ person's own Google Drive. Optional accounts (emailed code, password, Google) ad
   text, shapes, whiteout, links), page rotate/hide, export with markup, Normal/Wide/Full size with draggable divider, floating toolbar,
   Insert-menu PDF and its own Drive picker, password prompt, **tabs and split view** (part 1).
 - **Capture area (Group A):** every capture is a new topic with a source link; pinned target with Change; Add as Sub-topic / Next sibling / New
-  branch; Keep capturing; confirmation with Undo; tidy width; Compressed/Original asked once per session (unit tests, real-browser test at three sizes).
+  branch; Keep capturing; confirmation with Undo; tidy width; Compressed/Original asked once per session; optional titles (name from the page, text inside the rectangle) (unit tests, real-browser tests at three sizes, a synthetic-touch capture test).
 - **Google picker failure notice:** when the picker is blocked, cannot start or does not open within 15 s, one notice (copy link, try again, choose from device, copy details) instead of a hang; cancel never shows it (unit and component tests with mocked pickers).
 - **App shell:** installable PWA, offline start, Android share target for pictures, update bar, deploy-skew recovery (a stale tab recovers
   once), production smoke test.
@@ -56,8 +56,7 @@ person's own Google Drive. Optional accounts (emailed code, password, Google) ad
 1. Owner: run `0003_accounts.sql` and finish the dashboard checklist in `docs/auth-setup.md`; then test sign-in for real.
 2. Owner: fill the placeholders in `/privacy` and `/terms` (contact email, company/owner name, address, region, retention days, ages, law,
    court), remove the DRAFT box, set `VITE_SUPPORT_EMAIL`, publish the Google consent screen.
-3. Capture, Group B (optional text settings: name the topic from the page, selected text as the title; polish) and Group C (clips tray as
-   references). Group A is done (see below).
+3. Capture, Group C (clips tray as references). Groups A and B are done (below). **Unpushed commits** wait for the owner's "go live".
 4. PDF booklet view and view styles (spreads, page-turn styles, presentation mode, zoom modes).
 5. Write `docs/pdf-ai-plan.md` (plan only: AI outline from a PDF; requested earlier, not written).
 6. Content-Security-Policy header (needs testing with pdf.js, OCR and Google scripts).

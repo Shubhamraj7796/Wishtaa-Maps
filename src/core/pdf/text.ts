@@ -157,3 +157,21 @@ export function flattenBookmarks(tree: readonly BookmarkNode[], opts: { maxLevel
   walk(tree, 1)
   return out
 }
+
+/**
+ * The text that lies inside a rectangle of a page (fractions of the page as it is read): every line whose middle is inside the
+ * rectangle and at least half of whose width is, joined, with hyphenated line breaks mended. Empty when there is none (a scan).
+ */
+export function textInRect(page: PageLines, rect: { x: number; y: number; w: number; h: number }, max = 200): string {
+  if (!page.w || !page.h) return ''
+  const hit = page.lines.filter((l) => {
+    const midY = (l.y + l.h / 2) / page.h
+    if (midY < rect.y || midY > rect.y + rect.h) return false
+    const left = Math.max(l.x / page.w, rect.x)
+    const right = Math.min((l.x + l.w) / page.w, rect.x + rect.w)
+    return l.w > 0 && (right - left) * page.w >= l.w * 0.5
+  })
+  if (!hit.length) return ''
+  const joined = topicTexts(hit.map((l) => l.text).join('\n'))[0] ?? ''
+  return joined.length > max ? `${joined.slice(0, max - 1).trimEnd()}…` : joined
+}

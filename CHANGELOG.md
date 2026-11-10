@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### Capture area always adds a NEW topic (PDF panel)
+- Optional titles for captured topics (off by default, remembered): name from the page ("Audit may 24, p. 3") and the text inside the rectangle when the PDF has text. Escape inside the capture menu closes it first.
 - A capture no longer changes the picture of a topic: every capture is a new topic (one undo step) with the picture, a PDF, page and rectangle link and a "p. N" badge. Capture bar with **Into** (pinned when capture starts; **Change** picks a topic in the map or Outline on purpose), **Add as** (Sub-topic, Next sibling, New branch) and **Keep capturing**; a confirmation with **Undo**; Compressed or Original asked once per capture session; tidy picture width (default 320 px, Preferences). See `docs/pdf-source-panel.md`.
 
 ### Google picker that cannot open

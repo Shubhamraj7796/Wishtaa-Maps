@@ -1,6 +1,6 @@
-import { useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useEditor, type CaptureMode } from '../store'
-import { beginPickTarget, cancelPickTarget, leaveCapture, setCaptureKeep, setCaptureMode, setCaptureTarget, topicLabel } from './capture'
+import { beginPickTarget, cancelPickTarget, leaveCapture, setCaptureKeep, setCaptureMode, setCaptureOption, setCaptureTarget, topicLabel } from './capture'
 
 const MODES: { id: CaptureMode; label: string; hint: string }[] = [
   { id: 'sub', label: 'Sub-topic', hint: 'A new sub-topic after the existing ones' },
@@ -15,14 +15,18 @@ const MODES: { id: CaptureMode; label: string; hint: string }[] = [
 export function CaptureBar() {
   const cap = useEditor((s) => s.pdfPanel.capture)
   const label = useEditor(() => topicLabel(cap.targetId))
+  const [menu, setMenu] = useState(false)
+  const menuOpen = useRef(false)
+  menuOpen.current = menu
 
   // Escape: first cancels "Change", then ends capture.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape' || (e.target as HTMLElement | null)?.closest?.('input,textarea,select,[contenteditable="true"]') || document.querySelector('[role="dialog"][aria-modal="true"]')) return
+      if (e.key !== 'Escape' || (e.target as HTMLElement | null)?.closest?.('textarea,select,[contenteditable="true"],input:not([type="checkbox"]):not([type="radio"])') || document.querySelector('[role="dialog"][aria-modal="true"]')) return
       e.preventDefault()
       e.stopImmediatePropagation()
-      if (useEditor.getState().pdfPanel.capture.picking) cancelPickTarget()
+      if (menuOpen.current) setMenu(false)
+      else if (useEditor.getState().pdfPanel.capture.picking) cancelPickTarget()
       else leaveCapture()
     }
     window.addEventListener('keydown', onKey, true)
@@ -66,6 +70,25 @@ export function CaptureBar() {
         <input type="checkbox" checked={cap.keep} onChange={(e) => setCaptureKeep(e.target.checked)} />
         Keep capturing
       </label>
+      <span className="relative">
+        <button type="button" aria-haspopup="true" aria-expanded={menu} aria-label="More capture options" title="More capture options" className="rounded border border-line px-2 py-0.5 hover:bg-bg [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:px-3" onClick={() => setMenu(!menu)}>
+          …
+        </button>
+        {menu && (
+          <div data-capture-menu role="group" aria-label="Topic titles" className="absolute left-0 top-full z-50 mt-1 w-64 rounded-ui border border-line bg-surface p-2 text-xs shadow-xl">
+            <p className="mb-1 font-semibold">Give the new topic a title</p>
+            <label className="flex items-start gap-1.5 py-1 [@media(pointer:coarse)]:min-h-11">
+              <input type="checkbox" className="mt-0.5" checked={cap.nameFromPage} onChange={(e) => setCaptureOption('nameFromPage', e.target.checked)} />
+              <span>Name the topic from the page <span className="text-muted">(for example "Audit may 24, p. 3")</span></span>
+            </label>
+            <label className="flex items-start gap-1.5 py-1 [@media(pointer:coarse)]:min-h-11">
+              <input type="checkbox" className="mt-0.5" checked={cap.textAsTitle} onChange={(e) => setCaptureOption('textAsTitle', e.target.checked)} />
+              <span>Add the text inside the rectangle as the title <span className="text-muted">(when the PDF has text; otherwise no title)</span></span>
+            </label>
+            <p className="mt-1 text-muted">Both are off by default and remembered on this device.</p>
+          </div>
+        )}
+      </span>
       <span className="text-muted">Drag a rectangle on a page. Each one becomes a new topic.</span>
     </div>
   )

@@ -91,8 +91,28 @@ export interface CaptureState {
   /** The topic made by the latest capture (the next "Next sibling" goes after it) and how many this session. */
   lastNewId: string | null
   count: number
+  /** Name each new topic from its page, like "Audit may 24, p. 3" (off by default; remembered on this device). */
+  nameFromPage: boolean
+  /** Use the text inside the rectangle as the topic's title when the PDF has a text layer (off by default; remembered on this device). */
+  textAsTitle: boolean
 }
-export const closedCapture = (): CaptureState => ({ targetId: null, mode: 'sub', keep: false, picking: false, choice: null, last: {}, lastNewId: null, count: 0 })
+const CAPTURE_OPTIONS = 'wishtaamaps:capture-options'
+export function loadCaptureOptions(): { nameFromPage: boolean; textAsTitle: boolean } {
+  try {
+    const v = JSON.parse(localStorage.getItem(CAPTURE_OPTIONS) ?? '{}') as { nameFromPage?: unknown; textAsTitle?: unknown }
+    return { nameFromPage: v.nameFromPage === true, textAsTitle: v.textAsTitle === true }
+  } catch {
+    return { nameFromPage: false, textAsTitle: false }
+  }
+}
+export function saveCaptureOptions(o: { nameFromPage: boolean; textAsTitle: boolean }) {
+  try {
+    localStorage.setItem(CAPTURE_OPTIONS, JSON.stringify(o))
+  } catch {
+    /* not remembered */
+  }
+}
+export const closedCapture = (): CaptureState => ({ targetId: null, mode: 'sub', keep: false, picking: false, choice: null, last: {}, lastNewId: null, count: 0, ...loadCaptureOptions() })
 
 export const closedPdfPanel = (): PdfPanelState => {
   const prefs = loadPrefs()
