@@ -3,7 +3,7 @@ import { cmdRedo, cmdUndo } from '../actions'
 import { MarkupToolbar, TOOL_KEYS, type ToolbarExtra } from '../markup/MarkupToolbar'
 import { useEditor } from '../store'
 import { loadPdfUi } from './uiPrefs'
-import { setPageEdit, setPdfTool, setPdfToolSide, setToolStyle, turnPage } from './actions'
+import { addPreset, removePreset, resetToolbar, setPageEdit, setPdfTool, setPdfToolSide, setToolList, setToolStyle, turnPage } from './actions'
 
 export { TOOL_KEYS }
 
@@ -15,6 +15,8 @@ export function FloatingTools({ source }: { source: PdfSource }) {
   const tool = useEditor((s) => s.pdfPanel.tool)
   const styles = useEditor((s) => s.pdfPanel.styles)
   const shape = useEditor((s) => s.pdfPanel.shape)
+  const toolList = useEditor((s) => s.pdfPanel.toolList)
+  const presets = useEditor((s) => s.pdfPanel.presets)
   const page = useEditor((s) => s.pdfPanel.page)
   const canUndo = useEditor((s) => s.canUndo)
   const canRedo = useEditor((s) => s.canRedo)
@@ -26,5 +28,5 @@ export function FloatingTools({ source }: { source: PdfSource }) {
     { key: 'right', icon: 'rotateCw', label: `Turn page ${page} right`, onClick: () => turnPage(source.id, page, 90) },
     { key: 'hide', icon: 'eyeOff', label: `Hide page ${page} (the PDF file is not changed; it is left out when you download)`, onClick: () => setPageEdit(source.id, page, { hidden: true }) },
   ]
-  return <MarkupToolbar tool={tool} onTool={setPdfTool} styles={styles} onStyle={setToolStyle} shape={shape} extras={extras} placeKey="pdf" onSide={setPdfToolSide} readOnly={readOnly} idleCollapse={loadPdfUi().autoCollapse ? IDLE_MS : undefined} />
+  return <MarkupToolbar tool={tool} onTool={setPdfTool} styles={styles} onStyle={setToolStyle} shape={shape} extras={extras} placeKey="pdf" onSide={setPdfToolSide} readOnly={readOnly} tools={toolList} presets={presets} onSavePreset={addPreset} onRemovePreset={removePreset} onTools={setToolList} onReset={resetToolbar} idleCollapse={loadPdfUi().autoCollapse ? IDLE_MS : undefined} />
 }

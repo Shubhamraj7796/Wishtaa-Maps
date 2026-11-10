@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Pen and markup: customisable bar, pressure, straight-angle correction, palm rejection, lasso (PDF panel, Part 2 C1 to C3)
+- **Customise the tools** (the sliders button on the pen bar): choose which tools show and their order (Select always stays), with **Reset to defaults** (every tool back, presets forgotten, pen settings back). Kept on this device.
+- **Presets** in each tool's colour-and-size flyout: save the current colour and thickness (up to five per tool), tap one to use it, remove it. **Finer thickness:** lines go down to 0.5 in half steps (the starting values are unchanged); the flyout still has the live preview.
+- **Stylus pressure:** a pen that reports pressure draws a thicker line where it presses harder (half pressure is exactly the chosen thickness). Stored as an optional list on the stroke, and kept in **Download PDF with markup**. A mouse, or a pen that cannot sense pressure, draws as before.
+- **Straight-angle correction:** hold the pen still for 0.6 seconds at the end of a stroke. A nearly straight stroke becomes a straight line (flat, upright and 45 degree lines are made exact), a hooked end an arrow, and a nearly closed stroke a clean rectangle, circle or ellipse (only when it is nearly closed). After a line snaps the pen still steers its end; walking away from a snapped shape gives the stroke back as a drawing. Two switches: lines, and shapes.
+- **Palm rejection** and **Stylus only:** after a pen has been used, while it is down or just lifted, or for a touch as big as a palm, a finger scrolls instead of drawing; Stylus only makes a finger never draw. Both are switches in the customise panel.
+- **Lasso select** (new tool, key O): draw a loop round markup on a page, then drag the box to move it, drag a corner to resize it (keeping its shape, inside the page), recolour it, **Copy** it (a little to one side) or **Delete** it. Each action is one undo step. Read mode has no lasso.
+- All of it is kept on this device or in the map as optional markup data; no change to the saved map format beyond the optional `pressure` list. Not tested on a real tablet and stylus.
+
 ### Document colour, First page alone, 1-page flipping (PDF panel, Part 2 B1+B3, reduced scope)
 - **Document colour** in the View menu: Light (default), **Dark** (the page picture is inverted and the hue turned half way round), **Grey** and **Sepia**. It is display only: a CSS filter on the page picture and nothing else. The PDF file, the markup (drawn above the page picture, so it keeps its own colours and stays readable in Dark), captured and Add-as-topic pictures (drawn fresh from the PDF) and Download PDF with markup are untouched. Saved per PDF and per device; the last choice starts new PDFs on screens at least 900 px wide; **Reset to default layout** clears it.
 - **Show cover page** is now **First page alone** (the saved value is still `cover`).

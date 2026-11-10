@@ -1,4 +1,4 @@
-import { loadPrefs, type Shape, type ToolStyles } from './pdf/toolPrefs'
+import { loadPrefs, type Presets, type Shape, type ToolId, type ToolStyles } from './pdf/toolPrefs'
 import type { PanelSize } from './pdf/layout'
 import { loadPdfUi } from './pdf/uiPrefs'
 import { emptyPdfState, type PdfState, type Rect } from '@/core/pdf/types'
@@ -29,7 +29,7 @@ export interface SearchState {
 export type PictureTarget = { kind: 'topic'; id: string } | { kind: 'child'; parentId: string } | { kind: 'replace'; id: string }
 /** What the pointer does on a PDF page. */
 import type { SourceView } from './pdf/workspace'
-export type PdfTool = 'select' | 'eraser' | 'highlight' | 'underline' | 'strike' | 'pen' | 'text' | 'rect' | 'ellipse' | 'line' | 'arrow' | 'whiteout' | 'link' | 'capture'
+export type PdfTool = 'select' | 'eraser' | 'highlight' | 'underline' | 'strike' | 'pen' | 'text' | 'rect' | 'ellipse' | 'line' | 'arrow' | 'whiteout' | 'link' | 'lasso' | 'capture'
 
 export interface PdfPanelState {
   open: boolean
@@ -43,6 +43,12 @@ export interface PdfPanelState {
   styles: ToolStyles
   /** The shape the Shapes button last used. */
   shape: Shape
+  /** Which tools the floating bar shows, in order (kept on this device). */
+  toolList: ToolId[]
+  /** Saved colour-and-size choices for each tool (kept on this device). */
+  presets: Presets
+  /** Markup chosen with the lasso: the page they are on and their ids. */
+  lasso: { sourceId: string; page: number; ids: string[] } | null
   /** How much of the editor the PDF takes. */
   size: PanelSize
   /** The size the panel had before Two-page view widened it to Full (null when nothing was widened, or when the size was set by hand since). */
@@ -125,7 +131,7 @@ export const closedCapture = (): CaptureState => ({ targetId: null, mode: 'sub',
 
 export const closedPdfPanel = (): PdfPanelState => {
   const prefs = loadPrefs()
-  return { open: false, sourceId: null, page: 1, tab: 'pages', tool: 'select', styles: prefs.styles, shape: prefs.shape, size: 'normal', widenedFrom: null, focusMode: false, markupBar: false, thumbs: loadPdfUi().thumbs, collapsed: false, drawer: false, toolSide: prefs.bar?.side ?? 'left', zoom: null, focus: null, markId: null, tabs: [], other: null, activeSide: 'left', views: {}, ratio: 0.5, sync: false, outlineColumn: false, capture: closedCapture() }
+  return { open: false, sourceId: null, page: 1, tab: 'pages', tool: 'select', styles: prefs.styles, shape: prefs.shape, toolList: prefs.tools, presets: prefs.presets, lasso: null, size: 'normal', widenedFrom: null, focusMode: false, markupBar: false, thumbs: loadPdfUi().thumbs, collapsed: false, drawer: false, toolSide: prefs.bar?.side ?? 'left', zoom: null, focus: null, markId: null, tabs: [], other: null, activeSide: 'left', views: {}, ratio: 0.5, sync: false, outlineColumn: false, capture: closedCapture() }
 }
 
 export type PictureSource = 'upload' | 'camera' | 'gallery' | 'paste' | 'capture' | 'drop'

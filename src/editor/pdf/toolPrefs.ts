@@ -34,12 +34,12 @@ export const DEFAULT_STYLES: ToolStyles = {
   arrow: { color: '#ef4444', size: 4, opacity: 1 },
 }
 
-/** The range of the size slider for a tool, and what it is called. */
-export function sizeRange(key: StyleKey): { min: number; max: number; label: string } | null {
+/** The range of the size slider for a tool, and what it is called. Lines go down to a half step (finer than before). */
+export function sizeRange(key: StyleKey): { min: number; max: number; step: number; label: string } | null {
   if (key === 'highlight') return null
-  if (key === 'text') return { min: 8, max: 60, label: 'Text size' }
-  if (key === 'underline' || key === 'strike') return { min: 1, max: 8, label: 'Thickness' }
-  return { min: 1, max: 12, label: 'Thickness' }
+  if (key === 'text') return { min: 8, max: 60, step: 1, label: 'Text size' }
+  if (key === 'underline' || key === 'strike') return { min: 0.5, max: 8, step: 0.5, label: 'Thickness' }
+  return { min: 0.5, max: 12, step: 0.5, label: 'Thickness' }
 }
 
 /** A stroke's width as the fraction of the page width that is stored in the markup. */
@@ -55,9 +55,45 @@ export function sanitizeStyle(key: StyleKey, raw: Partial<ToolStyle> | undefined
   const range = sizeRange(key)
   return {
     color: isColor(raw?.color) ? raw.color : d.color,
-    size: range && Number.isFinite(raw?.size) ? clamp(Math.round(raw?.size as number), range.min, range.max) : d.size,
+    size: range && Number.isFinite(raw?.size) ? clamp(Math.round((raw?.size as number) / range.step) * range.step, range.min, range.max) : d.size,
     opacity: Number.isFinite(raw?.opacity) ? clamp(raw?.opacity as number, 0.15, 0.85) : d.opacity,
   }
+}
+
+/** The tools the floating bar can show. "shapes" is the one button for rectangle, ellipse, line and arrow. */
+export type ToolId = 'select' | 'lasso' | 'highlight' | 'underline' | 'strike' | 'pen' | 'text' | 'shapes' | 'whiteout' | 'eraser' | 'link'
+export const ALL_TOOLS: readonly ToolId[] = ['select', 'lasso', 'highlight', 'underline', 'strike', 'pen', 'text', 'shapes', 'whiteout', 'eraser', 'link']
+/** The bar as it comes: every tool, in this order. */
+export const DEFAULT_TOOLS: readonly ToolId[] = ALL_TOOLS
+const isToolId = (t: unknown): t is ToolId => typeof t === 'string' && (ALL_TOOLS as readonly string[]).includes(t)
+
+/** The tools to show, in order: known ones only, each once, and always Select (it is how a person gets out of every other tool). */
+export function sanitizeTools(raw: unknown): ToolId[] {
+  const seen = new Set<ToolId>()
+  if (Array.isArray(raw)) for (const t of raw) if (isToolId(t)) seen.add(t)
+  const list = [...seen]
+  return list.includes('select') ? list : ['select', ...list]
+}
+
+/** Saved colour-and-size choices for a tool ("presets"): a few each, kept on this device. */
+export type Presets = Partial<Record<StyleKey, ToolStyle[]>>
+export const MAX_PRESETS = 5
+
+export function sanitizePresets(raw: unknown): Presets {
+  const out: Presets = {}
+  if (!raw || typeof raw !== 'object') return out
+  for (const k of STYLE_KEYS) {
+    const list = (raw as Record<string, unknown>)[k]
+    if (!Array.isArray(list)) continue
+    const clean: ToolStyle[] = []
+    for (const item of list) {
+      if (!item || typeof item !== 'object' || !isColor((item as ToolStyle).color)) continue
+      const st = sanitizeStyle(k, item as Partial<ToolStyle>)
+      if (!clean.some((c) => c.color.toLowerCase() === st.color.toLowerCase() && c.size === st.size && c.opacity === st.opacity)) clean.push(st)
+    }
+    if (clean.length) out[k] = clean.slice(0, MAX_PRESETS)
+  }
+  return out
 }
 
 /** Where the floating toolbar is: which edge of the PDF area it snaps to, and how far down (0 top, 1 bottom). */
@@ -72,6 +108,9 @@ export interface Prefs {
   styles: ToolStyles
   shape: Shape
   bar: ToolbarPlace | null
+  /** Which tools the bar shows, in order. */
+  tools: ToolId[]
+  presets: Presets
 }
 
 const KEY = 'wishtaamaps:pdf-tools'
@@ -81,7 +120,7 @@ export function defaultPlace(touch: boolean): ToolbarPlace {
 }
 
 export function loadPrefs(): Prefs {
-  let raw: Partial<{ styles: Record<string, Partial<ToolStyle>>; shape: string; bar: Partial<ToolbarPlace> }> = {}
+  let raw: Partial<{ styles: Record<string, Partial<ToolStyle>>; shape: string; bar: Partial<ToolbarPlace>; tools: unknown; presets: unknown }> = {}
   try {
     raw = JSON.parse(localStorage.getItem(KEY) ?? '{}') ?? {}
   } catch {
@@ -91,7 +130,7 @@ export function loadPrefs(): Prefs {
   for (const k of STYLE_KEYS) styles[k] = sanitizeStyle(k, raw.styles?.[k])
   const b = raw.bar
   const bar: ToolbarPlace | null = b && (b.side === 'left' || b.side === 'right') ? { side: b.side, y: clamp(Number(b.y) || 0, 0, 1), collapsed: !!b.collapsed, fade: !!b.fade } : null
-  return { styles, shape: (SHAPES as readonly string[]).includes(raw.shape ?? '') ? (raw.shape as Shape) : 'rect', bar }
+  return { styles, shape: (SHAPES as readonly string[]).includes(raw.shape ?? '') ? (raw.shape as Shape) : 'rect', bar, tools: raw.tools === undefined ? [...DEFAULT_TOOLS] : sanitizeTools(raw.tools), presets: sanitizePresets(raw.presets) }
 }
 
 export function savePrefs(p: Prefs) {

@@ -58,6 +58,8 @@ export interface MarkupObject {
   rects?: Rect[]
   /** Pen: the path. Line and arrow: two points. */
   points?: Point[]
+  /** Pen: how hard a stylus pressed at each point (0 to 1, one per point). Absent for a mouse or a pen that cannot sense pressure. */
+  pressure?: number[]
   /** The words under a highlight (for "make a topic from this"), or the words in a text box. */
   text?: string
   /** A note on this markup. */

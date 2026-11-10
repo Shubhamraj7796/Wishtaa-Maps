@@ -1,5 +1,6 @@
 import { BlendMode, PDFDocument, PDFName, PDFString, StandardFonts, degrees, rgb, type PDFFont, type PDFPage } from 'pdf-lib'
 import { readSize, rectToPdf, toPdf, turn } from './geometry'
+import { pressureOf, segmentWidths } from './pressure'
 import { editKey, NO_EDIT, type MarkupObject, type PageEdit, type Point, type Rect, type Turn } from './types'
 
 /**
@@ -101,7 +102,8 @@ export async function exportMarkedPdf(original: Uint8Array, opts: ExportOptions)
           break
         case 'pen': {
           const pts = m.points ?? []
-          for (let k = 1; k < pts.length; k++) page.drawLine({ start: at(pts[k - 1] as Point), end: at(pts[k] as Point), thickness: lineW, color, lineCap: 1 })
+          const widths = pressureOf(pts, m.pressure) ? segmentWidths(lineW, m.pressure as number[]) : null
+          for (let k = 1; k < pts.length; k++) page.drawLine({ start: at(pts[k - 1] as Point), end: at(pts[k] as Point), thickness: Math.max(0.3, widths?.[k - 1] ?? lineW), color, lineCap: 1 })
           break
         }
         case 'rect': {

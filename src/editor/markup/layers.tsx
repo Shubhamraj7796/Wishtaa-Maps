@@ -1,10 +1,13 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { rectFrom } from '@/core/pdf/geometry'
 import type { MarkupObject, Point, Rect } from '@/core/pdf/types'
+import { pressureOf, roundPressure, segmentWidths, variesPressure } from '@/core/pdf/pressure'
 import { showNotice } from '../notice'
 import type { PdfTool } from '../store'
 import { boundsOf, markupAt } from '../pdf/markup'
+import { getPen, subscribePen } from '../pdf/penPrefs'
 import { strokeWidth, textSize, type ToolStyle } from '../pdf/toolPrefs'
+import { HOLD_MS, recognize, STILL_PX, straightEnd, type Snap } from './recognize'
 
 /**
  * The layers that draw markup and take it from the pointer. They know nothing about PDFs or pictures: they work in the coordinates of
@@ -28,8 +31,23 @@ export const RECT_MARK_TOOLS: readonly PdfTool[] = ['highlight', 'underline', 's
 
 /** Once a pen has touched the screen, fingers scroll instead of drawing (so a hand resting on the glass does no harm). */
 let penSeen = false
-export const noteStylus = () => void (penSeen = true)
+let penLastAt = 0
+export const noteStylus = () => void ((penSeen = true), (penLastAt = Date.now()))
 export const stylusSeen = () => penSeen
+/** For tests: as if no pen had ever touched the screen. */
+export const forgetStylus = () => void ((penSeen = false), (penLastAt = 0))
+
+/**
+ * Palm rejection and "stylus only": may this pointer draw? A mouse and a pen always may. A finger may not when "Stylus only" is on, nor
+ * (with palm rejection on) once a pen has been used, while a pen is down or just lifted, or when the touch is as big as a palm.
+ */
+export function pointerMayDraw(e: { pointerType: string; width?: number; height?: number }, touchDraws: boolean, now = Date.now()): boolean {
+  if (e.pointerType !== 'touch') return true
+  const pen = getPen()
+  if (!touchDraws || pen.stylusOnly) return false
+  if (pen.palm && (penSeen || now - penLastAt < 1000 || (e.width ?? 0) > 40 || (e.height ?? 0) > 40)) return false
+  return true
+}
 
 const px = (v: number, size: number) => v * size
 
@@ -66,7 +84,7 @@ export function MarkupLayer({ list, box, markId, onGoPage }: { list: MarkupObjec
                 return <line key={`${m.id}${i}`} data-markup={m.id} x1={px(r.x, W)} x2={px(r.x + r.w, W)} y1={y} y2={y} stroke={m.color} strokeWidth={m.width ? Math.max(1, m.width * W) : Math.max(1.5, r.h * H * 0.08)} />
               })
             case 'pen':
-              return <polyline key={m.id} data-markup={m.id} points={(m.points ?? []).map((p) => `${p[0] * W},${p[1] * H}`).join(' ')} fill="none" stroke={m.color} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round" />
+              return <PenPath key={m.id} id={m.id} points={m.points ?? []} pressure={m.pressure} color={m.color} width={sw} W={W} H={H} />
             case 'rect':
             case 'whiteout':
             case 'link': {
@@ -76,18 +94,18 @@ export function MarkupLayer({ list, box, markId, onGoPage }: { list: MarkupObjec
                 const go = () => (m.link && 'page' in m.link ? onGoPage?.(m.link.page) : m.link && 'url' in m.link ? window.open(m.link.url, '_blank', 'noopener,noreferrer') : undefined)
                 return <rect key={m.id} data-markup={m.id} data-link x={px(r.x, W)} y={px(r.y, H)} width={px(r.w, W)} height={px(r.h, H)} fill={m.color} fillOpacity={0.08} stroke={m.color} strokeDasharray="4 3" strokeWidth={1} style={{ pointerEvents: 'all', cursor: 'pointer' }} onClick={go} />
               }
-              return <rect key={m.id} data-markup={m.id} x={px(r.x, W)} y={px(r.y, H)} width={px(r.w, W)} height={px(r.h, H)} fill={m.kind === 'whiteout' ? '#ffffff' : 'none'} stroke={m.kind === 'whiteout' ? 'none' : m.color} strokeWidth={sw} />
+              return <rect key={m.id} data-markup={m.id} data-kind={m.kind} x={px(r.x, W)} y={px(r.y, H)} width={px(r.w, W)} height={px(r.h, H)} fill={m.kind === 'whiteout' ? '#ffffff' : 'none'} stroke={m.kind === 'whiteout' ? 'none' : m.color} strokeWidth={sw} />
             }
             case 'ellipse': {
               const r = m.rects?.[0]
-              return r ? <ellipse key={m.id} data-markup={m.id} cx={px(r.x + r.w / 2, W)} cy={px(r.y + r.h / 2, H)} rx={px(r.w / 2, W)} ry={px(r.h / 2, H)} fill="none" stroke={m.color} strokeWidth={sw} /> : null
+              return r ? <ellipse key={m.id} data-markup={m.id} data-kind="ellipse" cx={px(r.x + r.w / 2, W)} cy={px(r.y + r.h / 2, H)} rx={px(r.w / 2, W)} ry={px(r.h / 2, H)} fill="none" stroke={m.color} strokeWidth={sw} /> : null
             }
             case 'line':
             case 'arrow': {
               const [a, b] = m.points ?? []
               if (!a || !b) return null
               return (
-                <g key={m.id} data-markup={m.id}>
+                <g key={m.id} data-markup={m.id} data-kind={m.kind}>
                   <line x1={a[0] * W} y1={a[1] * H} x2={b[0] * W} y2={b[1] * H} stroke={m.color} strokeWidth={sw} strokeLinecap="round" />
                   {m.kind === 'arrow' && <polygon points={arrowHead(a, b, W, H, Math.max(8, sw * 4))} fill={m.color} />}
                 </g>
@@ -112,6 +130,22 @@ export function MarkupLayer({ list, box, markId, onGoPage }: { list: MarkupObjec
   )
 }
 
+/** A pen stroke: one line when it has no pressure, or one short segment per pair of points (thicker where the pen pressed harder). */
+function PenPath({ id, points, pressure, color, width, W, H }: { id?: string; points: readonly Point[]; pressure?: readonly number[]; color: string; width: number; W: number; H: number }) {
+  const pr = pressureOf(points, pressure)
+  if (!pr) return <polyline data-markup={id} data-kind="pen" points={points.map((p) => `${p[0] * W},${p[1] * H}`).join(' ')} fill="none" stroke={color} strokeWidth={width} strokeLinecap="round" strokeLinejoin="round" />
+  const widths = segmentWidths(width, pr)
+  return (
+    <g data-markup={id} data-kind="pen" data-pressure>
+      {widths.map((w, i) => {
+        const a = points[i] as Point
+        const b = points[i + 1] as Point
+        return <line key={i} x1={a[0] * W} y1={a[1] * H} x2={b[0] * W} y2={b[1] * H} stroke={color} strokeWidth={Math.max(0.5, w)} strokeLinecap="round" />
+      })}
+    </g>
+  )
+}
+
 export interface DrawProps {
   tool: PdfTool
   style: ToolStyle
@@ -127,26 +161,75 @@ export interface DrawProps {
   touchDraws?: boolean
 }
 
+interface Draft {
+  a: Point
+  b: Point
+  pts: Point[]
+  /** One pressure reading per point of a pen stroke. */
+  pr: number[]
+  /** The stroke the pen was held still on, shown as the straight line or clean shape it will become. */
+  snap: Snap | null
+}
+
 /** The pen and shape tools: the stroke is drawn as the finger or pen moves, and kept as markup when it is lifted. */
 export function DrawLayer({ tool, style, box, surface, toPoint, onAdd, linkPages, touchDraws = true }: DrawProps) {
   const color = style.color
   const pen = strokeWidth(style.size)
   const root = useRef<HTMLDivElement>(null)
-  const [draft, setDraft] = useState<{ a: Point; b: Point; pts: Point[] } | null>(null)
+  const [draft, setDraftState] = useState<Draft | null>(null)
+  const live = useRef<Draft | null>(null)
+  const setDraft = (d: Draft | null) => {
+    live.current = d
+    setDraftState(d)
+  }
   const [editor, setEditor] = useState<{ rect: Rect; kind: 'text' | 'link' } | null>(null)
-  const [touchOk, setTouchOk] = useState(!penSeen)
+  const prefs = useSyncExternalStore(subscribePen, getPen)
+  const [penDown, setPenDown] = useState(penSeen)
   const W = box.w * box.scale
   const H = box.h * box.scale
   const surfaceEl = () => root.current?.closest(surface) ?? null
+  const hold = useRef<{ timer: number; at: [number, number] } | null>(null)
+  const sizeNow = useRef({ W, H })
+  sizeNow.current = { W, H }
+  const canSnap = tool === 'pen' && (prefs.snapLines || prefs.snapShapes)
 
   useEffect(() => setEditor(null), [tool])
+  useEffect(() => () => window.clearTimeout(hold.current?.timer), [])
 
-  const finish = (d: { a: Point; b: Point; pts: Point[] }) => {
+  /** Holding still: after 0.6 s a stroke that is really a line, arrow, rectangle or ellipse snaps to it. */
+  const armHold = (x: number, y: number) => {
+    window.clearTimeout(hold.current?.timer)
+    if (!canSnap) return
+    hold.current = {
+      at: [x, y],
+      timer: window.setTimeout(() => {
+        const d = live.current
+        if (!d || d.snap || d.pts.length < 3) return
+        const snap = recognize(d.pts, sizeNow.current.W, sizeNow.current.H, { lines: getPen().snapLines, shapes: getPen().snapShapes })
+        if (snap) setDraft({ ...d, snap })
+      }, HOLD_MS),
+    }
+  }
+  const disarm = () => {
+    window.clearTimeout(hold.current?.timer)
+    hold.current = null
+  }
+
+  const finish = (d: Draft) => {
+    if (d.snap) {
+      const s = d.snap
+      if ('rect' in s) onAdd({ kind: s.kind, color, rects: [s.rect], width: pen })
+      else onAdd({ kind: s.kind, color, points: [s.a, s.b], width: pen })
+      return
+    }
     const rect = rectFrom(d.a, d.b)
     const big = rect.w * W > 6 || rect.h * H > 6
     switch (tool) {
       case 'pen':
-        if (d.pts.length > 1) onAdd({ kind: 'pen', color, points: d.pts, width: pen })
+        if (d.pts.length > 1) {
+          const usePressure = prefs.pressure && d.pr.length === d.pts.length && variesPressure(d.pr)
+          onAdd({ kind: 'pen', color, points: d.pts, width: pen, ...(usePressure ? { pressure: roundPressure(d.pr) } : {}) })
+        }
         break
       case 'rect':
       case 'ellipse':
@@ -175,49 +258,79 @@ export function DrawLayer({ tool, style, box, surface, toPoint, onAdd, linkPages
     }
   }
 
+  const fingerCanDraw = touchDraws && !prefs.stylusOnly && !(prefs.palm && penDown)
+
   return (
     <div
       ref={root}
       data-draw-layer={tool}
       className="absolute inset-0 cursor-crosshair"
-      style={{ touchAction: touchOk && touchDraws ? 'none' : 'pan-x pan-y' }}
+      style={{ touchAction: fingerCanDraw ? 'none' : 'pan-x pan-y' }}
       onPointerDown={(e) => {
         if (e.pointerType === 'pen') {
-          penSeen = true
-          setTouchOk(false)
+          noteStylus()
+          setPenDown(true)
         }
-        if (e.pointerType === 'touch' && (penSeen || !touchDraws)) return // a resting hand scrolls, it does not draw
+        if (!pointerMayDraw(e, touchDraws)) return // a resting hand, or a finger when only the stylus draws, scrolls instead
         if (e.pointerType === 'mouse' && e.button !== 0) return
         const el = surfaceEl()
         if (!el || editor) return
         e.currentTarget.setPointerCapture(e.pointerId)
         const p = toPoint(e, el)
-        setDraft({ a: p, b: p, pts: [p] })
+        setDraft({ a: p, b: p, pts: [p], pr: [e.pressure ?? 0.5], snap: null })
+        armHold(e.clientX, e.clientY)
       }}
       onPointerMove={(e) => {
         const el = surfaceEl()
-        if (!draft || !el) return
+        const d = live.current
+        if (!d || !el) return
         const events = tool === 'pen' && 'getCoalescedEvents' in e.nativeEvent ? (e.nativeEvent as PointerEvent).getCoalescedEvents() : []
         const moves = events.length ? events : [e.nativeEvent as PointerEvent]
-        let pts = draft.pts
-        let b = draft.b
+        let pts = d.pts
+        let pr = d.pr
+        let b = d.b
         for (const ev of moves) {
           b = toPoint(ev, el)
           const last = pts[pts.length - 1] as Point
-          if (tool === 'pen' && Math.hypot((b[0] - last[0]) * W, (b[1] - last[1]) * H) >= 1.5) pts = [...pts, b]
+          if (tool === 'pen' && Math.hypot((b[0] - last[0]) * W, (b[1] - last[1]) * H) >= 1.5) {
+            pts = [...pts, b]
+            pr = [...pr, ev.pressure ?? 0.5]
+          }
         }
-        setDraft({ a: draft.a, b, pts })
+        // Held still? The wait starts again each time the pen really moves.
+        const h = hold.current
+        const moved = h ? Math.hypot(e.clientX - h.at[0], e.clientY - h.at[1]) : 0
+        let snap = d.snap
+        if (snap && (snap.kind === 'line' || snap.kind === 'arrow')) {
+          // After a line snaps, the pen still steers its end (and the angle snaps to flat, upright and 45 degrees).
+          snap = { ...snap, b: straightEnd(snap.a, b, W, H) }
+        } else if (snap && moved > 14) {
+          snap = null // a shape is dropped when the pen walks away from it: the stroke carries on as a drawing
+        }
+        setDraft({ a: d.a, b, pts, pr, snap })
+        if (moved > STILL_PX) armHold(e.clientX, e.clientY)
       }}
       onPointerUp={() => {
-        const d = draft
+        const d = live.current
+        disarm()
         setDraft(null)
         if (d) finish(d)
       }}
-      onPointerCancel={() => setDraft(null)}
+      onPointerCancel={() => {
+        disarm()
+        setDraft(null)
+      }}
     >
       {draft && (
-        <svg className="pointer-events-none absolute left-0 top-0 overflow-visible" width={W} height={H} aria-hidden="true">
-          {tool === 'pen' && <polyline points={draft.pts.map((p) => `${p[0] * W},${p[1] * H}`).join(' ')} fill="none" stroke={color} strokeWidth={pen * W} strokeLinecap="round" strokeLinejoin="round" />}
+        <svg className="pointer-events-none absolute left-0 top-0 overflow-visible" width={W} height={H} aria-hidden="true" data-draft={draft.snap ? `snap-${draft.snap.kind}` : tool}>
+          {tool === 'pen' && !draft.snap && <PenPath points={draft.pts} pressure={prefs.pressure && variesPressure(draft.pr) ? draft.pr : undefined} color={color} width={pen * W} W={W} H={H} />}
+          {draft.snap && (draft.snap.kind === 'rect' || draft.snap.kind === 'ellipse') && (draft.snap.kind === 'rect' ? <DraftRect a={[draft.snap.rect.x, draft.snap.rect.y]} b={[draft.snap.rect.x + draft.snap.rect.w, draft.snap.rect.y + draft.snap.rect.h]} W={W} H={H} tool="rect" color={color} pen={pen} /> : <DraftEllipse a={[draft.snap.rect.x, draft.snap.rect.y]} b={[draft.snap.rect.x + draft.snap.rect.w, draft.snap.rect.y + draft.snap.rect.h]} W={W} H={H} color={color} pen={pen} />)}
+          {draft.snap && (draft.snap.kind === 'line' || draft.snap.kind === 'arrow') && (
+            <>
+              <line x1={draft.snap.a[0] * W} y1={draft.snap.a[1] * H} x2={draft.snap.b[0] * W} y2={draft.snap.b[1] * H} stroke={color} strokeWidth={pen * W} strokeLinecap="round" />
+              {draft.snap.kind === 'arrow' && <polygon points={arrowHead(draft.snap.a, draft.snap.b, W, H, Math.max(8, pen * W * 4))} fill={color} />}
+            </>
+          )}
           {(tool === 'rect' || tool === 'whiteout' || tool === 'text' || tool === 'link' || tool === 'highlight' || tool === 'underline' || tool === 'strike') && <DraftRect a={draft.a} b={draft.b} W={W} H={H} tool={tool} color={color} pen={pen} />}
           {tool === 'ellipse' && <DraftEllipse a={draft.a} b={draft.b} W={W} H={H} color={color} pen={pen} />}
           {(tool === 'line' || tool === 'arrow') && (
@@ -330,7 +443,8 @@ export function EraseLayer({ list, surface, toPoint, onErase, touchDraws = true 
       data-erase-layer
       className="absolute inset-0 cursor-cell touch-none"
       onPointerDown={(e) => {
-        if (e.pointerType === 'touch' && (penSeen || !touchDraws)) return
+        if (e.pointerType === 'pen') noteStylus()
+        if (!pointerMayDraw(e, touchDraws)) return
         down.current = true
         e.currentTarget.setPointerCapture(e.pointerId)
         erase(e)

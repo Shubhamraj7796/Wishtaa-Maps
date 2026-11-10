@@ -65,6 +65,28 @@ export function deleteMarkup(id: string) {
   if (get().pdfPanel.markId === id) selectMarkup(null)
 }
 
+/** Changes several pieces at once (a move, a resize, a recolour of a lasso selection): one undo step. */
+export function updateManyMarkup(changes: Record<string, Partial<Omit<MarkupObject, 'id' | 'sourceId' | 'createdAt'>>>) {
+  if (!mayEdit('Changing markup')) return
+  mapDoc.ydoc.transact(() => {
+    for (const [id, change] of Object.entries(changes)) {
+      const cur = mapDoc.markup.get(id)
+      if (cur) mapDoc.markup.set(id, { ...cur, ...change })
+    }
+  }, LOCAL)
+}
+
+/** Deletes several pieces at once: one undo step. */
+export function deleteManyMarkup(ids: readonly string[]) {
+  if (!mayEdit('Deleting markup')) return
+  mapDoc.ydoc.transact(() => {
+    for (const id of ids) mapDoc.markup.delete(id)
+  }, LOCAL)
+  const sel = get().pdfPanel.lasso
+  if (sel) useEditor.setState({ pdfPanel: { ...get().pdfPanel, lasso: null } })
+  if (get().pdfPanel.markId && ids.includes(get().pdfPanel.markId as string)) selectMarkup(null)
+}
+
 export const selectMarkup = (id: string | null) => useEditor.setState({ pdfPanel: { ...get().pdfPanel, markId: id } })
 
 /** The bounding rectangle of a piece of markup (page fractions as read). */

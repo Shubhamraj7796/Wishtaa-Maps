@@ -12,7 +12,8 @@ import { pickPdfFiles } from '@/core/drive/picker'
 import { askPassword } from './password'
 import { withPickerNotice } from '@/app/pickerNotice'
 import { rememberSize, type PanelSize } from './layout'
-import { isShape, loadPrefs, sanitizeStyle, savePrefs, type Shape as PanelShape, type StyleKey, type ToolStyle } from './toolPrefs'
+import { DEFAULT_TOOLS, isShape, loadPrefs, MAX_PRESETS, sanitizeStyle, sanitizeTools, savePrefs, type Shape as PanelShape, type StyleKey, type ToolId, type ToolStyle } from './toolPrefs'
+import { resetPen } from './penPrefs'
 import { bumpDevice, closePdf, loadPdfjs, pdfStore, rememberPassword, trimOpenPdfs } from './runtime'
 import * as W from './workspace'
 import { nearestRow } from './spreads'
@@ -202,12 +203,45 @@ export function setPdfTool(tool: PdfPanelState['tool']) {
     return
   }
   if (tool !== 'capture' && was === 'capture') endCapture()
+  if (tool !== 'lasso' && get().pdfPanel.lasso) patch({ lasso: null })
   const drawing = tool !== 'select' && tool !== 'capture'
   if (isShape(tool)) {
     patch({ tool, shape: tool, markupBar: true })
     savePrefs({ ...loadPrefs(), shape: tool })
   } else patch(drawing ? { tool, markupBar: true } : { tool })
 }
+/** Chooses which tools the floating bar shows and in what order (Select is always kept). Remembered on this device. */
+export function setToolList(list: readonly ToolId[]) {
+  const tools = sanitizeTools(list)
+  patch({ toolList: tools })
+  savePrefs({ ...loadPrefs(), tools })
+}
+/** Saves a tool's current colour and size as a preset (at most five; the oldest goes when full). */
+export function addPreset(key: StyleKey) {
+  const cur = get().pdfPanel.styles[key]
+  const have = get().pdfPanel.presets[key] ?? []
+  if (have.some((p) => p.color.toLowerCase() === cur.color.toLowerCase() && p.size === cur.size && p.opacity === cur.opacity)) return
+  const presets = { ...get().pdfPanel.presets, [key]: [...have, { ...cur }].slice(-MAX_PRESETS) }
+  patch({ presets })
+  savePrefs({ ...loadPrefs(), presets })
+}
+export function removePreset(key: StyleKey, index: number) {
+  const have = (get().pdfPanel.presets[key] ?? []).filter((_, i) => i !== index)
+  const presets = { ...get().pdfPanel.presets }
+  if (have.length) presets[key] = have
+  else delete presets[key]
+  patch({ presets })
+  savePrefs({ ...loadPrefs(), presets })
+}
+/** Back to the bar as it comes: every tool, no presets, and the pen settings (pressure, snapping, palm rejection) as they start. */
+export function resetToolbar() {
+  patch({ toolList: [...DEFAULT_TOOLS], presets: {} })
+  savePrefs({ ...loadPrefs(), tools: [...DEFAULT_TOOLS], presets: {} })
+  resetPen()
+}
+/** The markup picked with the lasso (null: none). */
+export const setLasso = (lasso: PdfPanelState['lasso']) => patch({ lasso })
+
 /** Changes one tool's colour, size or strength; it is remembered for next time on this device. */
 export function setToolStyle(key: StyleKey, change: Partial<ToolStyle>) {
   const styles = { ...get().pdfPanel.styles, [key]: sanitizeStyle(key, { ...get().pdfPanel.styles[key], ...change }) }

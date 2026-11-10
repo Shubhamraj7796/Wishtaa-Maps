@@ -7,7 +7,9 @@ import { DrawLayer, DRAW_TOOLS, EraseLayer, MarkupLayer, parseLink, type NewShap
 import { useEditor } from '../store'
 import type { PageBox } from './PageView'
 import { captureArea } from './capture'
-import { setPdfPage } from './actions'
+import { setLasso, setPdfPage } from './actions'
+import { LassoDraw, LassoSelection } from './LassoLayer'
+import { withMove, type Move } from './lasso'
 import { addMarkup, deleteMarkup, markupOfPage } from './markup'
 import { hasStyle } from './toolPrefs'
 
@@ -27,13 +29,20 @@ export function PageLayers({ source, handle, n, box }: { source: PdfSource; hand
   const markId = useEditor((s) => s.pdfPanel.markId)
   const style = useEditor((s) => (hasStyle(tool) ? s.pdfPanel.styles[tool] : s.pdfPanel.styles.pen))
   const list = useMemo(() => markupOfPage(all, source.id, n), [all, source.id, n])
+  // Markup picked with the lasso, and what a drag in progress would do to it (shown without touching the map until it is let go).
+  const lasso = useEditor((s) => s.pdfPanel.lasso)
+  const [preview, setPreview] = useState<Move | null>(null)
+  const picked = useMemo(() => (lasso && lasso.sourceId === source.id && lasso.page === n ? lasso.ids.filter((id) => list.some((m) => m.id === id)) : []), [lasso, source.id, n, list])
+  const shown = useMemo(() => (preview && picked.length ? withMove(list, picked, preview) : list), [list, picked, preview])
   const toPoint = (e: { clientX: number; clientY: number }, el: Element) => pagePoint(e, el, box.rotation)
   const add = (m: NewShape) => void addMarkup({ sourceId: source.id, page: n, ...m })
   return (
     <>
-      {list.length > 0 && <MarkupLayer list={list} box={box} markId={markId} onGoPage={setPdfPage} />}
+      {shown.length > 0 && <MarkupLayer list={shown} box={box} markId={markId} onGoPage={setPdfPage} />}
       {!readOnly && tool === 'capture' && <CaptureLayer source={source} handle={handle} n={n} box={box} />}
       {!readOnly && tool === 'eraser' && list.length > 0 && <EraseLayer list={list} surface="[data-page]" toPoint={toPoint} onErase={deleteMarkup} />}
+      {!readOnly && tool === 'lasso' && <LassoDraw list={list} box={box} surface="[data-page]" toPoint={toPoint} onPick={(ids) => setLasso(ids.length ? { sourceId: source.id, page: n, ids } : null)} />}
+      {!readOnly && tool === 'lasso' && picked.length > 0 && <LassoSelection list={list} ids={picked} box={box} rotationOf={toPoint} onPreview={setPreview} onDone={() => setLasso(null)} />}
       {!readOnly && DRAW_TOOLS.includes(tool) && <DrawLayer tool={tool} style={style} box={box} surface="[data-page]" toPoint={toPoint} onAdd={add} linkPages={source.pages} />}
     </>
   )

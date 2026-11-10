@@ -5,7 +5,7 @@ import type { PageLines } from '@/core/pdf/text'
 import { editKey, NO_EDIT, type PdfSource, type Rect, type Turn } from '@/core/pdf/types'
 import { offsets, rowAt, windowFor } from '../outlineLayout'
 import { useEditor } from '../store'
-import { reportView, setViewOf } from './actions'
+import { reportView, setLasso, setViewOf } from './actions'
 import { buildRows, fitScale, nearestRow, rowIndexOf, rowShape, slotsOf, SPREAD_GAP, twoAllowed, type PageShape } from './spreads'
 import { forgetView, publishView } from './spreadState'
 import { ViewMenu } from './ViewMenu'
@@ -18,7 +18,7 @@ import type { DocColor } from './docColor'
 import { hintSeen, markHintSeen } from './uiPrefs'
 import { SelectedMarkup } from './tools'
 import { pagePoint } from './layers'
-import { deleteMarkup, markupAt, markupOfPage, selectMarkup } from './markup'
+import { deleteManyMarkup, deleteMarkup, markupAt, markupOfPage, selectMarkup } from './markup'
 
 const GUTTER = 12
 const GAP = 14
@@ -203,7 +203,15 @@ export function Viewer({ source, handle, showHidden, active = true }: { source: 
       e.preventDefault()
       deleteMarkup(id)
     }
-    if (e.key === 'Escape') selectMarkup(null)
+    const lassoed = useEditor.getState().pdfPanel.lasso
+    if (lassoed && (e.key === 'Delete' || e.key === 'Backspace') && !target.closest('textarea,input')) {
+      e.preventDefault()
+      deleteManyMarkup(lassoed.ids)
+    }
+    if (e.key === 'Escape') {
+      selectMarkup(null)
+      if (lassoed) setLasso(null)
+    }
     // Paged: the arrow keys turn the page when the page fits (zoomed in, they scroll it); Page Up and Down when it fits top to bottom.
     if (paged && !e.ctrlKey && !e.metaKey && !e.altKey && !target.closest('textarea,input,select')) {
       const el = scroller.current

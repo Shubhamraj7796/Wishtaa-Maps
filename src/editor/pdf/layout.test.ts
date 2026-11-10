@@ -64,9 +64,9 @@ describe('tool preferences', () => {
     expect(q.bar).toEqual({ side: 'right', y: 0.4, collapsed: true, fade: true })
   })
 
-  it('sizes: highlight has none, strokes 1 to 12, text 8 to 60; stroke width is a fraction of the page', () => {
+  it('sizes: highlight has none, strokes 0.5 to 12 in half steps, text 8 to 60; stroke width is a fraction of the page', () => {
     expect(sizeRange('highlight')).toBeNull()
-    expect(sizeRange('pen')).toMatchObject({ min: 1, max: 12 })
+    expect(sizeRange('pen')).toMatchObject({ min: 0.5, max: 12 })
     expect(sizeRange('text')).toMatchObject({ min: 8, max: 60 })
     expect(strokeWidth(4)).toBe(0.004)
   })
