@@ -13,6 +13,8 @@ export function PreferencesDialog({ onClose }: { onClose: () => void }) {
   const setPicturesPref = useSettings((s) => s.setPicturesPref)
   const touchControls = useSettings((s) => s.touchControls)
   const setTouchControls = useSettings((s) => s.setTouchControls)
+  const captureWidth = useSettings((s) => s.capturedPictureWidth)
+  const setCaptureWidth = useSettings((s) => s.setCapturedPictureWidth)
   const allRead = useSettings((s) => s.openAllReadOnly)
   const setAllRead = useSettings((s) => s.setOpenAllReadOnly)
   return (
@@ -33,6 +35,15 @@ export function PreferencesDialog({ onClose }: { onClose: () => void }) {
               {id === 'move' && <span className="text-xs text-muted">(default)</span>}
             </label>
           ))}
+        </fieldset>
+        <fieldset className="rounded-ui border border-line p-3">
+          <legend className="px-1 font-semibold">Pictures captured from a PDF</legend>
+          <label className="flex items-center gap-2">
+            <span>Captured picture width</span>
+            <input type="number" min={120} max={1200} step={10} value={captureWidth} onChange={(e) => setCaptureWidth(Number(e.target.value))} aria-label="Captured picture width in pixels" className="w-20 rounded border border-line bg-bg px-2 py-1" />
+            <span className="text-xs text-muted">px</span>
+          </label>
+          <p className="mt-1 text-xs text-muted">Each capture becomes a new topic with a picture this wide (the shape is kept). Any picture can still be resized later.</p>
         </fieldset>
         <fieldset className="rounded-ui border border-line p-3">
           <legend className="px-1 font-semibold">Pictures</legend>

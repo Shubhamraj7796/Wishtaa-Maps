@@ -295,7 +295,21 @@ export function NoticeToast() {
   return (
     <div aria-live="polite" role="status" className="pointer-events-none absolute bottom-4 left-1/2 z-40 -translate-x-1/2 px-4">
       {notice && (
-        <div className="pointer-events-auto rounded-ui border border-line bg-surface px-4 py-2 text-sm shadow-lg">{notice.text}</div>
+        <div className="pointer-events-auto flex items-center gap-3 rounded-ui border border-line bg-surface px-4 py-2 text-sm shadow-lg">
+          <span>{notice.text}</span>
+          {notice.action && (
+            <button
+              type="button"
+              className="shrink-0 rounded-ui border border-line px-2 py-0.5 font-semibold text-brand hover:bg-bg"
+              onClick={() => {
+                notice.action?.run()
+                useEditor.setState({ notice: null })
+              }}
+            >
+              {notice.action.label}
+            </button>
+          )}
+        </div>
       )}
     </div>
   )

@@ -34,6 +34,8 @@ person's own Google Drive. Optional accounts (emailed code, password, Google) ad
 - **PDF panel:** viewer (virtualised pages), text to topics, "p. N" source badges, capture area, markup (highlight, underline, strike, pen,
   text, shapes, whiteout, links), page rotate/hide, export with markup, Normal/Wide/Full size with draggable divider, floating toolbar,
   Insert-menu PDF and its own Drive picker, password prompt, **tabs and split view** (part 1).
+- **Capture area (Group A):** every capture is a new topic with a source link; pinned target with Change; Add as Sub-topic / Next sibling / New
+  branch; Keep capturing; confirmation with Undo; tidy width; Compressed/Original asked once per session (unit tests, real-browser test at three sizes).
 - **Google picker failure notice:** when the picker is blocked, cannot start or does not open within 15 s, one notice (copy link, try again, choose from device, copy details) instead of a hang; cancel never shows it (unit and component tests with mocked pickers).
 - **App shell:** installable PWA, offline start, Android share target for pictures, update bar, deploy-skew recovery (a stale tab recovers
   once), production smoke test.
@@ -47,14 +49,15 @@ person's own Google Drive. Optional accounts (emailed code, password, Google) ad
   consent screen behaviour (blocked/not a test user), the Drive token handed over at sign-in, silent renewal over hours.
 - **Two real accounts on one browser** (sign-out / user-switch clean-up has only been tested with mocks).
 - Safari and Firefox (only Chromium was used for real-browser tests).
+- **Capture on a real tablet or phone** (finger drawing of the rectangle, the capture bar at touch size, "Change" in the Outline); only mouse-driven browser tests were run.
 - **The picker notice in a real Brave or a browser with third-party cookies blocked** (only mocked pickers were tried), and that Google's "loaded" event arrives in real use as assumed.
 
 ## Open tasks, in priority order
 1. Owner: run `0003_accounts.sql` and finish the dashboard checklist in `docs/auth-setup.md`; then test sign-in for real.
 2. Owner: fill the placeholders in `/privacy` and `/terms` (contact email, company/owner name, address, region, retention days, ages, law,
    court), remove the DRAFT box, set `VITE_SUPPORT_EMAIL`, publish the Google consent screen.
-3. **Capture always adds a new topic** (reported bug, see below), with a pinned target, Add-as modes, Keep capturing, tidy width, source
-   link, optional clips tray.
+3. Capture, Group B (optional text settings: name the topic from the page, selected text as the title; polish) and Group C (clips tray as
+   references). Group A is done (see below).
 4. PDF booklet view and view styles (spreads, page-turn styles, presentation mode, zoom modes).
 5. Write `docs/pdf-ai-plan.md` (plan only: AI outline from a PDF; requested earlier, not written).
 6. Content-Security-Policy header (needs testing with pdf.js, OCR and Google scripts).
@@ -62,8 +65,6 @@ person's own Google Drive. Optional accounts (emailed code, password, Google) ad
 8. Test on real devices (first item of "not verified" above).
 
 ## Known bugs and limits
-- **Reported by the owner, not yet reproduced here:** PDF "Capture area" can change the picture of the selected topic instead of adding a new
-  topic. (Part 3 above.)
 - A browser tab already open on an old build needs one manual reload after a deploy that predates the recovery code; later deploys recover by themselves.
 - Live site shows the Sign in button because Vercel has the Supabase variables, even if the Supabase project is not set up; sign-in then fails
   with a message (guest mode is unaffected).

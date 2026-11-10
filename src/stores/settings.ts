@@ -44,6 +44,7 @@ interface Saved {
   pauseOnDataSaver?: unknown
   panelPinned?: unknown
   wheelHintSeen?: unknown
+  capturedPictureWidth?: unknown
 }
 
 function readSaved(storage: Pick<Storage, 'getItem'> | undefined): Saved {
@@ -78,6 +79,9 @@ interface SettingsState {
   /** The settings panel stays docked open (large screens). */
   panelPinned: boolean
   setPanelPinned: (on: boolean) => void
+  /** Width in px of a picture captured from a PDF (aspect kept; any picture can still be resized later). */
+  capturedPictureWidth: number
+  setCapturedPictureWidth: (w: number) => void
   /** The one-time tip about Ctrl + wheel and pinch has been shown. */
   wheelHintSeen: boolean
   markWheelHintSeen: () => void
@@ -91,9 +95,9 @@ const initial = readSavedTheme(storage)
 
 export const useSettings = create<SettingsState>((set, get) => {
   const persist = () => {
-    const { theme, mouseWheel, openAllReadOnly, wheelHintSeen, panelMode, panelPinned, picturesPref, touchControls, pictureUploads, pauseOnDataSaver } = get()
+    const { theme, mouseWheel, openAllReadOnly, wheelHintSeen, panelMode, panelPinned, picturesPref, touchControls, pictureUploads, pauseOnDataSaver, capturedPictureWidth } = get()
     try {
-      localStorage.setItem(KEY, JSON.stringify({ theme, mouseWheel, openAllReadOnly, wheelHintSeen, panelMode, panelPinned, picturesPref, touchControls, pictureUploads, pauseOnDataSaver }))
+      localStorage.setItem(KEY, JSON.stringify({ theme, mouseWheel, openAllReadOnly, wheelHintSeen, panelMode, panelPinned, picturesPref, touchControls, pictureUploads, pauseOnDataSaver, capturedPictureWidth }))
     } catch {
       /* ignore */
     }
@@ -142,6 +146,11 @@ export const useSettings = create<SettingsState>((set, get) => {
     panelPinned: saved.panelPinned === true,
     setPanelPinned: (panelPinned) => {
       set({ panelPinned })
+      persist()
+    },
+    capturedPictureWidth: typeof saved.capturedPictureWidth === 'number' && saved.capturedPictureWidth >= 120 && saved.capturedPictureWidth <= 1200 ? Math.round(saved.capturedPictureWidth) : 320,
+    setCapturedPictureWidth: (w) => {
+      set({ capturedPictureWidth: Math.min(1200, Math.max(120, Math.round(w) || 320)) })
       persist()
     },
     wheelHintSeen: saved.wheelHintSeen === true,

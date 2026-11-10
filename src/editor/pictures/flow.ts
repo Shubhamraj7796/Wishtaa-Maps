@@ -206,6 +206,40 @@ export async function addPictures(blobs: Blob[], source: PictureSource, target: 
   }
 }
 
+/**
+ * Stores a captured picture (the same Compressed or Original steps as any picture, once: the same bytes are the same picture) and
+ * returns what a new topic needs. It places NOTHING: the caller makes a new topic. `session.choice` remembers the answer for the rest of
+ * a capture session, so the question is asked once. Returns null when the person cancels or the picture cannot be kept.
+ */
+export async function prepareCapturedPicture(blob: Blob, session: { choice: 'compressed' | 'original' | null; set: (c: 'compressed' | 'original') => void }): Promise<{ id: string; width: number; height: number } | null> {
+  if (blob.size <= 0) return null
+  try {
+    const a = await analyze(blob, {}, activeCodec)
+    const d = decideFor(useSettings.getState().picturesPref, a)
+    let choice = d.use
+    if (d.ask) {
+      if (session.choice) choice = session.choice
+      else {
+        const answer = await requestChoice([{ name: 'Captured picture', original: a.original?.blob.size ?? blob.size, compressed: a.compressed.blob.size }], a.original ? { original: a.original.blob, compressed: a.compressed.blob } : undefined)
+        if (!answer) return null
+        if (answer.remember) rememberChoice(answer.choice)
+        session.set(answer.choice)
+        choice = answer.choice
+      }
+    }
+    if (choice === 'original' && !a.original) {
+      showNotice(`${a.originalProblem ?? 'That picture is too large to keep as it is.'} It was added as Compressed instead.`, 8000)
+      choice = 'compressed'
+    }
+    const c = await finalize(a, choice, blob)
+    const id = await storePicture(c)
+    return { id, width: c.width, height: c.height }
+  } catch (e) {
+    showNotice(e instanceof ImageError ? e.message : "Couldn't save that picture in this browser. Storage may be full or blocked.")
+    return null
+  }
+}
+
 /** The crop step is done: store the chosen version and put it in the map. */
 export async function finishDraft(c: Candidate, source: PictureSource, target: PictureTarget, original: Blob): Promise<void> {
   try {

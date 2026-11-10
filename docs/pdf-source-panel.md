@@ -234,3 +234,30 @@ return, and every other one is closed and opened again from this device's copy w
 Measured on the production build (Chromium, 5 PDFs of 200 pages, see `e2e/pdf-tabs.spec.ts`): JS heap about 10 MB after visiting all
 five tabs twice; at most 3 to 6 page bitmaps alive (one pane to two panes); 60 frames per second while scrolling one pane, two panes
 and synced panes (worst frame 17 to 33 ms).
+
+## Capture area: always a NEW topic (Group A)
+
+Before, a capture was put on "the selected topic itself", so a capture replaced that topic's picture, and with the new topic left
+selected the next capture replaced the one just taken. Now **a capture never changes an existing picture**: replacing a picture is
+only the explicit **Replace** on that picture.
+
+**Capture area** (controls row) shows the **capture bar**:
+
+- **Into: <topic> [Change]**. The target is **pinned when capture starts**: the topic selected at that moment, else the last target used for
+  this PDF, else the central topic. Selecting other topics afterwards does NOT move it. **Change** waits for the next topic you choose
+  in the map or the Outline (the selection is cleared so even the old target is a visible choice); **Esc** cancels. A deleted target falls
+  back to the central topic.
+- **Add as:** **Sub-topic** (default; after the existing children, in capture order), **Next sibling** (right after the target, and
+  captures in a row keep their order; the central topic has no siblings, so it goes under it), **New branch** (under the central topic).
+- **Keep capturing:** capture stays on after each capture. **Esc** ends it (the first Esc only cancels "Change"). Without it, the tool goes
+  back to Select after one capture.
+
+Each capture drags a rectangle, draws it fresh from the PDF, and makes ONE new topic with the picture (one undo step), a link
+`{PDF, page, rectangle}` (so the "p. N" badge opens that PDF at that spot, in any tab or pane), and an empty title. A confirmation says
+where it went ("Added topic 3 under "Chapter 5", page 12") with **Undo**, which removes exactly that topic and refuses (with a message)
+once other edits were made after it. The picture goes through the normal store: the same bytes are one picture however many topics use
+it, and it uploads once to Drive. **Compressed or Original** is asked **once per capture session** (until capture ends) and the answer is
+used for the rest. Every captured picture gets the same tidy width, **320 px** by default (Preferences, "Captured picture width", 120 to
+1200), aspect kept, never enlarged; any picture can be resized later. Read mode has no capture and writes nothing.
+
+Not yet built (later groups): naming topics from the page, selected text as the title, the clips tray.

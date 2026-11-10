@@ -70,11 +70,33 @@ export interface PdfPanelState {
   sync: boolean
   /** On wide screens: the Outline in a third column beside the PDFs. */
   outlineColumn: boolean
+  /** "Capture area": where captures go and how. */
+  capture: CaptureState
 }
+
+/** Where a new capture goes: always a NEW topic, never a change to an existing picture. */
+export type CaptureMode = 'sub' | 'sibling' | 'branch'
+export interface CaptureState {
+  /** The topic captures go into: pinned when capture starts, changed only on purpose ("Change"). */
+  targetId: string | null
+  mode: CaptureMode
+  /** Capture stays on after each capture. */
+  keep: boolean
+  /** Waiting for a topic to be chosen in the map or the Outline as the new target. */
+  picking: boolean
+  /** Compressed or Original, asked once per capture session. */
+  choice: 'compressed' | 'original' | null
+  /** The last target used for each PDF (the next capture session starts there when nothing is selected). */
+  last: Record<string, string>
+  /** The topic made by the latest capture (the next "Next sibling" goes after it) and how many this session. */
+  lastNewId: string | null
+  count: number
+}
+export const closedCapture = (): CaptureState => ({ targetId: null, mode: 'sub', keep: false, picking: false, choice: null, last: {}, lastNewId: null, count: 0 })
 
 export const closedPdfPanel = (): PdfPanelState => {
   const prefs = loadPrefs()
-  return { open: false, sourceId: null, page: 1, tab: 'pages', tool: 'select', styles: prefs.styles, shape: prefs.shape, size: 'normal', collapsed: false, drawer: false, toolSide: prefs.bar?.side ?? 'left', zoom: null, focus: null, markId: null, tabs: [], other: null, activeSide: 'left', views: {}, ratio: 0.5, sync: false, outlineColumn: false }
+  return { open: false, sourceId: null, page: 1, tab: 'pages', tool: 'select', styles: prefs.styles, shape: prefs.shape, size: 'normal', collapsed: false, drawer: false, toolSide: prefs.bar?.side ?? 'left', zoom: null, focus: null, markId: null, tabs: [], other: null, activeSide: 'left', views: {}, ratio: 0.5, sync: false, outlineColumn: false, capture: closedCapture() }
 }
 
 export type PictureSource = 'upload' | 'camera' | 'gallery' | 'paste' | 'capture' | 'drop'
@@ -100,6 +122,8 @@ export type ReadReason = 'user' | 'file' | 'preference' | 'drive' | 'link'
 export interface Notice {
   id: number
   text: string
+  /** A button on the notice (for example Undo). */
+  action?: { label: string; run: () => void }
 }
 
 export interface ImageLive {

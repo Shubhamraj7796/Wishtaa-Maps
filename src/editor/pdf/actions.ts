@@ -15,6 +15,7 @@ import { rememberSize, type PanelSize } from './layout'
 import { isShape, loadPrefs, sanitizeStyle, savePrefs, type Shape as PanelShape, type StyleKey, type ToolStyle } from './toolPrefs'
 import { bumpDevice, closePdf, loadPdfjs, pdfStore, rememberPassword, trimOpenPdfs } from './runtime'
 import * as W from './workspace'
+import { beginCapture, endCapture } from './capture'
 
 const get = useEditor.getState
 const set = useEditor.setState
@@ -123,6 +124,14 @@ export function rememberShape(shape: PanelShape) {
   savePrefs({ ...loadPrefs(), shape })
 }
 export function setPdfTool(tool: PdfPanelState['tool']) {
+  const was = get().pdfPanel.tool
+  // Capture is a session: it pins its target when it starts, and forgets what was asked once when it ends.
+  if (tool === 'capture' && was !== 'capture') {
+    patch({ tool })
+    beginCapture()
+    return
+  }
+  if (tool !== 'capture' && was === 'capture') endCapture()
   if (isShape(tool)) {
     patch({ tool, shape: tool })
     savePrefs({ ...loadPrefs(), shape: tool })

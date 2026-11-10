@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Capture area always adds a NEW topic (PDF panel)
+- A capture no longer changes the picture of a topic: every capture is a new topic (one undo step) with the picture, a PDF, page and rectangle link and a "p. N" badge. Capture bar with **Into** (pinned when capture starts; **Change** picks a topic in the map or Outline on purpose), **Add as** (Sub-topic, Next sibling, New branch) and **Keep capturing**; a confirmation with **Undo**; Compressed or Original asked once per capture session; tidy picture width (default 320 px, Preferences). See `docs/pdf-source-panel.md`.
+
 ### Google picker that cannot open
 - When a browser blocks Google's file picker (for example Brave), or it does not open within 15 seconds, one notice says so, with Copy link to open in another browser, Try again, Choose a file from this device and Copy details. Google's picker is hidden and disposed, and anything it reports late is ignored. Cancelling never shows it. Previously the app waited forever.
 

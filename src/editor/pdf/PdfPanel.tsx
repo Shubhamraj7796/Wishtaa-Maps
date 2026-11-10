@@ -4,6 +4,7 @@ import { Icon } from '@/ui/icons'
 import { useEditor } from '../store'
 import { addPdfFiles, closePdfPanel, focusPdfPane, openPdfFromDrive, openPdfTab, pickPdfFromDevice, refetchFromDrive, removePdfFromDevice, removePdfSource, reopenPdf, setPdfCollapsed, setPdfDrawer, setPdfOutlineColumn, setPdfPage, setPdfRatio, setPdfSize, setPdfSync, setPdfTab, setPdfTool, setPdfZoom, showSource, splitPdf, unsplitPdf } from './actions'
 import { SplitDropZones, Tabs } from './Tabs'
+import { CaptureBar } from './CaptureBar'
 import { accessPdf, bumpDevice, getDeviceVersion, rememberPassword, subscribeDevice, type PdfAccess } from './runtime'
 import { downloadMarkedPdf, saveCopyToDrive } from './exportActions'
 import { OutlineDialog } from './OutlineDialog'
@@ -61,6 +62,7 @@ export default function PdfPanel({ mode }: { mode: 'side' | 'sheet' }) {
     if (size === 'normal' && !panel.drawer) return
     const esc = (e: KeyboardEvent) => {
       if (e.key !== 'Escape' || typing(e.target) || document.querySelector('[role="dialog"][aria-modal="true"]') || document.querySelector('[data-flyout]')) return
+      if (useEditor.getState().pdfPanel.tool === 'capture') return // Escape ends capture first (see the capture bar)
       if (panel.drawer) setPdfDrawer(false)
       else setPdfSize('normal')
     }
@@ -246,6 +248,7 @@ export default function PdfPanel({ mode }: { mode: 'side' | 'sheet' }) {
       </div>
 
       <Tabs />
+      {source && !readOnly && panel.tool === 'capture' && <CaptureBar />}
       {source && <Controls source={source} showHidden={showHidden} setShowHidden={setShowHidden} />}
       <div role="tablist" aria-label="PDF panel" className="flex shrink-0 gap-1 border-b border-line px-2 py-1 text-xs">
         {(['pages', 'markup'] as const).map((t) => (
@@ -451,7 +454,7 @@ function Controls({ source, showHidden, setShowHidden }: { source: PdfSource; sh
       <button type="button" className="min-w-12 rounded px-1 py-1 hover:bg-bg" title="Fit to the width of the panel" onClick={() => setPdfZoom(null)} aria-label={percent === null ? 'Zoom: fit width' : `Zoom ${percent} percent. Click to fit the width`}>{percent === null ? 'Fit' : `${percent}%`}</button>
       <button type="button" className={btn} aria-label="Zoom in" title="Zoom in" onClick={() => setPdfZoom((zoom ?? 1) * 1.25)}><Icon name="zoomIn" size={15} /></button>
       <span className="mx-1 h-4 w-px bg-line" />
-      <button type="button" className={`${btn} ${tool === 'capture' ? 'bg-brand/15 text-ink' : ''}`} aria-pressed={tool === 'capture'} title="Take part of a page as a picture (works on scans and handwriting)" disabled={readOnly} onClick={() => setPdfTool(tool === 'capture' ? 'select' : 'capture')}>
+      <button type="button" className={`${btn} ${tool === 'capture' ? 'bg-brand/15 text-ink' : ''}`} aria-pressed={tool === 'capture'} aria-label="Capture area" title="Take part of a page as a picture, as a new topic (works on scans and handwriting)" disabled={readOnly} onClick={() => setPdfTool(tool === 'capture' ? 'select' : 'capture')}>
         <Icon name="camera" size={15} />
         <span className="ml-1 hidden sm:inline">Capture area</span>
       </button>
