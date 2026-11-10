@@ -18,6 +18,7 @@ import * as W from './workspace'
 import { nearestRow } from './spreads'
 import { liveViewOf } from './spreadState'
 import { beginCapture, endCapture } from './capture'
+import { resetDefaultLayout, saveDefaultLayout, startingLayout } from './layoutDefault'
 
 const get = useEditor.getState
 const set = useEditor.setState
@@ -81,7 +82,47 @@ export const setPdfCollapsed = (collapsed: boolean) => patch({ collapsed, ...(co
 /** How much of the editor the PDF takes. Page, zoom and place in the PDF are kept; "Fit" fits again. */
 export function setPdfSize(size: PanelSize) {
   rememberSize(size)
-  patch({ size, collapsed: false, ...(size === 'full' ? {} : { drawer: false }) })
+  patch({ size, widenedFrom: null, collapsed: false, ...(size === 'full' ? {} : { drawer: false }) }) // a size chosen by hand is never undone by the layout
+}
+
+/** Two-page view needs room: the panel goes to Full, and remembers the size it had so switching back can restore it. */
+function widenForTwoPages() {
+  const p = get().pdfPanel
+  if (p.size !== 'full') patch({ widenedFrom: p.size, size: 'full', collapsed: false })
+}
+/** Puts the panel back to the size it had before Two-page view widened it (only if nobody changed the size since, and no other pane is still in Two-page view). */
+function restoreWidth(except: string) {
+  const p = get().pdfPanel
+  if (!p.widenedFrom) return
+  if ([p.sourceId, p.other].some((i) => i && i !== except && W.viewOf(p, i).two === true)) return
+  if (p.size === 'full') patch({ size: p.widenedFrom, widenedFrom: null, drawer: false })
+  else patch({ widenedFrom: null })
+}
+
+/**
+ * A layout choice from the View menu or the book button (Single or Two pages, cover, scrolling, right to left, fit). Choosing Two pages widens
+ * the panel; going back restores it. The choice is also remembered as the starting layout for new PDFs on wide screens on this device.
+ */
+export function chooseLayout(id: string, change: Partial<W.SourceView>) {
+  const wasTwo = W.viewOf(get().pdfPanel, id).two === true
+  if (change.two === true && !wasTwo) widenForTwoPages()
+  work((p) => W.setView(p, id, change))
+  saveDefaultLayout(W.viewOf(get().pdfPanel, id))
+  if (change.two === false && wasTwo) restoreWidth(id)
+}
+
+/** "Reset to default layout": this PDF goes back to one page, scrolling, fit width, and nothing is remembered for new PDFs. */
+export function resetPdfLayout(id: string) {
+  resetDefaultLayout()
+  const wasTwo = W.viewOf(get().pdfPanel, id).two === true
+  work((p) => W.setView(p, id, { two: false, cover: false, paged: false, rtl: false, fit: 'width', zoom: null }))
+  if (wasTwo) restoreWidth(id)
+}
+
+/** A PDF just added starts in the layout last chosen on this device, on a wide screen. */
+function applyStartingLayout(id: string) {
+  const layout = startingLayout(typeof window === 'undefined' ? 0 : window.innerWidth)
+  if (Object.keys(layout).length) chooseLayout(id, layout)
 }
 
 /** The PDF button: opens the panel on the map's first PDF (or empty, ready for one), or closes it. */
@@ -95,7 +136,7 @@ export function togglePdfPanel() {
 export const setPdfPage = (page: number) => work((p) => (p.sourceId ? W.setView(p, p.sourceId, { page: Math.max(1, Math.round(page)), anchor: undefined }) : p))
 export const setPdfZoom = (zoom: number | null) => work((p) => (p.sourceId ? W.setView(p, p.sourceId, { zoom: zoom === null ? null : Math.min(4, Math.max(0.25, zoom)) }) : p))
 /** Fit the width of the pane (default) or the whole page or spread. */
-export const setPdfFit = (fit: 'width' | 'page') => work((p) => (p.sourceId ? W.setView(p, p.sourceId, { zoom: null, fit }) : p))
+export const setPdfFit = (fit: 'width' | 'page' | 'height') => work((p) => (p.sourceId ? W.setView(p, p.sourceId, { zoom: null, fit }) : p))
 /** The previous or next page, or spread when two pages are showing (the page buttons). */
 export function turnPdf(dir: 1 | -1) {
   const p = get().pdfPanel
@@ -211,6 +252,7 @@ export async function addPdf(bytes: Uint8Array, name: string, opts: { driveId?: 
     const source: PdfSource = { id: newId(), name: name.replace(/\.pdf$/i, '') + (/\.pdf$/i.test(name) ? '.pdf' : ''), size: bytes.byteLength, hash, pages, ...(opts.driveId ? { driveId: opts.driveId } : {}), addedAt: Date.now() }
     mapDoc.ydoc.transact(() => mapDoc.pdfSources.set(source.id, source), LOCAL)
     showPdf(source.id)
+    applyStartingLayout(source.id)
     return source
   } catch (e) {
     showNotice(e instanceof PdfError ? e.message : 'This PDF could not be added.')

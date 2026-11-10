@@ -44,6 +44,8 @@ export interface PdfPanelState {
   shape: Shape
   /** How much of the editor the PDF takes. */
   size: PanelSize
+  /** The size the panel had before Two-page view widened it to Full (null when nothing was widened, or when the size was set by hand since). */
+  widenedFrom: PanelSize | null
   /** The panel is tucked away to a small tab; the PDF stays open. */
   collapsed: boolean
   /** In full screen, the Outline slides over the PDF. */
@@ -116,7 +118,7 @@ export const closedCapture = (): CaptureState => ({ targetId: null, mode: 'sub',
 
 export const closedPdfPanel = (): PdfPanelState => {
   const prefs = loadPrefs()
-  return { open: false, sourceId: null, page: 1, tab: 'pages', tool: 'select', styles: prefs.styles, shape: prefs.shape, size: 'normal', collapsed: false, drawer: false, toolSide: prefs.bar?.side ?? 'left', zoom: null, focus: null, markId: null, tabs: [], other: null, activeSide: 'left', views: {}, ratio: 0.5, sync: false, outlineColumn: false, capture: closedCapture() }
+  return { open: false, sourceId: null, page: 1, tab: 'pages', tool: 'select', styles: prefs.styles, shape: prefs.shape, size: 'normal', widenedFrom: null, collapsed: false, drawer: false, toolSide: prefs.bar?.side ?? 'left', zoom: null, focus: null, markId: null, tabs: [], other: null, activeSide: 'left', views: {}, ratio: 0.5, sync: false, outlineColumn: false, capture: closedCapture() }
 }
 
 export type PictureSource = 'upload' | 'camera' | 'gallery' | 'paste' | 'capture' | 'drop'

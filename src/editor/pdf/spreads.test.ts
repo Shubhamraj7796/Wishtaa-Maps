@@ -84,6 +84,12 @@ describe('Two-page view: pages of different sizes', () => {
     expect(fitScale(s, 'page', 1000, 5000, 12, 14)).toBeCloseTo(byWidth)
   })
 
+  it('Fit height fills the pane height whatever the width', () => {
+    const s = rowShape([{ w: 600, h: 800 }, { w: 600, h: 800 }])
+    expect(fitScale(s, 'height', 1000, 600, 12, 14)).toBeCloseTo((600 - 28) / 800)
+    expect(fitScale(s, 'height', 300, 600, 12, 14)).toBeCloseTo((600 - 28) / 800) // may be wider than the pane: it scrolls sideways
+  })
+
   it('a single page fits as it always did: the pane minus the gutters', () => {
     const s = rowShape([{ w: 600, h: 800 }])
     expect(fitScale(s, 'width', 800, 600, 12, 14)).toBeCloseTo((800 - 24) / 600)

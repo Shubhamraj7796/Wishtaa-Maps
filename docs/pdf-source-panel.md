@@ -295,3 +295,11 @@ choices are remembered per PDF and per device with the workspace (`wishtaamaps:p
 - Code: `src/editor/pdf/spreads.ts` (pure layout maths, tested in `spreads.test.ts`), `spreadState.ts` (what each pane shows now), `ViewMenu.tsx`, `Viewer.tsx`; tests `views.test.tsx` and `e2e/pdf-views.spec.ts`.
 - **Not yet (Group B):** page-turn styles (Slide, Flip, Fade, None), tap-the-edge and swipe turning, Presentation mode, laser pointer.
 - **Not tested on a physical tablet or phone**, nor in Safari or Firefox.
+
+### Two-page view makes room, Fit height, remembered layout (Part 1 of the combined list)
+- `chooseLayout(id, change)` (actions.ts) is the one way the View menu and the book button change the layout. Turning Two pages on sets the panel to Full and stores `widenedFrom` (the size before); turning it off restores that size only if the size was not changed by hand since (`setPdfSize` clears `widenedFrom`) and no other pane is still in Two-page view. Not saved to disk.
+- Fit height: `fitScale(..., 'height')` fills the pane height; saved as `fit: 'height'`.
+- The last layout is stored per device in `wishtaamaps:pdf-default-layout` (`layoutDefault.ts`, only the valid layout fields). A newly added PDF starts in it when the window is at least 900 px wide. `resetPdfLayout` ("Reset to default layout") clears the key and returns the current PDF to one page, scrolling, fit width.
+- The book button (toolbar, `data-two-toggle`) is not shown in the small View button of a split pane.
+- Presentation mode is a disabled menu item until Group B builds it.
+

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import type { PdfSource } from '@/core/pdf/types'
 import { Icon } from '@/ui/icons'
 import { useEditor } from '../store'
-import { addPdfFiles, closePdfPanel, focusPdfPane, openPdfFromDrive, openPdfTab, pickPdfFromDevice, refetchFromDrive, removePdfFromDevice, removePdfSource, reopenPdf, setPdfCollapsed, setPdfDrawer, setPdfFit, setPdfOutlineColumn, setPdfPage, setPdfRatio, setPdfSize, setPdfSync, setPdfTab, setPdfTool, setPdfZoom, showSource, splitPdf, turnPdf, unsplitPdf } from './actions'
+import { addPdfFiles, chooseLayout, closePdfPanel, focusPdfPane, openPdfFromDrive, openPdfTab, pickPdfFromDevice, refetchFromDrive, removePdfFromDevice, removePdfSource, reopenPdf, setPdfCollapsed, setPdfDrawer, setPdfFit, setPdfOutlineColumn, setPdfPage, setPdfRatio, setPdfSize, setPdfSync, setPdfTab, setPdfTool, setPdfZoom, showSource, splitPdf, turnPdf, unsplitPdf } from './actions'
 import { ViewMenu } from './ViewMenu'
 import { liveViewOf, subscribeViews, viewsVersion } from './spreadState'
 import { nearestRow } from './spreads'
@@ -444,6 +444,7 @@ function Controls({ source, showHidden, setShowHidden }: { source: PdfSource; sh
   }
   const percent = zoom === null ? null : Math.round(zoom * 100)
   const fitKind = useEditor((s) => s.pdfPanel.views[source.id]?.fit ?? 'width')
+  const twoOn = useEditor((s) => s.pdfPanel.views[source.id]?.two === true)
   // With two pages showing, the arrows step by spread.
   useSyncExternalStore(subscribeViews, viewsVersion)
   const rows = liveViewOf(source.id)?.rows
@@ -464,8 +465,19 @@ function Controls({ source, showHidden, setShowHidden }: { source: PdfSource; sh
       <button type="button" className={btn} aria-label={shown ? 'Next spread' : 'Next page'} onClick={() => turnPdf(1)} disabled={atEnd}>›</button>
       <span className="mx-1 h-4 w-px bg-line" />
       <button type="button" className={btn} aria-label="Zoom out" title="Zoom out" onClick={() => setPdfZoom((zoom ?? 1) / 1.25)}><Icon name="zoomOut" size={15} /></button>
-      <button type="button" className="min-w-12 rounded px-1 py-1 hover:bg-bg" title="Fit to the width of the panel" onClick={() => setPdfFit('width')} aria-label={percent === null ? `Zoom: fit ${fitKind}` : `Zoom ${percent} percent. Click to fit the width`}>{percent === null ? (fitKind === 'page' ? 'Fit page' : 'Fit') : `${percent}%`}</button>
+      <button type="button" className="min-w-12 rounded px-1 py-1 hover:bg-bg" title="Fit to the width of the panel" onClick={() => setPdfFit('width')} aria-label={percent === null ? `Zoom: fit ${fitKind}` : `Zoom ${percent} percent. Click to fit the width`}>{percent === null ? (fitKind === 'page' ? 'Fit page' : fitKind === 'height' ? 'Fit height' : 'Fit') : `${percent}%`}</button>
       <button type="button" className={btn} aria-label="Zoom in" title="Zoom in" onClick={() => setPdfZoom((zoom ?? 1) * 1.25)}><Icon name="zoomIn" size={15} /></button>
+      <button
+        type="button"
+        data-two-toggle
+        className={`${btn} ${twoOn ? 'bg-brand/15 text-ink' : ''}`}
+        aria-pressed={twoOn}
+        aria-label="Two pages side by side"
+        title={twoOn ? 'Back to one page' : 'Two pages side by side, like an open book (the panel goes full screen)'}
+        onClick={() => chooseLayout(source.id, { two: !twoOn })}
+      >
+        <Icon name="openBook" size={15} />
+      </button>
       <ViewMenu sourceId={source.id} />
       <span className="mx-1 h-4 w-px bg-line" />
       <button type="button" className={`${btn} ${tool === 'capture' ? 'bg-brand/15 text-ink' : ''}`} aria-pressed={tool === 'capture'} aria-label="Capture area" title="Take part of a page as a picture, as a new topic (works on scans and handwriting)" disabled={readOnly} onClick={() => setPdfTool(tool === 'capture' ? 'select' : 'capture')}>

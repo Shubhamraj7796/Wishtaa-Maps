@@ -12,7 +12,7 @@ import { installMemoryLocalStorage } from '../../test/memoryStorage'
 import { closeFile, openFile } from '../session'
 import { closedPdfPanel, useEditor } from '../store'
 import { closeAllPdfs, setPdfStore, usePdfjs } from './runtime'
-import { addPdfFile, setPdfPage, setViewOf, showSource, splitPdf } from './actions'
+import { addPdfFile, setPdfPage, setPdfSize, setViewOf, showSource, splitPdf } from './actions'
 import PdfPanel from './PdfPanel'
 
 let t = 1_700_000_000_000
@@ -247,6 +247,113 @@ describe('View menu: zoom', () => {
     openMenu()
     fireEvent.click(screen.getByRole('button', { name: '150%' }))
     expect(st().pdfPanel.zoom).toBe(1.5)
+  })
+})
+
+describe('Two-page view makes room (Part 1)', () => {
+  const size = () => st().pdfPanel.size
+
+  it('choosing Two-page view takes the panel to Full, and Single-page view restores the earlier size', async () => {
+    await open()
+    act(() => setPdfSize('wide'))
+    openMenu()
+    view(/Two-page view/)
+    expect(size()).toBe('full')
+    expect(document.querySelector('[data-pdf-size="full"]')).toBeTruthy()
+    view(/Single-page view/)
+    expect(size()).toBe('wide')
+    expect(st().pdfPanel.widenedFrom).toBeNull()
+  })
+
+  it('a size set by hand after the widening is never overridden', async () => {
+    await open()
+    openMenu()
+    view(/Two-page view/)
+    expect(size()).toBe('full')
+    act(() => setPdfSize('normal')) // the person shrinks it
+    view(/Single-page view/)
+    expect(size()).toBe('normal')
+    // and the other way: a size chosen while Two pages is on is kept
+    view(/Two-page view/)
+    act(() => setPdfSize('wide'))
+    view(/Single-page view/)
+    expect(size()).toBe('wide')
+  })
+
+  it('already Full: nothing to widen and nothing to restore', async () => {
+    await open()
+    act(() => setPdfSize('full'))
+    openMenu()
+    view(/Two-page view/)
+    view(/Single-page view/)
+    expect(size()).toBe('full')
+  })
+
+  it('the book button in the toolbar toggles Two pages the same way', async () => {
+    await open()
+    const toggle = () => screen.getByRole('button', { name: 'Two pages side by side' })
+    expect(toggle().getAttribute('aria-pressed')).toBe('false')
+    fireEvent.click(toggle())
+    expect(scroller().dataset.layout).toBe('two')
+    expect(size()).toBe('full')
+    expect(toggle().getAttribute('aria-pressed')).toBe('true')
+    fireEvent.click(toggle())
+    expect(scroller().dataset.layout).toBe('single')
+    expect(size()).toBe('normal')
+  })
+
+  it('Fit height: the page height fills the pane (a taller scale than Fit page on a wide pane)', async () => {
+    await open()
+    const width = () => Number((document.querySelector('[data-page="1"]') as HTMLElement).style.width.replace('px', ''))
+    openMenu()
+    view(/Fit page/)
+    const page = width()
+    view(/Fit height/)
+    expect(st().pdfPanel.views[id()]?.fit).toBe('height')
+    expect(screen.getByRole('button', { name: /Zoom: fit height/ }).textContent).toBe('Fit height')
+    expect(width()).toBeGreaterThanOrEqual(page)
+  })
+
+  it('Presentation mode is shown but disabled until it is built', async () => {
+    await open()
+    openMenu()
+    const item = screen.getByRole('menuitem', { name: /Presentation mode/ }) as HTMLButtonElement
+    expect(item.disabled).toBe(true)
+  })
+})
+
+describe('the last chosen layout is remembered for new PDFs (Part 1)', () => {
+  it('a new PDF on a wide screen starts in the layout last chosen; Reset to default layout forgets it', async () => {
+    await open()
+    openMenu()
+    view(/Two-page view/)
+    check(/Show cover page/)
+    expect(localStorage.getItem('wishtaamaps:pdf-default-layout')).toContain('"two":true')
+    await act(async () => void (await addPdfFile(await file('Second.pdf'))))
+    const second = Object.values(st().pdf.sources).find((s) => s.name === 'Second.pdf') as { id: string }
+    expect(st().pdfPanel.views[second.id]).toMatchObject({ two: true, cover: true })
+    // Reset: this PDF goes back and nothing is remembered.
+    if (!document.querySelector('[data-view-menu]')) openMenu() // the menu may still be open from the choices above
+    fireEvent.click(screen.getByRole('menuitem', { name: /Reset to default layout/ }))
+    expect(st().pdfPanel.views[second.id]?.two).toBe(false)
+    expect(localStorage.getItem('wishtaamaps:pdf-default-layout')).toBeNull()
+    await act(async () => void (await addPdfFile(await file('Third.pdf'))))
+    const third = Object.values(st().pdf.sources).find((s) => s.name === 'Third.pdf') as { id: string }
+    expect(st().pdfPanel.views[third.id]?.two).toBeUndefined()
+  })
+
+  it('a narrow screen (a phone) keeps one page for new PDFs', async () => {
+    await open()
+    openMenu()
+    view(/Two-page view/)
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 600 })
+    try {
+      await act(async () => void (await addPdfFile(await file('Phone.pdf'))))
+      const phone = Object.values(st().pdf.sources).find((s) => s.name === 'Phone.pdf') as { id: string }
+      expect(st().pdfPanel.views[phone.id]?.two).toBeUndefined()
+    } finally {
+      Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1024 })
+    }
   })
 })
 

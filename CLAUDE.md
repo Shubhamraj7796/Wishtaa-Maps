@@ -45,6 +45,11 @@ values. Only public values (Supabase URL and anon/publishable key, Google client
 ## 6. Finish a part: update `docs/PROJECT_STATE.md`
 (and the relevant feature doc and `CHANGELOG.md`).
 
+## 7. Every new screen must be clean
+Content first, one thin primary bar, floating or on-demand tools, progressive disclosure (rare settings in menus, not on the bar), no
+permanent notice rows. For any large layout change, measure the content area before and after (at 1366x768, tablet landscape and tablet
+portrait) and report the numbers.
+
 ## Working conventions (learned in this project)
 - Before every push: `npx tsc --noEmit`, `npm run lint`, `npx vitest run`. For UI that matters, also the real-browser tests in `e2e/`
   (`npm run e2e:smoke`, `npm run e2e:login`, `npx playwright test e2e/pdf-tabs.spec.ts`).

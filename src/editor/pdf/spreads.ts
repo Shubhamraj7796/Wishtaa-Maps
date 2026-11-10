@@ -89,10 +89,11 @@ export function rowShape(shapes: readonly (PageShape | null)[]): RowShape {
  * The scale (CSS pixels per point) that fits the first row: its whole width (both pages of a spread), or the whole row in the pane.
  * `gutter` is the space at each side and `above` the space above and below.
  */
-export function fitScale(shape: RowShape, kind: 'width' | 'page', paneW: number, paneH: number, gutter: number, above: number): number {
+export function fitScale(shape: RowShape, kind: 'width' | 'page' | 'height', paneW: number, paneH: number, gutter: number, above: number): number {
   const gap = shape.widths.length === 2 ? SPREAD_GAP : 0
   const byWidth = Math.max(1, paneW - gutter * 2 - gap) / Math.max(1, shape.w)
   if (kind === 'width') return byWidth
   const byHeight = Math.max(1, paneH - above * 2) / Math.max(1, shape.h)
+  if (kind === 'height') return byHeight // the height fills the pane; a wide spread may then scroll sideways
   return Math.min(byWidth, byHeight)
 }

@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Two-page view makes room; Fit height; remembered layout (PDF panel)
+- Choosing **Two-page view** (View menu, or the new book button in the toolbar) takes the panel to Full screen so both pages show side by side; choosing Single-page view gives the earlier size back. A size you set by hand is never undone.
+- **Fit height** added to the View menu (the page height fills the pane). **Presentation mode** is listed but disabled until it is built.
+- The last layout you chose (Single or Two pages, cover page, scrolling, right to left, fit) is remembered on this device and used for NEW PDFs on screens at least 900 px wide. **Reset to default layout** in the View menu forgets it and puts the current PDF back to one page.
+
 ### View menu: Two-page view (PDF panel)
 - New **View** menu in the PDF panel and in each Split pane: Single-page or Two-page view (two pages of the same PDF side by side, like an open book), Show cover page (page 1 alone on the right, then 2-3, 4-5...), Enable scrolling (off: one page or spread at a time, with the page buttons and the arrow keys), Right-to-left reading, and Fit width, Fit page, Actual size or a percentage. Remembered per PDF and per device. Pages of different sizes share one height in a spread. A pane narrower than 480 px shows one page and the menu says why. The page buttons step by spread; a "p. N" link opens the spread that has the page. Capture, text selection and markup work on both pages.
 - Escape now closes an open View menu before it ends Capture area.

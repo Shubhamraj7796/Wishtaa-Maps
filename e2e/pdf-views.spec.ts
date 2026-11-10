@@ -166,6 +166,29 @@ test('memory: a 60-page PDF in Two-page view keeps only the pages near the scree
   await context.close()
 })
 
+test('the book button: Two pages side by side in one click, the panel makes room and gives it back', async ({ browser }) => {
+  const context = await browser.newContext({ viewport: { width: 1366, height: 800 }, serviceWorkers: 'block' })
+  const page = await context.newPage()
+  await openMapWithPdf(page, await makePdf())
+  const panel = page.locator('[data-pdf-panel]')
+  await expect(panel).toHaveAttribute('data-pdf-size', 'normal')
+  const toggle = page.getByRole('button', { name: 'Two pages side by side' })
+  await toggle.click()
+  await expect(panel).toHaveAttribute('data-pdf-size', 'full')
+  await expect.poll(() => rows(page).then((r) => r[0])).toBe('1-2')
+  await expect(page.locator('[data-page="2"] canvas')).toBeVisible()
+  await page.screenshot({ path: join(DIR, 'desktop-6-book-button.png') })
+  await toggle.click()
+  await expect(panel).toHaveAttribute('data-pdf-size', 'normal') // the size it had before
+  await expect.poll(() => rows(page).then((r) => r[0])).toBe('1')
+  // Fit height is in the menu, and a size set by hand is never undone.
+  await toggle.click()
+  await page.locator('[data-expand]').click() // full -> normal by hand
+  await toggle.click()
+  await expect(panel).toHaveAttribute('data-pdf-size', 'normal')
+  await context.close()
+})
+
 test('Escape closes the View menu (and nothing else)', async ({ browser }) => {
   const context = await browser.newContext({ viewport: { width: 1366, height: 800 }, serviceWorkers: 'block' })
   const page = await context.newPage()

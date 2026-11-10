@@ -58,6 +58,7 @@ person's own Google Drive. Optional accounts (emailed code, password, Google) ad
 2. Owner: fill the placeholders in `/privacy` and `/terms` (contact email, company/owner name, address, region, retention days, ages, law,
    court), remove the DRAFT box, set `VITE_SUPPORT_EMAIL`, publish the Google consent screen.
 3. Capture, Group C (clips tray as references). Groups A and B are done and live.
+3b. **Done locally (not pushed):** Two-page view auto-widens the panel and restores it, Fit height, book-icon toggle, remembered layout for new PDFs on wide screens, Reset to default layout, Presentation mode shown disabled. Waits for "go live".
 4. PDF booklet view, **Group B** (page-turn styles Slide / Flip / Fade / None, tap edge and swipe, Presentation mode, laser pointer; Flip falls back to Slide if it cannot hold 30 fps). Group A is done (see above); **unpushed commits** wait for the owner's "go live".
 5. Write `docs/pdf-ai-plan.md` (plan only: AI outline from a PDF; requested earlier, not written).
 6. Content-Security-Policy header (needs testing with pdf.js, OCR and Google scripts).

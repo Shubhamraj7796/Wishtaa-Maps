@@ -1,7 +1,7 @@
 import { useEffect, useState, useSyncExternalStore } from 'react'
 import { Icon } from '@/ui/icons'
 import { useEditor } from '../store'
-import { setViewOf } from './actions'
+import { chooseLayout, resetPdfLayout } from './actions'
 import { liveViewOf, subscribeViews, viewsVersion } from './spreadState'
 import { TWO_MIN_PANE, twoNote } from './spreads'
 import { DEFAULT_VIEW } from './workspace'
@@ -21,7 +21,7 @@ export function ViewMenu({ sourceId, compact = false }: { sourceId: string; comp
   const live = liveViewOf(sourceId)
   const two = v.two === true
   const paged = v.paged === true
-  const set = (change: Parameters<typeof setViewOf>[1]) => setViewOf(sourceId, change)
+  const set = (change: Parameters<typeof chooseLayout>[1]) => chooseLayout(sourceId, change)
   const note = twoNote(two, live?.paneW ?? TWO_MIN_PANE)
   const percent = v.zoom === null ? null : Math.round(v.zoom * 100)
 
@@ -83,6 +83,7 @@ export function ViewMenu({ sourceId, compact = false }: { sourceId: string; comp
             <hr className="my-1 border-line" />
             {radio(percent === null && (v.fit ?? 'width') === 'width', 'Fit width', () => set({ zoom: null, fit: 'width' }))}
             {radio(percent === null && v.fit === 'page', 'Fit page', () => set({ zoom: null, fit: 'page' }))}
+            {radio(percent === null && v.fit === 'height', 'Fit height', () => set({ zoom: null, fit: 'height' }), 'The page height fills the pane (a wide spread may then scroll sideways)')}
             {radio(percent === 100, 'Actual size (100%)', () => set({ zoom: 1 }))}
             <div role="group" aria-label="Zoom" className="flex flex-wrap gap-1 px-3 py-1.5">
               {ZOOMS.map((z) => (
@@ -91,6 +92,15 @@ export function ViewMenu({ sourceId, compact = false }: { sourceId: string; comp
                 </button>
               ))}
             </div>
+            <hr className="my-1 border-line" />
+            <button type="button" role="menuitem" aria-disabled="true" disabled data-presentation title="Full screen with the tools hidden: coming soon" className={`${row} cursor-not-allowed opacity-50`}>
+              <span aria-hidden="true" className="w-4" />
+              Presentation mode <span className="text-xs text-muted">(coming soon)</span>
+            </button>
+            <button type="button" role="menuitem" data-reset-layout onClick={() => (resetPdfLayout(sourceId), setOpen(false))} className={row} title="One page, scrolling, fit width for this PDF, and new PDFs start that way again">
+              <span aria-hidden="true" className="w-4" />
+              Reset to default layout
+            </button>
           </div>
         </>
       )}

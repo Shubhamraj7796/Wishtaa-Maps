@@ -22,7 +22,7 @@ export interface SourceView {
   /** Right-to-left reading: the first page of a spread is on the right. */
   rtl?: boolean
   /** What "no zoom" fits: the width of the pane (default) or the whole page or spread. */
-  fit?: 'width' | 'page'
+  fit?: 'width' | 'page' | 'height'
 }
 
 /** The layout choices of a view, only the ones that are set (so old saves and new ones stay small). */
@@ -31,14 +31,15 @@ const layoutOf = (v: SourceView) => ({
   ...(v.cover ? { cover: true } : {}),
   ...(v.paged ? { paged: true } : {}),
   ...(v.rtl ? { rtl: true } : {}),
-  ...(v.fit === 'page' ? { fit: 'page' as const } : {}),
+  ...(v.fit === 'page' || v.fit === 'height' ? { fit: v.fit } : {}),
 })
-const layoutFrom = (v: Partial<SourceView>) => ({
+/** The valid layout choices out of anything (a saved file, a stored default): only the ones that are set. */
+export const layoutFrom = (v: Partial<SourceView>): Pick<SourceView, 'two' | 'cover' | 'paged' | 'rtl' | 'fit'> => ({
   ...(v.two === true ? { two: true } : {}),
   ...(v.cover === true ? { cover: true } : {}),
   ...(v.paged === true ? { paged: true } : {}),
   ...(v.rtl === true ? { rtl: true } : {}),
-  ...(v.fit === 'page' ? { fit: 'page' as const } : {}),
+  ...(v.fit === 'page' || v.fit === 'height' ? { fit: v.fit } : {}),
 })
 
 export const DEFAULT_VIEW: SourceView = { page: 1, zoom: null }
