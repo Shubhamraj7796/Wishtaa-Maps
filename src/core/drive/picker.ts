@@ -1,4 +1,4 @@
-import { DriveError } from './errors'
+import { DriveError, PickerUnavailableError, type PickerKind } from './errors'
 
 export interface PickedFile {
   id: string
@@ -13,7 +13,7 @@ export interface PickerBuilder {
   setCallback(cb: (data: PickerResponse) => void): PickerBuilder
   setTitle(t: string): PickerBuilder
   enableFeature(f: unknown): PickerBuilder
-  build(): { setVisible(v: boolean): void }
+  build(): { setVisible(v: boolean): void; dispose?(): void }
 }
 export interface PickerResponse {
   action: string
@@ -32,34 +32,97 @@ export interface PickerApi {
   DocsView: new (viewId?: unknown) => DocsViewApi
   ViewId: { DOCS: unknown; FOLDERS: unknown; RECENTLY_PICKED?: unknown }
   Feature: { MULTISELECT_ENABLED: unknown; SUPPORT_DRIVES?: unknown }
-  Action: { PICKED: string; CANCEL: string }
+  Action: { PICKED: string; CANCEL: string; LOADED?: string }
 }
 
 const SCRIPT = 'https://apis.google.com/js/api.js'
 let apiPromise: Promise<PickerApi> | null = null
 
-function loadPicker(): Promise<PickerApi> {
+/** How long the picker has to show itself (its script, then its window) before the app says it cannot open here. */
+export const PICKER_WAIT_MS = 15_000
+
+/** For tests: forget a picker that was loaded before. */
+export const resetPickerLoader = () => void (apiPromise = null)
+
+function loadPicker(which: PickerKind): Promise<PickerApi> {
   apiPromise ??= new Promise<PickerApi>((resolve, reject) => {
-    const w = window as unknown as { gapi?: { load(name: string, cb: () => void): void }; google?: { picker?: PickerApi } }
+    const w = window as unknown as { gapi?: { load(name: string, cb: unknown): void }; google?: { picker?: PickerApi } }
+    const timer = setTimeout(() => {
+      apiPromise = null
+      reject(new PickerUnavailableError('script-blocked', which))
+    }, PICKER_WAIT_MS)
+    const fail = (e: Error) => {
+      clearTimeout(timer)
+      apiPromise = null
+      reject(e)
+    }
     const finish = () => {
-      w.gapi?.load('picker', () => {
-        const p = w.google?.picker
-        if (p) resolve(p)
-        else reject(new DriveError('other', 'Google Picker did not load.'))
-      })
+      try {
+        w.gapi?.load('picker', {
+          callback: () => {
+            const p = w.google?.picker
+            if (p) {
+              clearTimeout(timer)
+              resolve(p)
+            } else fail(new PickerUnavailableError('script-blocked', which))
+          },
+          onerror: () => fail(new PickerUnavailableError('script-blocked', which)),
+        })
+      } catch {
+        fail(new PickerUnavailableError('script-blocked', which))
+      }
     }
     if (w.gapi) return finish()
     const s = document.createElement('script')
     s.src = SCRIPT
     s.async = true
     s.onload = finish
-    s.onerror = () => {
-      apiPromise = null
-      reject(new DriveError('offline', 'Could not reach Google. Check your connection and try again.'))
-    }
+    s.onerror = () => fail(typeof navigator !== 'undefined' && navigator.onLine === false ? new DriveError('offline', 'Could not reach Google. Check your connection and try again.') : new PickerUnavailableError('script-blocked', which))
     document.head.appendChild(s)
   })
   return apiPromise
+}
+
+/**
+ * Shows a built picker and waits for the answer. Picking and cancelling are answers; a picker that never reports "loaded" within
+ * PICKER_WAIT_MS (a blocked frame, an error page, a sign-in screen the app cannot see) is a failure: it is hidden and disposed so
+ * nothing of Google's is left on screen, and anything it reports later is ignored.
+ */
+function present<T>(picker: PickerApi, which: PickerKind, builder: PickerBuilder, onData: (d: PickerResponse) => { value: T } | null): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    let done = false
+    let handle: ReturnType<PickerBuilder['build']> | null = null
+    const timer = setTimeout(() => stop(new PickerUnavailableError('never-loaded', which)), PICKER_WAIT_MS)
+    const stop = (error: Error | null, value?: T) => {
+      if (done) return
+      done = true
+      clearTimeout(timer)
+      if (error) {
+        try {
+          handle?.setVisible(false)
+          handle?.dispose?.()
+        } catch {
+          /* already gone */
+        }
+        reject(error)
+      } else resolve(value as T)
+    }
+    builder.setCallback((data) => {
+      if (done) return // a late "loaded" (or anything) after the notice was shown changes nothing
+      if (data.action === (picker.Action.LOADED ?? 'loaded')) {
+        clearTimeout(timer) // it opened: from here the person takes as long as they like
+        return
+      }
+      const r = onData(data)
+      if (r) stop(null, r.value)
+    })
+    try {
+      handle = builder.build()
+      handle.setVisible(true)
+    } catch {
+      stop(new PickerUnavailableError('start-failed', which))
+    }
+  })
 }
 
 /** The Google Cloud project number is the first part of the OAuth client id. */
@@ -73,25 +136,17 @@ export async function pickDriveFolder(opts: { token: string; apiKey: string | un
   if (!opts.apiKey || !opts.clientId) {
     throw new DriveError('config', 'Choosing a folder needs a Google API key. Add VITE_GOOGLE_API_KEY (see the setup notes).')
   }
-  const picker = await loadPicker()
-  return new Promise((resolve) => {
+  const picker = await loadPicker('folder')
+  {
     const view = new picker.DocsView(picker.ViewId.FOLDERS)
     view.setIncludeFolders(true)
     view.setSelectFolderEnabled(true)
     view.setMimeTypes('application/vnd.google-apps.folder')
-    new picker.PickerBuilder()
-      .addView(view)
-      .setOAuthToken(opts.token)
-      .setDeveloperKey(opts.apiKey as string)
-      .setAppId(projectNumber(opts.clientId as string))
-      .setTitle('Choose a folder in Google Drive')
-      .setCallback((data) => {
-        if (data.action === picker.Action.PICKED) resolve(data.docs?.[0] ? { id: data.docs[0].id, name: data.docs[0].name } : null)
-        else if (data.action === picker.Action.CANCEL) resolve(null)
-      })
-      .build()
-      .setVisible(true)
-  })
+    const builder = new picker.PickerBuilder().addView(view).setOAuthToken(opts.token).setDeveloperKey(opts.apiKey as string).setAppId(projectNumber(opts.clientId as string)).setTitle('Choose a folder in Google Drive')
+    return present<PickedFile | null>(picker, 'folder', builder, (data) =>
+      data.action === picker.Action.PICKED ? { value: data.docs?.[0] ? { id: data.docs[0].id, name: data.docs[0].name } : null } : data.action === picker.Action.CANCEL ? { value: null } : null
+    )
+  }
 }
 
 export interface OpenedDoc {
@@ -113,8 +168,8 @@ export async function pickOpenableFiles(opts: { token: string; apiKey: string | 
   if (!opts.apiKey || !opts.clientId) {
     throw new DriveError('config', 'Choosing files from Drive needs a Google API key. Add VITE_GOOGLE_API_KEY (see the setup notes).')
   }
-  const picker = api ?? (await loadPicker())
-  return new Promise((resolve) => {
+  const picker = api ?? (await loadPicker('open-map'))
+  {
     // No text query: it would stop folder browsing.
     const view = (viewId: unknown, label: string, setup?: (v: DocsViewApi) => void) => {
       const v = new picker.DocsView(viewId)
@@ -131,18 +186,11 @@ export async function pickOpenableFiles(opts: { token: string; apiKey: string | 
     builder.addView(view(picker.ViewId.DOCS, 'Shared drives', (v) => v.setEnableDrives?.(true)))
     builder.enableFeature(picker.Feature.MULTISELECT_ENABLED)
     if (picker.Feature.SUPPORT_DRIVES) builder.enableFeature(picker.Feature.SUPPORT_DRIVES)
-    builder
-      .setOAuthToken(opts.token)
-      .setDeveloperKey(opts.apiKey as string)
-      .setAppId(projectNumber(opts.clientId as string))
-      .setTitle(OPEN_PICKER_TITLE)
-      .setCallback((data) => {
-        if (data.action === picker.Action.PICKED) resolve((data.docs ?? []).map((d) => ({ id: d.id, name: d.name, mimeType: d.mimeType, sizeBytes: d.sizeBytes })))
-        else if (data.action === picker.Action.CANCEL) resolve([])
-      })
-      .build()
-      .setVisible(true)
-  })
+    builder.setOAuthToken(opts.token).setDeveloperKey(opts.apiKey as string).setAppId(projectNumber(opts.clientId as string)).setTitle(OPEN_PICKER_TITLE)
+    return present<OpenedDoc[]>(picker, 'open-map', builder, (data) =>
+      data.action === picker.Action.PICKED ? { value: (data.docs ?? []).map((d) => ({ id: d.id, name: d.name, mimeType: d.mimeType, sizeBytes: d.sizeBytes })) } : data.action === picker.Action.CANCEL ? { value: [] } : null
+    )
+  }
 }
 
 /**
@@ -155,8 +203,8 @@ export async function pickPdfFiles(opts: { token: string; apiKey: string | undef
   if (!opts.apiKey || !opts.clientId) {
     throw new DriveError('config', 'Choosing a PDF from Drive needs a Google API key. Add VITE_GOOGLE_API_KEY (see the setup notes).')
   }
-  const picker = api ?? (await loadPicker())
-  return new Promise((resolve) => {
+  const picker = api ?? (await loadPicker('pdf'))
+  {
     const view = (viewId: unknown, label: string, setup?: (v: DocsViewApi) => void, pdfOnly = true) => {
       const v = new picker.DocsView(viewId)
       if (pdfOnly) v.setMimeTypes('application/pdf')
@@ -174,16 +222,9 @@ export async function pickPdfFiles(opts: { token: string; apiKey: string | undef
     builder.addView(view(picker.ViewId.DOCS, 'Any file (.pdf)', undefined, false))
     builder.enableFeature(picker.Feature.MULTISELECT_ENABLED)
     if (picker.Feature.SUPPORT_DRIVES) builder.enableFeature(picker.Feature.SUPPORT_DRIVES)
-    builder
-      .setOAuthToken(opts.token)
-      .setDeveloperKey(opts.apiKey as string)
-      .setAppId(projectNumber(opts.clientId as string))
-      .setTitle('Insert a PDF from Google Drive')
-      .setCallback((data) => {
-        if (data.action === picker.Action.PICKED) resolve((data.docs ?? []).map((d) => ({ id: d.id, name: d.name, mimeType: d.mimeType, sizeBytes: d.sizeBytes })))
-        else if (data.action === picker.Action.CANCEL) resolve([])
-      })
-      .build()
-      .setVisible(true)
-  })
+    builder.setOAuthToken(opts.token).setDeveloperKey(opts.apiKey as string).setAppId(projectNumber(opts.clientId as string)).setTitle('Insert a PDF from Google Drive')
+    return present<OpenedDoc[]>(picker, 'pdf', builder, (data) =>
+      data.action === picker.Action.PICKED ? { value: (data.docs ?? []).map((d) => ({ id: d.id, name: d.name, mimeType: d.mimeType, sizeBytes: d.sizeBytes })) } : data.action === picker.Action.CANCEL ? { value: [] } : null
+    )
+  }
 }

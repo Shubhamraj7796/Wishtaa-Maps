@@ -116,6 +116,9 @@ reached, the new file is kept in this browser and you can retry or keep it there
 | "Choosing files from Drive needs a Google API key" | `VITE_GOOGLE_API_KEY` missing |
 | Picker opens blank or errors | Picker API not enabled, or the key's website restriction does not include the site |
 | Sign-in window closes immediately | Pop-up blocker: allow pop-ups for the site |
+| The app says "Google Drive could not open in this browser" | Browsers that block third-party cookies or referrers (for example Brave) cannot use the Google Picker; the app tells the user to switch browser. |
+
+The notice appears when the picker's script is blocked, it cannot start, or it does not report that it opened within 15 seconds (`PICKER_WAIT_MS`). It offers Copy link, Try again, Choose a file from this device (not for the save-to folder picker) and Copy details (which picker, reason, browser, app version; no file names or tokens). Cancelling the picker never shows it.
 
 ## PDFs from and to Drive
 

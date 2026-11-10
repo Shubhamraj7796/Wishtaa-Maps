@@ -10,6 +10,7 @@ import { useEditor, type PdfPanelState } from '../store'
 import { driveAuth, driveClient, driveConfig } from '@/app/drive'
 import { pickPdfFiles } from '@/core/drive/picker'
 import { askPassword } from './password'
+import { withPickerNotice } from '@/app/pickerNotice'
 import { rememberSize, type PanelSize } from './layout'
 import { isShape, loadPrefs, sanitizeStyle, savePrefs, type Shape as PanelShape, type StyleKey, type ToolStyle } from './toolPrefs'
 import { bumpDevice, closePdf, loadPdfjs, pdfStore, rememberPassword, trimOpenPdfs } from './runtime'
@@ -287,7 +288,7 @@ export async function openPdfFromDrive(): Promise<PdfSource | null> {
   try {
     if (!driveAuth.ready()) await driveAuth.connect()
     const token = await driveAuth.getToken()
-    const docs = await pickPdfFiles({ token, apiKey: driveConfig.apiKey, clientId: driveConfig.clientId })
+    const docs = await withPickerNotice(() => pickPdfFiles({ token, apiKey: driveConfig.apiKey, clientId: driveConfig.clientId }), [])
     for (const doc of docs) {
       if (doc.sizeBytes && doc.sizeBytes > PDF_LIMITS.maxBytes) {
         showNotice(`"${doc.name}" is larger than ${Math.round(PDF_LIMITS.maxBytes / 1048576)} MB, which is more than we open.`)

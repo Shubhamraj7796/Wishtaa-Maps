@@ -7,6 +7,7 @@ import type { ConflictChoice, DriveConflict } from '@/core/drive/repository'
 import type { FileRecord } from '@/core/files/types'
 import { currentFileId, reopenFile } from '@/editor/session'
 import { useAuthUi } from './authUi'
+import { withPickerNotice } from './pickerNotice'
 import { classifyDriveProblem, connectDrive, type ConnectOptions } from './driveConnect'
 import { driveAuth, driveConfig } from './drive'
 import { useFiles } from './FilesContext'
@@ -82,7 +83,7 @@ export function useDriveActions() {
         run(async () => {
           if (!(await ensureConnected())) return null
           const token = await driveAuth.getToken()
-          const docs = await pickOpenableFiles({ token, apiKey: driveConfig.apiKey, clientId: driveConfig.clientId })
+          const docs = await withPickerNotice(() => pickOpenableFiles({ token, apiKey: driveConfig.apiKey, clientId: driveConfig.clientId }), [])
           if (!docs.length) return null
           setDialog({ kind: 'driveOpen', docs })
           return docs
@@ -99,7 +100,7 @@ export function useDriveActions() {
         run(async (): Promise<DriveFolderRef | null> => {
           if (!(await ensureConnected())) return null
           const token = await driveAuth.getToken()
-          const picked = await pickDriveFolder({ token, apiKey: driveConfig.apiKey, clientId: driveConfig.clientId })
+          const picked = await withPickerNotice(() => pickDriveFolder({ token, apiKey: driveConfig.apiKey, clientId: driveConfig.clientId }), null)
           return picked ? { id: picked.id, name: picked.name } : null
         }),
       /** Brings a Drive file into this browser and moves the Drive copy to Drive's bin. */

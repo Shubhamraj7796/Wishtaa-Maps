@@ -1,10 +1,14 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { expectedDriveEmail } from '@/core/drive/linkAccount'
 import { Cloud } from '../icons'
 import { Modal, buttonPrimary, buttonSecondary } from '../Modal'
 import { useDriveActions, useDriveAuth } from '../useDrive'
 import { auth, useAuth } from '../account'
 import { driveProblemDetails, supportEmail, type DriveProblem } from '../driveConnect'
+import { pickPdfFromDevice } from '@/editor/pdf/actions'
+import type { PickerFailure, PickerKind } from '@/core/drive/errors'
+import { useImportEmmx } from '../importFlow'
+import { pickerDetails, type PickerChoice } from '../pickerNotice'
 import { Alert } from './parts'
 
 const same = (a: string | null | undefined, b: string | null | undefined) => !!a && !!b && a.trim().toLowerCase() === b.trim().toLowerCase()
@@ -174,6 +178,54 @@ export function DriveProblemDialog({ problem, expected, onClose }: { problem: Dr
         <button type="button" className={buttonSecondary} onClick={onClose}>Close</button>
         <button type="button" className={buttonPrimary} disabled={busy} onClick={() => void retry()}>Try again</button>
       </div>
+    </Modal>
+  )
+}
+
+/**
+ * Some browsers (Brave, or any that blocks third-party cookies or frames) cannot show Google's file picker. One calm notice: copy the
+ * link to open elsewhere, try again, or choose a file from this device instead (not offered for the save-to folder picker).
+ */
+export function PickerProblemDialog({ which, reason, answer, onClose }: { which: PickerKind; reason: PickerFailure; answer: (c: PickerChoice) => void; onClose: () => void }) {
+  const importer = useImportEmmx()
+  const [linkCopied, setLinkCopied] = useState(false)
+  const [detailsCopied, setDetailsCopied] = useState(false)
+  const giveUp = useCallback(() => {
+    answer('close') // Escape, the x or a click outside: the picker's caller stops waiting
+    onClose()
+  }, [answer, onClose])
+  const choose = (c: PickerChoice, then?: () => void) => {
+    then?.() // the device chooser must open from this click
+    answer(c)
+    onClose()
+  }
+  const copy = async (text: string, done: () => void) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      done()
+    } catch {
+      /* clipboard blocked */
+    }
+  }
+  return (
+    <Modal title="Google Drive could not open in this browser" onClose={giveUp}>
+      <p className="text-sm">Some browsers (for example Brave) block the Google file picker. Please open Wishtaa Maps in Chrome, Edge or Firefox to use Google Drive, or allow cookies for this site.</p>
+      <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
+        <button type="button" className={buttonSecondary} onClick={() => void copy(location.href, () => setLinkCopied(true))}>
+          {linkCopied ? 'Link copied' : 'Copy link to open in another browser'}
+        </button>
+        {which !== 'folder' && (
+          <button type="button" className={buttonSecondary} onClick={() => choose('device', which === 'pdf' ? pickPdfFromDevice : () => importer.pick({ source: 'home' }))}>
+            Choose a file from this device
+          </button>
+        )}
+        <button type="button" className={buttonPrimary} onClick={() => choose('retry')}>Try again</button>
+      </div>
+      <p className="mt-3 text-xs">
+        <button type="button" className="text-muted underline underline-offset-2 hover:text-ink" onClick={() => void pickerDetails(which, reason).then((t) => copy(t, () => setDetailsCopied(true)))}>
+          {detailsCopied ? 'Details copied' : 'Copy details'}
+        </button>
+      </p>
     </Modal>
   )
 }

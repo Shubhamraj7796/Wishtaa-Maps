@@ -5,7 +5,7 @@ import { useFiles } from '../FilesContext'
 import { Info, X } from '../icons'
 import { Modal, buttonPrimary, buttonSecondary } from '../Modal'
 import { useDriveActions } from '../useDrive'
-import { DriveAllowDialog, DriveChooseDialog, DriveProblemDialog } from './DriveDialogs'
+import { DriveAllowDialog, DriveChooseDialog, DriveProblemDialog, PickerProblemDialog } from './DriveDialogs'
 import { Alert } from './parts'
 import { SignInDialog } from './SignInDialog'
 
@@ -102,6 +102,7 @@ export function AuthHost() {
   if (dialog.kind === 'guest-files') return <GuestFilesDialog count={dialog.count} onClose={close} />
   if (dialog.kind === 'drive-allow') return <DriveAllowDialog email={dialog.email} onClose={close} />
   if (dialog.kind === 'drive-choose') return <DriveChooseDialog onClose={close} />
+  if (dialog.kind === 'picker-problem') return <PickerProblemDialog which={dialog.which} reason={dialog.reason} answer={dialog.answer} onClose={close} />
   if (dialog.kind === 'drive-problem') return <DriveProblemDialog problem={dialog.problem} expected={dialog.expected} onClose={close} />
   return null
 }

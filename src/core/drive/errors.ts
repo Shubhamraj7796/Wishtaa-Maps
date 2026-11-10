@@ -8,6 +8,7 @@ export type DriveErrorKind =
   | 'conflict'
   | 'config' // client id / API key not set up
   | 'account' // the Google account that was chosen is not the one the person signed in with (or could not be read)
+  | 'picker' // Google's file picker did not open in this browser (blocked script, frame or cookies)
   | 'popup' // the browser would not open Google's window without a click (a quiet renewal had to wait for one)
   | 'other'
 
@@ -54,5 +55,16 @@ export class DriveAccountError extends DriveError {
         : `Could not confirm which Google account this Drive belongs to. Please try again with ${expected}.`
     )
     this.name = 'DriveAccountError'
+  }
+}
+
+export type PickerKind = 'open-map' | 'folder' | 'pdf'
+export type PickerFailure = 'script-blocked' | 'never-loaded' | 'start-failed'
+
+/** Google's file picker could not be shown (some browsers, such as Brave, block it by design). Cancelling is NOT this. */
+export class PickerUnavailableError extends DriveError {
+  constructor(public readonly reason: PickerFailure, public readonly which: PickerKind) {
+    super('picker', 'Google Drive could not open in this browser.', undefined, reason)
+    this.name = 'PickerUnavailableError'
   }
 }

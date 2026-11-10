@@ -1,6 +1,6 @@
 # Wishtaa Maps: project state
 
-Last updated: 2026-11-10, after commit `7ea3c15` (PDF panel part 1). Built from the code, `git log` and `docs/`. Anything not checked is
+Last updated: 2026-11-10, after the Google-picker failure notice (on top of `7ea3c15`, PDF panel part 1). Built from the code, `git log` and `docs/`. Anything not checked is
 marked **unverified**. Rules for working on this project: `CLAUDE.md`.
 
 ## The app in two lines
@@ -34,6 +34,7 @@ person's own Google Drive. Optional accounts (emailed code, password, Google) ad
 - **PDF panel:** viewer (virtualised pages), text to topics, "p. N" source badges, capture area, markup (highlight, underline, strike, pen,
   text, shapes, whiteout, links), page rotate/hide, export with markup, Normal/Wide/Full size with draggable divider, floating toolbar,
   Insert-menu PDF and its own Drive picker, password prompt, **tabs and split view** (part 1).
+- **Google picker failure notice:** when the picker is blocked, cannot start or does not open within 15 s, one notice (copy link, try again, choose from device, copy details) instead of a hang; cancel never shows it (unit and component tests with mocked pickers).
 - **App shell:** installable PWA, offline start, Android share target for pictures, update bar, deploy-skew recovery (a stale tab recovers
   once), production smoke test.
 - **Accounts (logic and UI against mocks and a real Postgres engine):** login dialog, code/password/Google, reset, account page, sign-out and
@@ -46,6 +47,7 @@ person's own Google Drive. Optional accounts (emailed code, password, Google) ad
   consent screen behaviour (blocked/not a test user), the Drive token handed over at sign-in, silent renewal over hours.
 - **Two real accounts on one browser** (sign-out / user-switch clean-up has only been tested with mocks).
 - Safari and Firefox (only Chromium was used for real-browser tests).
+- **The picker notice in a real Brave or a browser with third-party cookies blocked** (only mocked pickers were tried), and that Google's "loaded" event arrives in real use as assumed.
 
 ## Open tasks, in priority order
 1. Owner: run `0003_accounts.sql` and finish the dashboard checklist in `docs/auth-setup.md`; then test sign-in for real.
