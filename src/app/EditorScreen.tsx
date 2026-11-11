@@ -17,6 +17,7 @@ import { SettingsPanel } from '@/editor/ui/SettingsPanel'
 import { InsertMenu } from '@/editor/ui/InsertMenu'
 import { ObjectBar } from '@/editor/ui/ObjectBar'
 import { OutlineView } from '@/editor/ui/OutlineView'
+import { ItemsHost } from '@/editor/items/ItemsHost'
 import { CommandPalette, ContextMenu, NoticeToast, SearchBar, ShortcutSheet } from '@/editor/ui/Overlays'
 import { QuickToolbar } from '@/editor/ui/QuickToolbar'
 import { ReadModeSwitch } from '@/editor/ui/ReadModeSwitch'
@@ -252,6 +253,7 @@ function Editor({ file }: { file: FileRecord }) {
           <CommandPalette />
           <ShortcutSheet />
           <ContextMenu />
+          <ItemsHost />
           <Lightbox />
           <OcrDialog />
           <NoticeToast />

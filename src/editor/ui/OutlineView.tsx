@@ -10,6 +10,7 @@ import type { TopicImage } from '@/core/model/topic'
 import { buildIndex, childrenOf } from '@/core/model/tree'
 import { computeNumbers } from '@/core/numbering'
 import { Icon } from '@/ui/icons'
+import { NotesChip } from '../items/NotesChip'
 import { selectOnly, setOutlineZoom, toggleFold } from '../actions'
 import { showPreview } from '../content'
 import { noteViewportActivity, removeImage, replaceImage, useImageUrl, usePictureColor, useUpgrade, useViewMoving } from '../images'
@@ -183,6 +184,7 @@ const OutlineRow = memo(function OutlineRow({ row, top, height, text, image, box
           className="min-w-0 flex-1 bg-transparent py-1 text-sm outline-none placeholder:italic placeholder:text-muted"
         />
         {source && <SourceBadge source={source} />}
+        <NotesChip id={row.id} size={16} className="h-7 min-w-7 justify-center text-xs text-muted hover:text-ink [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:min-w-11" />
         {selected && !readOnly && (
           <button
             type="button"

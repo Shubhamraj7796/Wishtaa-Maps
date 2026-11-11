@@ -87,4 +87,12 @@ export interface SceneOptions {
   numbering?: boolean
   /** Shape a topic will be drawn with (affects its size). */
   shapeOf?: (t: TopicData, depth: number) => Shape
+  /** How many notes and open tasks each topic has beyond the flags stored on the topic (they decide the width of the badge row). */
+  itemCounts?: Record<string, ItemCount>
+}
+
+/** The notes of a topic (the first one counts) and its open tasks of their own. */
+export interface ItemCount {
+  notes: number
+  tasks: number
 }

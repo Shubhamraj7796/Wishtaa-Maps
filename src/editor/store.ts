@@ -10,6 +10,8 @@ import { emptyObjects, type MapObjects, type ObjectRef } from '@/core/model/obje
 import type { Corner } from '@/core/images/resize'
 import type { TopicStyle } from '@/core/model/types'
 import type { TopicMap } from '@/core/model/tree'
+import type { NoteItem } from '@/core/model/notes'
+import type { ItemCount } from '@/core/layout/types'
 import { DEFAULT_SETTINGS, type MapSettings } from '@/core/settings'
 
 export interface Viewport {
@@ -183,6 +185,10 @@ export interface EditorState {
   fileId: string | null
   fileType: 'map' | 'kb' | null
   topics: TopicMap
+  /** The notes of the open map beyond each topic's first one. */
+  notes: Record<string, NoteItem>
+  /** How many notes and open tasks each topic has (only topics with some). */
+  itemCounts: Record<string, ItemCount>
   rootId: string
   selected: string[]
   editingId: string | null
@@ -288,6 +294,8 @@ export const useEditor = create<EditorState>(() => ({
   fileId: null,
   fileType: null,
   topics: {},
+  notes: {},
+  itemCounts: {},
   rootId: '',
   selected: [],
   editingId: null,

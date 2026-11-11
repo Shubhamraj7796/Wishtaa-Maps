@@ -4,7 +4,8 @@ import { buildFileIndex, referencedIds } from '@/core/files/indexer'
 import { makeThumbnail } from '@/core/files/thumbnail'
 import type { FileRecord, FileRepository, SaveMeta } from '@/core/files/types'
 import { buildScene } from '@/core/layout/engine'
-import { ensureRoot, snapshotObjects, snapshotPdf, snapshotTopics } from '@/core/model/doc'
+import { ensureRoot, snapshotNotes, snapshotObjects, snapshotPdf, snapshotTopics } from '@/core/model/doc'
+import { itemCountsOf, sameCounts } from '@/core/model/itemCounts'
 import { OBJECT_COLLECTION } from '@/core/model/objects'
 import { encodeDoc, fromBase64 } from '@/core/persistence'
 import { snapshotSettings } from '@/core/settings'
@@ -35,7 +36,7 @@ export function buildSaveMeta(fileId: string): SaveMeta {
   } catch {
     /* a thumbnail is a nicety; never block saving on it */
   }
-  return { thumbnail, imageIds, attachmentIds, topicCount: Object.keys(topics).length, index: buildFileIndex(fileId, topics) }
+  return { thumbnail, imageIds, attachmentIds, topicCount: Object.keys(topics).length, index: buildFileIndex(fileId, topics, useEditor.getState().notes) }
 }
 
 /**
@@ -219,6 +220,8 @@ async function doOpen(fileId: string, repo: FileRepository, opts: OpenOptions = 
     fileId,
     fileType: file.type === 'kb' ? 'kb' : 'map',
     topics: snapshotTopics(mapDoc),
+    notes: snapshotNotes(mapDoc),
+    itemCounts: itemCountsOf(snapshotTopics(mapDoc), snapshotNotes(mapDoc)),
     rootId,
     selected: [rootId],
     title: file.name,
@@ -278,6 +281,18 @@ async function doOpen(fileId: string, repo: FileRepository, opts: OpenOptions = 
   mapDoc.topics.observe(onTopics)
   disposers.push(() => mapDoc.topics.unobserve(onTopics))
   watch(mapDoc.settings, () => useEditor.setState({ settings: snapshotSettings(mapDoc) }))
+  // The counts on the topics' notes and tasks icons follow the topics (the first note) and the notes of their own.
+  const syncItems = () => {
+    const st = useEditor.getState()
+    const counts = itemCountsOf(st.topics, st.notes)
+    if (!sameCounts(st.itemCounts, counts)) useEditor.setState({ itemCounts: counts })
+  }
+  watch(mapDoc.notes, () => {
+    useEditor.setState({ notes: snapshotNotes(mapDoc) })
+    syncItems()
+  })
+  mapDoc.topics.observe(syncItems)
+  disposers.push(() => mapDoc.topics.unobserve(syncItems))
   const syncObjects = () => {
     const objects = snapshotObjects(mapDoc)
     const sel = useEditor.getState().selectedObject

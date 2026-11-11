@@ -6,7 +6,6 @@ import type { Shape } from '@/core/model/types'
 import { optsOfLook, shapeGeometry, textArea } from '@/core/shapes'
 import { ShapePaint } from '@/ui/ShapePaint'
 import { readableText } from '@/core/theme/color'
-import { noteText } from '@/core/sanitize'
 import { tagColor } from '@/core/settings'
 import { clampTopicWidth, resolveLook, type ResolvedTheme } from '@/core/theme/resolve'
 import { Icon } from '@/ui/icons'
@@ -15,6 +14,7 @@ import { followLink, openTab, toggleTaskDone } from '../content'
 import { levelFor, whileMoving } from '@/core/images/lod'
 import { commitImageSize, removeImage, setImageLive, useImageUrl, usePictureColor, useUpgrade, useViewMoving } from '../images'
 import { useEditor, type ImageLive } from '../store'
+import { NotesChip } from '../items/NotesChip'
 import { Formula } from '../ui/Formula'
 import { MarkBadge } from '../ui/MarkBadge'
 import { SourceBadge } from '../pdf/SourceBadge'
@@ -246,7 +246,9 @@ export const TopicView = memo(function TopicView(p: TopicViewProps) {
   const latex = topic.latex?.trim() ?? ''
   const table = topic.table?.length ? topic.table : null
   const attachments = topic.attachments ?? []
-  const hasNote = noteText(topic.note) !== ''
+  // The notes icon (with a count) shows when the topic has a note: its first one or others added to it.
+  const notesN = useEditor((s) => s.itemCounts[box.id]?.notes ?? 0)
+  const hasNote = notesN > 0
   const hasMeta = tags.length > 0 || !!topic.task || !!topic.link || attachments.length > 0 || hasNote
   const hasTitle = p.editing || topic.text.trim().length > 0 || p.number !== '' || marks.length > 0
   const extra = !!inline || !!latex || !!table || hasMeta
@@ -345,17 +347,7 @@ export const TopicView = memo(function TopicView(p: TopicViewProps) {
               {attachments.length > 1 && <span>{attachments.length}</span>}
             </Mini>
           )}
-          {hasNote && (
-            <Mini
-              label="Open note"
-              onClick={() => {
-                selectOnly(box.id)
-                openTab('notes')
-              }}
-            >
-              <Icon name="notes" size={14} />
-            </Mini>
-          )}
+          {hasNote && <NotesChip id={box.id} stop className="h-[18px]" />}
         </div>
       )}
     </>

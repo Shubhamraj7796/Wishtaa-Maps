@@ -7,7 +7,7 @@ import { fitBox, innerWidth } from '../shapes'
 import { computeNumbers } from '../numbering'
 import { noteText } from '../sanitize'
 import { layoutDef, type LayoutDef } from './catalog'
-import type { ConnectorKind, Decor, LaidOut, Rect, Scene, SceneEdge, SceneOptions, Side } from './types'
+import type { ConnectorKind, Decor, ItemCount, LaidOut, Rect, Scene, SceneEdge, SceneOptions, Side } from './types'
 
 export type { ConnectorKind, Decor, LaidOut, Rect, Scene, SceneEdge, SceneOptions, Side }
 
@@ -70,13 +70,16 @@ function tableDims(table: string[][] | null | undefined): { w: number; h: number
 }
 
 /** Width of the small badge row (tags, task, link, attachments, note) under a topic's text. */
-export function metaRowWidth(t: TopicData): number {
+export function metaRowWidth(t: TopicData, count?: ItemCount): number {
   let w = 0
   for (const tag of t.tags ?? []) w += tag.length * 6.2 + 20
   if (t.task) w += t.task.dueDate ? 92 : 30
   if (t.link) w += 26
   if (t.attachments?.length) w += 26
-  if (noteText(t.note)) w += 26
+  // The notes badge shows a count when there are several, so it is a little wider then.
+  const notes = count ? count.notes : noteText(t.note) ? 1 : 0
+  if (notes > 0) w += notes > 1 ? 34 : 26
+  if (count && count.tasks > 0) w += 34
   return w
 }
 
@@ -84,7 +87,7 @@ export function metaRowWidth(t: TopicData): number {
  * Size of a topic box. Everything a topic can hold is accounted for: text (with its number prefix and marks), an inline
  * note, a formula, a table, a badge row and a picture in any position. Deterministic: no DOM measuring.
  */
-export function measureTopic(t: TopicData, depth: number, shape: Shape = 'rounded', prefix = ''): Size {
+export function measureTopic(t: TopicData, depth: number, shape: Shape = 'rounded', prefix = '', count?: ItemCount): Size {
   const style = t.style
   const image = t.image
   const big = depth === 0
@@ -117,7 +120,7 @@ export function measureTopic(t: TopicData, depth: number, shape: Shape = 'rounde
   if (t.latex?.trim()) rows.push({ w: Math.min(340, 40 + t.latex.length * 7) + PAD_X, h: 36 })
   const table = tableDims(t.table)
   if (table) rows.push({ w: table.w + PAD_X, h: table.h })
-  const meta = metaRowWidth(t)
+  const meta = metaRowWidth(t, count)
   if (meta > 0) rows.push({ w: meta + PAD_X, h: 22 })
 
   let w: number
@@ -267,7 +270,7 @@ class Ctx {
 
   private measureOne(t: TopicData, depth: number): Size {
     const n = this.numbers.get(t.id)
-    return measureTopic(t, depth, this.shape(t, depth), n ? `${n} ` : '')
+    return measureTopic(t, depth, this.shape(t, depth), n ? `${n} ` : '', this.opts.itemCounts?.[t.id])
   }
 
   size(t: TopicData, depth: number): Size {

@@ -1,21 +1,24 @@
 import { linkedFile } from '../links'
 import { buildIndex as buildTopicIndex, childrenOf, type TopicMap } from '../model/tree'
 import { noteText } from '../sanitize'
+import { noteTexts, type NoteItem } from '../model/notes'
 import type { FileIndex, FileLinkRef } from './types'
 
 const MAX_NOTE_CHARS = 500
 const MAX_TOPICS = 5000
 
 /** What search, notes, resources and backlinks need from a map, taken when it is saved. */
-export function buildFileIndex(fileId: string, topics: TopicMap): FileIndex {
+export function buildFileIndex(fileId: string, topics: TopicMap, notes: Record<string, NoteItem> = {}): FileIndex {
   const out: FileIndex = { fileId, topics: [], resources: [] }
   let n = 0
+  const hasOwn = new Set(Object.values(notes).map((x) => x.topicId))
   for (const t of Object.values(topics)) {
     if (++n > MAX_TOPICS) break
     const links: FileLinkRef[] = []
     const ref = linkedFile(t.link)
     if (ref) links.push({ file: ref.fileId, ...(ref.topicId ? { topic: ref.topicId } : {}) })
-    const note = noteText(t.note).slice(0, MAX_NOTE_CHARS)
+    // The first note and the others of the topic, one after the other (clipped, like before).
+    const note = (hasOwn.has(t.id) ? noteTexts(topics, notes, t.id).join(' · ') : noteText(t.note)).slice(0, MAX_NOTE_CHARS)
     // Only topics that have something worth searching beyond their text still need an entry for the text itself.
     out.topics.push({ id: t.id, text: t.text, note, tags: t.tags ?? [], links })
     if (t.image) out.resources.push({ kind: 'image', id: t.image.imageId, topicId: t.id, topicText: t.text })

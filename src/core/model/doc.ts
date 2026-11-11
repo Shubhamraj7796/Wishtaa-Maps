@@ -3,6 +3,7 @@ import * as Y from 'yjs'
 import type { MarkupObject, PageEdit, PdfSource, PdfState } from '../pdf/types'
 import { emptyPdfState } from '../pdf/types'
 import { newId } from './ids'
+import type { NoteItem } from './notes'
 import { makeTopic, type TopicData } from './topic'
 import type { TopicMap } from './tree'
 import {
@@ -35,6 +36,8 @@ export interface MapDoc {
   markup: Y.Map<MarkupObject>
   /** Pages turned or hidden, by `sourceId:page`. */
   pageEdits: Y.Map<PageEdit>
+  /** The notes of a topic beyond its first one (the first is `topic.note`). */
+  notes: Y.Map<NoteItem>
   undo: Y.UndoManager
 }
 
@@ -51,13 +54,14 @@ export function createMapDoc(): MapDoc {
   const pdfSources = ydoc.getMap<PdfSource>('pdfSources')
   const markup = ydoc.getMap<MarkupObject>('markup')
   const pageEdits = ydoc.getMap<PageEdit>('pageEdits')
+  const notes = ydoc.getMap<NoteItem>('notes')
   // captureTimeout 0: every transaction is its own undo step.
-  const undo = new Y.UndoManager([topics, settings, relationships, callouts, boundaries, summaries, pdfSources, markup, pageEdits], { trackedOrigins: new Set([LOCAL]), captureTimeout: 0 })
+  const undo = new Y.UndoManager([topics, settings, relationships, callouts, boundaries, summaries, pdfSources, markup, pageEdits, notes], { trackedOrigins: new Set([LOCAL]), captureTimeout: 0 })
   undo.on('stack-item-added', () => {
     const over = undo.undoStack.length - MAX_UNDO
     if (over > 0) undo.undoStack.splice(0, over)
   })
-  return { ydoc, topics, meta, settings, relationships, callouts, boundaries, summaries, pdfSources, markup, pageEdits, undo }
+  return { ydoc, topics, meta, settings, relationships, callouts, boundaries, summaries, pdfSources, markup, pageEdits, notes, undo }
 }
 
 export function getRootId(doc: MapDoc): string | null {
@@ -82,6 +86,12 @@ export function snapshotTopics(doc: MapDoc): TopicMap {
   doc.topics.forEach((v, k) => {
     out[k] = v
   })
+  return out
+}
+
+export function snapshotNotes(doc: MapDoc): Record<string, NoteItem> {
+  const out: Record<string, NoteItem> = {}
+  doc.notes.forEach((v, k) => (out[k] = v))
   return out
 }
 

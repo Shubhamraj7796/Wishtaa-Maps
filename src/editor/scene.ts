@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { buildScene, type Scene } from '@/core/layout/engine'
+import type { ItemCount } from '@/core/layout/types'
 import type { TopicMap } from '@/core/model/tree'
 import type { MapSettings } from '@/core/settings'
 import { resolveTheme } from '@/core/settings'
@@ -28,9 +29,10 @@ function compute(
   focusId: string | null,
   reveal: string[],
   settings: MapSettings,
-  theme: ResolvedTheme
+  theme: ResolvedTheme,
+  itemCounts: Record<string, ItemCount>
 ): Scene {
-  const key = [topics, rootId, levels, focusId, reveal, settings, theme]
+  const key = [topics, rootId, levels, focusId, reveal, settings, theme, itemCounts]
   if (last && last.key.every((v, i) => v === key[i])) return last.scene
   const sceneRoot = focusId && topics[focusId] ? focusId : rootId
   const scene = buildScene(topics, {
@@ -46,6 +48,7 @@ function compute(
     alignSiblings: settings.alignSiblings,
     freePositioning: settings.freePositioning,
     numbering: settings.numbering,
+    itemCounts,
     // The shape a topic will be drawn with decides how much room it needs.
     shapeOf: (t, depth) => shapeFor(theme, levelOf(depth, t.id === sceneRoot)),
   })
@@ -63,7 +66,7 @@ export function getTheme(settings: MapSettings): ResolvedTheme {
 /** Current scene (memoised on the inputs). Safe to call outside React. */
 export function getScene(): Scene {
   const s = useEditor.getState()
-  return compute(viewTopics(s.topics, s.readOnly, s.viewCollapsed), s.rootId, s.levels, s.focusId, s.reveal, s.settings, getTheme(s.settings))
+  return compute(viewTopics(s.topics, s.readOnly, s.viewCollapsed), s.rootId, s.levels, s.focusId, s.reveal, s.settings, getTheme(s.settings), s.itemCounts)
 }
 
 export function useTheme(): ResolvedTheme {
@@ -92,9 +95,10 @@ export function useScene(): Scene {
   const focusId = useEditor((s) => s.focusId)
   const reveal = useEditor((s) => s.reveal)
   const settings = useEditor((s) => s.settings)
+  const itemCounts = useEditor((s) => s.itemCounts)
   const theme = useTheme()
   return useMemo(
-    () => compute(topics, rootId, levels, focusId, reveal, settings, theme),
-    [topics, rootId, levels, focusId, reveal, settings, theme]
+    () => compute(topics, rootId, levels, focusId, reveal, settings, theme, itemCounts),
+    [topics, rootId, levels, focusId, reveal, settings, theme, itemCounts]
   )
 }

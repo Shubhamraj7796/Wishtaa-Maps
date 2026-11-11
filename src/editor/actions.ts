@@ -29,6 +29,7 @@ import { clampTopicWidth, resolveLook } from '@/core/theme/resolve'
 import { DEFAULT_THEME_ID, findTheme, type Theme } from '@/core/theme/themes'
 import { ancestorIds, buildIndex, childrenOf, descendantIds, topLevelOnly } from '@/core/model/tree'
 import { outlineToBranches, parseOutline, toOutline } from '@/core/io/outline'
+import { itemLines } from '@/core/model/itemLines'
 import { revealAncestors, searchTopics } from '@/core/search'
 import { addImageReferenceSource, noteViewportActivity } from './images'
 import { getScene, getTheme } from './scene'
@@ -295,11 +296,11 @@ function branchImageIds(bs: Branch[]): string[] {
 addImageReferenceSource(() => (clip ? branchImageIds(clip.branches) : []))
 
 export function cmdCopy(): string | null {
-  const { selected, topics, rootId } = get()
+  const { selected, topics, rootId, notes } = get()
   const ids = selected.length ? selected : [rootId]
   const branches = serializeBranches(topics, ids)
   if (!branches.length) return null
-  const text = toOutline(topics, ids)
+  const text = toOutline(topics, ids, (id) => itemLines(topics, notes, id))
   clip = { branches, text }
   navigator.clipboard?.writeText(text).catch(() => {})
   return text
@@ -385,7 +386,7 @@ export function closeSearch() {
 }
 export function setQuery(query: string) {
   const topics = get().topics
-  const matches = searchTopics(topics, query)
+  const matches = searchTopics(topics, query, get().notes)
   set({ search: { open: true, query, matches, index: 0 }, reveal: revealAncestors(topics, matches) })
   const first = matches[0]
   if (first) {

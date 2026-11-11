@@ -5,7 +5,7 @@ import { createMapDoc, type MapDoc } from '../model/doc'
  * The maps of a map file that are merged, by name. Anything that lives in the map file must be listed here, or it would not survive a
  * merge: add a name when a feature adds a new shared map.
  */
-export const MERGE_MAPS = ['topics', 'meta', 'settings', 'relationships', 'callouts', 'boundaries', 'summaries', 'pdfSources', 'markup', 'pageEdits'] as const
+export const MERGE_MAPS = ['topics', 'meta', 'settings', 'relationships', 'callouts', 'boundaries', 'summaries', 'pdfSources', 'markup', 'pageEdits', 'notes'] as const
 export type MergeMapName = (typeof MERGE_MAPS)[number]
 
 type Snapshot = Record<MergeMapName, Map<string, unknown>>
@@ -76,6 +76,7 @@ const describe = (map: MergeMapName, key: string, value: unknown): string => {
   if (map === 'topics' && isObject(value) && typeof value.text === 'string') return `Topic “${value.text.slice(0, 40) || 'empty'}”`
   if (map === 'topics') return 'A topic'
   if (map === 'markup') return 'PDF markup'
+  if (map === 'notes' && isObject(value)) return `Note “${(typeof value.title === 'string' && value.title ? value.title : 'untitled').slice(0, 40)}”`
   if (map === 'settings') return `Setting ${key}`
   return `${map} ${key}`
 }
