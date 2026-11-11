@@ -15,6 +15,7 @@ import { levelFor, whileMoving } from '@/core/images/lod'
 import { commitImageSize, removeImage, setImageLive, useImageUrl, usePictureColor, useUpgrade, useViewMoving } from '../images'
 import { useEditor, type ImageLive } from '../store'
 import { NotesChip } from '../items/NotesChip'
+import { TasksChip } from '../items/TasksChip'
 import { Formula } from '../ui/Formula'
 import { MarkBadge } from '../ui/MarkBadge'
 import { SourceBadge } from '../pdf/SourceBadge'
@@ -249,7 +250,8 @@ export const TopicView = memo(function TopicView(p: TopicViewProps) {
   // The notes icon (with a count) shows when the topic has a note: its first one or others added to it.
   const notesN = useEditor((s) => s.itemCounts[box.id]?.notes ?? 0)
   const hasNote = notesN > 0
-  const hasMeta = tags.length > 0 || !!topic.task || !!topic.link || attachments.length > 0 || hasNote
+  const tasksN = useEditor((s) => s.itemCounts[box.id]?.tasks ?? 0)
+  const hasMeta = tags.length > 0 || !!topic.task || !!topic.link || attachments.length > 0 || hasNote || tasksN > 0
   const hasTitle = p.editing || topic.text.trim().length > 0 || p.number !== '' || marks.length > 0
   const extra = !!inline || !!latex || !!table || hasMeta
   const simple = !image && !extra
@@ -347,6 +349,7 @@ export const TopicView = memo(function TopicView(p: TopicViewProps) {
               {attachments.length > 1 && <span>{attachments.length}</span>}
             </Mini>
           )}
+          {tasksN > 0 && <TasksChip id={box.id} stop className="h-[18px]" />}
           {hasNote && <NotesChip id={box.id} stop className="h-[18px]" />}
         </div>
       )}

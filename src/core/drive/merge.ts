@@ -5,7 +5,7 @@ import { createMapDoc, type MapDoc } from '../model/doc'
  * The maps of a map file that are merged, by name. Anything that lives in the map file must be listed here, or it would not survive a
  * merge: add a name when a feature adds a new shared map.
  */
-export const MERGE_MAPS = ['topics', 'meta', 'settings', 'relationships', 'callouts', 'boundaries', 'summaries', 'pdfSources', 'markup', 'pageEdits', 'notes'] as const
+export const MERGE_MAPS = ['topics', 'meta', 'settings', 'relationships', 'callouts', 'boundaries', 'summaries', 'pdfSources', 'markup', 'pageEdits', 'notes', 'tasks'] as const
 export type MergeMapName = (typeof MERGE_MAPS)[number]
 
 type Snapshot = Record<MergeMapName, Map<string, unknown>>
@@ -76,6 +76,7 @@ const describe = (map: MergeMapName, key: string, value: unknown): string => {
   if (map === 'topics' && isObject(value) && typeof value.text === 'string') return `Topic “${value.text.slice(0, 40) || 'empty'}”`
   if (map === 'topics') return 'A topic'
   if (map === 'markup') return 'PDF markup'
+  if (map === 'tasks' && isObject(value)) return `Task “${(typeof value.title === 'string' && value.title ? value.title : 'untitled').slice(0, 40)}”`
   if (map === 'notes' && isObject(value)) return `Note “${(typeof value.title === 'string' && value.title ? value.title : 'untitled').slice(0, 40)}”`
   if (map === 'settings') return `Setting ${key}`
   return `${map} ${key}`
@@ -156,6 +157,9 @@ export function mergeMaps(base: Uint8Array | null, local: Uint8Array, remote: Ui
               v = merge(isObject(bf) ? bf : {}, lf, rf, `${path}${f}.`, depth + 1)
             } else if (lf === undefined || rf === undefined) {
               v = lf ?? rf // one side removed it, the other changed it: the change stays
+            } else if (f === 'updatedAt' && depth === 0 && (name === 'notes' || name === 'tasks') && typeof lf === 'number' && typeof rf === 'number') {
+              // The "edited" time of a note or a task moves with every change: the later one is simply kept (not a clash worth reporting).
+              v = Math.max(lf, rf)
             } else {
               // The same field of the same thing, changed on both sides: the newer wins.
               v = newer === 'local' ? lf : rf

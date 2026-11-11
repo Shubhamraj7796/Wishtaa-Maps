@@ -11,6 +11,7 @@ import type { Corner } from '@/core/images/resize'
 import type { TopicStyle } from '@/core/model/types'
 import type { TopicMap } from '@/core/model/tree'
 import type { NoteItem } from '@/core/model/notes'
+import type { TaskItem } from '@/core/model/tasks'
 import type { ItemCount } from '@/core/layout/types'
 import { DEFAULT_SETTINGS, type MapSettings } from '@/core/settings'
 
@@ -177,7 +178,7 @@ export type SelectionKind = 'none' | 'topic' | 'topics' | 'picture' | 'object'
 
 /** Why the settings panel is open: it closes itself only when it opened by itself. */
 export type PanelOpener = 'selection' | 'hover' | 'handle' | null
-export type ViewMode = 'map' | 'outline'
+export type ViewMode = 'map' | 'outline' | 'tasks'
 export type DetailsSection = 'picture' | 'tags' | 'task' | 'link' | 'attachments' | 'inline' | 'latex' | 'table'
 
 export interface EditorState {
@@ -187,6 +188,8 @@ export interface EditorState {
   topics: TopicMap
   /** The notes of the open map beyond each topic's first one. */
   notes: Record<string, NoteItem>
+  /** The tasks of their own of the open map. */
+  tasks: Record<string, TaskItem>
   /** How many notes and open tasks each topic has (only topics with some). */
   itemCounts: Record<string, ItemCount>
   rootId: string
@@ -295,6 +298,7 @@ export const useEditor = create<EditorState>(() => ({
   fileType: null,
   topics: {},
   notes: {},
+  tasks: {},
   itemCounts: {},
   rootId: '',
   selected: [],

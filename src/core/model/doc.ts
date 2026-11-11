@@ -4,6 +4,7 @@ import type { MarkupObject, PageEdit, PdfSource, PdfState } from '../pdf/types'
 import { emptyPdfState } from '../pdf/types'
 import { newId } from './ids'
 import type { NoteItem } from './notes'
+import type { TaskItem } from './tasks'
 import { makeTopic, type TopicData } from './topic'
 import type { TopicMap } from './tree'
 import {
@@ -38,6 +39,8 @@ export interface MapDoc {
   pageEdits: Y.Map<PageEdit>
   /** The notes of a topic beyond its first one (the first is `topic.note`). */
   notes: Y.Map<NoteItem>
+  /** Tasks of their own (a topic can also be a task through `topic.task`). */
+  tasks: Y.Map<TaskItem>
   undo: Y.UndoManager
 }
 
@@ -55,13 +58,14 @@ export function createMapDoc(): MapDoc {
   const markup = ydoc.getMap<MarkupObject>('markup')
   const pageEdits = ydoc.getMap<PageEdit>('pageEdits')
   const notes = ydoc.getMap<NoteItem>('notes')
+  const tasks = ydoc.getMap<TaskItem>('tasks')
   // captureTimeout 0: every transaction is its own undo step.
-  const undo = new Y.UndoManager([topics, settings, relationships, callouts, boundaries, summaries, pdfSources, markup, pageEdits, notes], { trackedOrigins: new Set([LOCAL]), captureTimeout: 0 })
+  const undo = new Y.UndoManager([topics, settings, relationships, callouts, boundaries, summaries, pdfSources, markup, pageEdits, notes, tasks], { trackedOrigins: new Set([LOCAL]), captureTimeout: 0 })
   undo.on('stack-item-added', () => {
     const over = undo.undoStack.length - MAX_UNDO
     if (over > 0) undo.undoStack.splice(0, over)
   })
-  return { ydoc, topics, meta, settings, relationships, callouts, boundaries, summaries, pdfSources, markup, pageEdits, notes, undo }
+  return { ydoc, topics, meta, settings, relationships, callouts, boundaries, summaries, pdfSources, markup, pageEdits, notes, tasks, undo }
 }
 
 export function getRootId(doc: MapDoc): string | null {
@@ -92,6 +96,12 @@ export function snapshotTopics(doc: MapDoc): TopicMap {
 export function snapshotNotes(doc: MapDoc): Record<string, NoteItem> {
   const out: Record<string, NoteItem> = {}
   doc.notes.forEach((v, k) => (out[k] = v))
+  return out
+}
+
+export function snapshotTasks(doc: MapDoc): Record<string, TaskItem> {
+  const out: Record<string, TaskItem> = {}
+  doc.tasks.forEach((v, k) => (out[k] = v))
   return out
 }
 

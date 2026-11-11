@@ -2,23 +2,28 @@ import { linkedFile } from '../links'
 import { buildIndex as buildTopicIndex, childrenOf, type TopicMap } from '../model/tree'
 import { noteText } from '../sanitize'
 import { noteTexts, type NoteItem } from '../model/notes'
+import { tasksOfTopic, type TaskItem } from '../model/tasks'
 import type { FileIndex, FileLinkRef } from './types'
 
 const MAX_NOTE_CHARS = 500
 const MAX_TOPICS = 5000
 
 /** What search, notes, resources and backlinks need from a map, taken when it is saved. */
-export function buildFileIndex(fileId: string, topics: TopicMap, notes: Record<string, NoteItem> = {}): FileIndex {
+export function buildFileIndex(fileId: string, topics: TopicMap, notes: Record<string, NoteItem> = {}, tasks: Record<string, TaskItem> = {}): FileIndex {
   const out: FileIndex = { fileId, topics: [], resources: [] }
   let n = 0
   const hasOwn = new Set(Object.values(notes).map((x) => x.topicId))
+  const hasTasks = new Set(Object.values(tasks).map((x) => x.topicId))
   for (const t of Object.values(topics)) {
     if (++n > MAX_TOPICS) break
     const links: FileLinkRef[] = []
     const ref = linkedFile(t.link)
     if (ref) links.push({ file: ref.fileId, ...(ref.topicId ? { topic: ref.topicId } : {}) })
     // The first note and the others of the topic, one after the other (clipped, like before).
-    const note = (hasOwn.has(t.id) ? noteTexts(topics, notes, t.id).join(' · ') : noteText(t.note)).slice(0, MAX_NOTE_CHARS)
+    const base = hasOwn.has(t.id) ? noteTexts(topics, notes, t.id).join(' · ') : noteText(t.note)
+    // The tasks of their own on the topic are searchable like its notes.
+    const taskText = hasTasks.has(t.id) ? tasksOfTopic(topics, tasks, t.id).filter((e) => !e.legacy).map((e) => `Task: ${[e.title, e.details].filter(Boolean).join(' ')}`).join(' · ') : ''
+    const note = [base, taskText].filter(Boolean).join(' · ').slice(0, MAX_NOTE_CHARS)
     // Only topics that have something worth searching beyond their text still need an entry for the text itself.
     out.topics.push({ id: t.id, text: t.text, note, tags: t.tags ?? [], links })
     if (t.image) out.resources.push({ kind: 'image', id: t.image.imageId, topicId: t.id, topicText: t.text })

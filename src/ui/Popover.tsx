@@ -24,7 +24,7 @@ export function Popover({ anchor, onClose, label, children, className = '' }: { 
   // The first choice takes the focus once the popover is visible (a hidden element cannot be focused).
   const placed = at !== null
   useLayoutEffect(() => {
-    if (placed) box.current?.querySelector<HTMLElement>('[role="menuitem"]:not([disabled])')?.focus()
+    if (placed) (box.current?.querySelector<HTMLElement>('[data-autofocus]') ?? box.current?.querySelector<HTMLElement>('[role="menuitem"]:not([disabled])'))?.focus()
   }, [placed])
 
   useEffect(() => {

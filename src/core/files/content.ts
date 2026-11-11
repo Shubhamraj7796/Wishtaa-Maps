@@ -1,5 +1,5 @@
 import * as Y from 'yjs'
-import { createMapDoc, snapshotNotes, snapshotTopics } from '../model/doc'
+import { createMapDoc, snapshotNotes, snapshotTasks, snapshotTopics } from '../model/doc'
 import { buildFileIndex, referencedIds } from './indexer'
 import type { SaveMeta } from './types'
 
@@ -8,7 +8,7 @@ export function saveMetaFromContent(fileId: string, content: Uint8Array): SaveMe
   const doc = createMapDoc()
   Y.applyUpdate(doc.ydoc, content, 'load')
   const topics = snapshotTopics(doc)
-  return { ...referencedIds(topics), topicCount: Object.keys(topics).length, index: buildFileIndex(fileId, topics, snapshotNotes(doc)) }
+  return { ...referencedIds(topics), topicCount: Object.keys(topics).length, index: buildFileIndex(fileId, topics, snapshotNotes(doc), snapshotTasks(doc)) }
 }
 
 /** True if the bytes are a readable map document. */

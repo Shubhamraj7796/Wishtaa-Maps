@@ -99,6 +99,8 @@ export interface TopicStyle {
 
 export interface Task {
   done: boolean
+  /** Doing (a done flag always means Done). */
+  status?: 'doing'
   dueDate?: string
   startDate?: string
   assignee?: string

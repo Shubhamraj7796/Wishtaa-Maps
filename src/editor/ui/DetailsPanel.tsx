@@ -8,6 +8,7 @@ import { Icon, PositionIcon, type IconName } from '@/ui/icons'
 import { attachFiles, detachFile, downloadAttachment, formatBytes, pickFiles } from '../attachments'
 import { cancelLinkPick, addTagToSelected, applyPictureSizeToAll, removeTagFromSelected, setFormula, setInline, setPicturePosition, setTagColor, setTopicLink, setTopicTable, showPreview, startLinkPick, startOcr, toggleTagFilter } from '../content'
 import { commitImageSize, downloadImage, removeImage, replaceImage, resetImageSize } from '../images'
+import { TaskRows } from '../items/TaskList'
 import { mapDoc } from '../mapdoc'
 import { getTheme } from '../scene'
 import { useEditor, type DetailsSection } from '../store'
@@ -183,6 +184,10 @@ function TaskSection({ id }: { id: string }) {
           <button type="button" onClick={() => setTask(mapDoc, id, null)} aria-label="Remove task" title="Remove task" className={`${iconBtn} text-bad`}><Icon name="trash" size={16} /></button>
         </>
       )}
+      <div className="border-t border-line pt-2">
+        <span className="mb-1 block text-xs text-muted">More tasks on this topic</span>
+        <TaskRows topicId={id} legacy={false} />
+      </div>
     </Sec>
   )
 }

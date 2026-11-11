@@ -1,13 +1,15 @@
 import type { ItemCount } from '../layout/types'
 import { noteCounts, type NoteItem } from './notes'
+import { taskCounts, type TaskItem } from './tasks'
 import type { TopicMap } from './tree'
 
 export const noItems: Record<string, ItemCount> = {}
 
 /** How many notes (the first one counts) and open tasks of their own each topic has: only topics that have at least one are listed. */
-export function itemCountsOf(topics: TopicMap, notes: Record<string, NoteItem>): Record<string, ItemCount> {
+export function itemCountsOf(topics: TopicMap, notes: Record<string, NoteItem>, tasks: Record<string, TaskItem> = {}): Record<string, ItemCount> {
   const out: Record<string, ItemCount> = {}
   for (const [id, n] of Object.entries(noteCounts(topics, notes))) out[id] = { notes: n, tasks: 0 }
+  for (const [id, n] of Object.entries(taskCounts(topics, tasks))) out[id] = { notes: out[id]?.notes ?? 0, tasks: n }
   return out
 }
 

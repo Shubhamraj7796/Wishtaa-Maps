@@ -121,3 +121,57 @@ test.describe('notes', () => {
     await page.screenshot({ path: join(SHOTS, 'note-popup-tablet.png') })
   })
 })
+
+async function addTaskViaInsert(page: Page) {
+  await page.locator('[aria-haspopup="menu"][aria-label^="Insert"]').first().click()
+  await page.getByRole('menuitem', { name: 'Task' }).click()
+  await page.locator('[data-details-task], #settings-panel').first().waitFor()
+  await page.getByRole('button', { name: 'Add a task' }).click()
+  await expect(page.getByRole('dialog', { name: /^Task/ })).toBeVisible()
+}
+
+test.describe('tasks on a topic', () => {
+  test('add a task in the popup: title, status, date, priority; icon with count; list; reload', async ({ page }) => {
+    const errors: string[] = []
+    page.on('pageerror', (e) => errors.push(e.message))
+    await page.setViewportSize({ width: 1366, height: 768 })
+    await openBlankMap(page)
+    await addTopic(page, 'Dose')
+    await page.locator('[data-topic]', { hasText: 'Dose' }).first().click()
+
+    await addTaskViaInsert(page)
+    const dialog = page.getByRole('dialog', { name: /^Task/ })
+    await page.getByLabel('Task title').fill('Order stock')
+    await dialog.getByRole('radio', { name: 'Doing' }).click()
+    await expect(dialog.getByRole('radio', { name: 'Doing' })).toHaveAttribute('aria-checked', 'true')
+    await dialog.getByLabel('Due date', { exact: true }).fill('2026-12-01')
+    await dialog.getByRole('radio', { name: 'Priority 2' }).click()
+    await page.screenshot({ path: join(SHOTS, 'task-popup-desktop.png') })
+    await page.keyboard.press('Escape')
+    await expect(dialog).toBeHidden()
+
+    const chip = page.locator('[data-tasks-chip]').first()
+    await expect(chip).toHaveAttribute('aria-label', 'Task. Open the list')
+    await chip.click()
+    const menu = page.getByRole('menu', { name: 'Tasks of this topic' })
+    await expect(menu.locator('[data-task-row]')).toHaveCount(1)
+    await expect(menu).toContainText('Order stock')
+    await menu.getByRole('menuitem', { name: 'Add a task' }).click()
+    await page.getByLabel('Task title').fill('Call supplier')
+    await page.keyboard.press('Escape')
+    await expect(page.locator('[data-tasks-chip]').first()).toHaveAttribute('aria-label', '2 tasks. Open the list')
+
+    await page.waitForTimeout(1200)
+    await page.reload()
+    await page.locator('[data-topic]').first().waitFor()
+    await page.locator('[data-tasks-chip]').first().click()
+    const rows = page.getByRole('menu', { name: 'Tasks of this topic' }).locator('[data-task-row]')
+    await expect(rows).toHaveCount(2)
+    await rows.nth(0).click()
+    await expect(page.getByLabel('Task title')).toHaveValue('Order stock')
+    await expect(page.getByLabel('Due date', { exact: true })).toHaveValue('2026-12-01')
+    await expect(page.getByRole('radio', { name: 'Priority 2' })).toHaveAttribute('aria-checked', 'true')
+    await expect(page.getByRole('radio', { name: 'Doing' })).toHaveAttribute('aria-checked', 'true')
+    expect(errors).toEqual([])
+  })
+})
