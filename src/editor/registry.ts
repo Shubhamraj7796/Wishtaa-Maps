@@ -16,7 +16,7 @@ import {
 } from './images'
 import { blockedInReadMode, toggleReadMode } from './readmode'
 import { resolveTarget, startSource } from './pictures/flow'
-import { openPdfFromDrive, pickPdfFromDevice, togglePdfPanel } from './pdf/actions'
+import { openPdfFromDrive, pickPdfFromDevice, togglePdfCollapse, togglePdfPanel } from './pdf/actions'
 import { useEditor } from './store'
 
 export interface Cmd {
@@ -68,6 +68,7 @@ export const COMMANDS: Cmd[] = [
   { id: 'insertPdfDrive', label: 'Insert PDF from Google Drive…', group: 'Insert', run: () => void openPdfFromDrive() },
   { id: 'recoverVersion', label: 'Recover earlier version…', group: 'Tools', run: () => { const id = st().fileId; if (id) openRecover(id) } },
   { id: 'pdfPanel', label: 'Open or close the PDF panel', group: 'Insert', run: () => togglePdfPanel() },
+  { id: 'pdfCollapse', label: 'Collapse the PDF to an edge tab, or open it again', group: 'View', keys: ['Alt+Shift+F'], run: togglePdfCollapse },
   { id: 'captureScreen', label: 'Capture screen as a picture', group: 'Insert', keys: ['Alt+Shift+Q'], run: () => void captureToPicture() },
   { id: 'removeImage', label: 'Remove image from topic', group: 'Edit', run: () => removeImage() },
   {
@@ -186,7 +187,7 @@ export const COMMANDS: Cmd[] = [
 export const READ_SAFE = new Set([
   'collapse', 'copy', 'selectAll', 'nav-left', 'nav-right', 'nav-up', 'nav-down', 'search', 'palette', 'help', 'escape',
   'fit', 'zoom100', 'zoomIn', 'zoomOut', 'focus', 'lvl1', 'lvl2', 'lvl3', 'lvlAll', 'fullscreen', 'viewMap', 'viewOutline',
-  'clearTagFilter', 'toolPan', 'toolSelect', 'readMode', 'panel',
+  'clearTagFilter', 'toolPan', 'toolSelect', 'readMode', 'panel', 'pdfCollapse',
 ])
 
 for (const c of COMMANDS) {

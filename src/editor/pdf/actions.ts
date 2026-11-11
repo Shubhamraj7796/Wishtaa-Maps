@@ -96,7 +96,30 @@ export function setAutoCollapse(autoCollapse: boolean) {
 /** Opens or closes the panel's Outline drawer (full screen). */
 export const setPdfDrawer = (drawer: boolean) => patch({ drawer })
 export const setPdfToolSide = (toolSide: 'left' | 'right') => void (get().pdfPanel.toolSide !== toolSide && patch({ toolSide }))
-export const setPdfCollapsed = (collapsed: boolean) => patch({ collapsed, ...(collapsed ? { drawer: false } : {}) })
+export const setPdfCollapsed = (collapsed: boolean) => {
+  patch({ collapsed, ...(collapsed ? { drawer: false } : {}) })
+  rememberSoon() // the collapsed state is remembered with the workspace, so it survives a reload
+}
+/**
+ * Collapse PDF: the panel tucks away into an edge tab (or a floating button on touch) and the PDF stays open, with everything kept in the
+ * store: tabs, split, page, zoom, place, layout, markup tool, size. Closing (X) is a different thing and resets the tools.
+ */
+export function collapsePdf(): boolean {
+  if (!get().pdfPanel.open || get().pdfPanel.collapsed) return false
+  setPdfCollapsed(true)
+  return true
+}
+/** Brings a collapsed panel back exactly as it was. */
+export function restorePdf(): boolean {
+  if (!get().pdfPanel.collapsed) return false
+  setPdfCollapsed(false)
+  return true
+}
+/** The shortcut and the command: collapse when it is open, open when it is collapsed (nothing when there is no PDF panel). */
+export function togglePdfCollapse() {
+  if (get().pdfPanel.collapsed) restorePdf()
+  else collapsePdf()
+}
 /** How much of the editor the PDF takes. Page, zoom and place in the PDF are kept; "Fit" fits again. */
 export function setPdfSize(size: PanelSize) {
   rememberSize(size)
