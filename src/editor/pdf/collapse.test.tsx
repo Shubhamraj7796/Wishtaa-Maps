@@ -8,7 +8,8 @@ import { installMemoryLocalStorage } from '../../test/memoryStorage'
 import { COMMANDS, READ_SAFE, chordOf, commandFor, isReservedChord } from '../registry'
 import { closeFile, mapDoc, openFile } from '../session'
 import { closedPdfPanel, useEditor } from '../store'
-import { closePdfPanel, collapsePdf, restoreCollapsedPanel, restorePdf, setPdfSize, togglePdfCollapse, togglePdfPanel } from './actions'
+import { setCaptureOption } from './capture'
+import { closePdfPanel, collapsePdf, hasTypedDraft, setPdfTool, restoreCollapsedPanel, restorePdf, setPdfSize, togglePdfCollapse, togglePdfPanel } from './actions'
 import { loadWorkspace, saveWorkspace, type Workspace } from './workspace'
 
 let t = 1_700_000_000_000
@@ -210,5 +211,83 @@ describe('Collapse PDF: remembered across a reload', () => {
     act(() => useEditor.setState({ pdfPanel: { ...closedPdfPanel(), ...panelState() } }))
     act(() => void collapsePdf())
     expect(restoreCollapsedPanel()).toBe(false) // already open
+  })
+})
+
+describe('Collapse PDF: pending captures and drafts', () => {
+  const field = (tag: 'textarea' | 'input', label: string, value: string) => {
+    const host = document.createElement('div')
+    host.setAttribute('data-pdf-panel', 'side')
+    const el = document.createElement(tag)
+    el.setAttribute('aria-label', label)
+    el.value = value
+    host.appendChild(el)
+    document.body.appendChild(host)
+    return { el, host }
+  }
+  afterEach(() => document.querySelectorAll('[data-pdf-panel], [role="dialog"]').forEach((e) => e.remove()))
+
+  it('collapsing is refused, with a notice, while a text box has words typed in it', () => {
+    const { el } = field('textarea', 'Text box', 'Remember this')
+    expect(hasTypedDraft()).toBe(true)
+    expect(collapsePdf()).toBe(false)
+    expect(st().pdfPanel.collapsed).toBe(false)
+    expect(st().notice?.text).toBe('Finish or cancel the text box first.')
+    el.value = ''
+    expect(hasTypedDraft()).toBe(false)
+    expect(collapsePdf()).toBe(true)
+  })
+
+  it('the same for a link target and for a note being typed; an empty box, spaces and the page number do not block', () => {
+    field('textarea', 'Link target', 'https://example.com')
+    expect(collapsePdf()).toBe(false)
+    document.querySelectorAll('[data-pdf-panel]').forEach((e) => e.remove())
+    field('input', 'Note', 'a note')
+    expect(collapsePdf()).toBe(false)
+    document.querySelectorAll('[data-pdf-panel]').forEach((e) => e.remove())
+    field('textarea', 'Text box', '   ')
+    field('input', 'Page number', '12')
+    expect(hasTypedDraft()).toBe(false)
+    expect(collapsePdf()).toBe(true)
+  })
+
+  it('the toggle shortcut obeys the same rule, and opening it again is never refused', () => {
+    field('textarea', 'Text box', 'typed')
+    togglePdfCollapse()
+    expect(st().pdfPanel.collapsed).toBe(false)
+    document.querySelectorAll('[data-pdf-panel]').forEach((e) => e.remove())
+    togglePdfCollapse()
+    expect(st().pdfPanel.collapsed).toBe(true)
+    field('textarea', 'Text box', 'typed')
+    togglePdfCollapse() // restoring has nothing to lose
+    expect(st().pdfPanel.collapsed).toBe(false)
+  })
+
+  it('an open question (a modal dialog) has to be answered first: collapse does nothing', () => {
+    act(() => useEditor.setState({ notice: null }))
+    const d = document.createElement('div')
+    d.setAttribute('role', 'dialog')
+    d.setAttribute('aria-modal', 'true')
+    document.body.appendChild(d)
+    expect(collapsePdf()).toBe(false)
+    expect(st().notice).toBeNull()
+  })
+
+  it('collapsing ends Capture area: the tool goes back to Select, its options are kept', () => {
+    act(() => setPdfTool('capture'))
+    act(() => setCaptureOption('nameFromPage', true))
+    expect(st().pdfPanel.tool).toBe('capture')
+    expect(collapsePdf()).toBe(true)
+    expect(st().pdfPanel.tool).toBe('select')
+    expect(st().pdfPanel.capture.picking).toBe(false)
+    expect(st().pdfPanel.capture.nameFromPage).toBe(true)
+    expect(st().pdfPanel.collapsed).toBe(true)
+  })
+
+  it('other tools stay as they were (a pen, the markup bar, a lasso choice)', () => {
+    act(() => useEditor.setState({ pdfPanel: { ...st().pdfPanel, tool: 'pen', markupBar: true, lasso: { sourceId: 'a', page: 2, ids: ['m1'] } } }))
+    collapsePdf()
+    restorePdf()
+    expect(st().pdfPanel).toMatchObject({ tool: 'pen', markupBar: true, lasso: { sourceId: 'a', page: 2, ids: ['m1'] } })
   })
 })

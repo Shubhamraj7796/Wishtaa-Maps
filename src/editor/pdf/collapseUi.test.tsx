@@ -167,6 +167,17 @@ describe('the collapsed edge tab (computer)', () => {
   })
 })
 
+describe('keys while collapsed', () => {
+  it('Escape does nothing to a collapsed panel (it does not open it)', async () => {
+    await open()
+    act(() => setPdfSize('full'))
+    act(() => void collapsePdf())
+    fireEvent.keyDown(window, { key: 'Escape' })
+    expect(st().pdfPanel.collapsed).toBe(true)
+    expect(st().pdfPanel.size).toBe('full')
+  })
+})
+
 describe('the floating button (touch, phone, narrow window)', () => {
   it('is a round 48 px button (never under 44) with the PDF icon, and the badge when two PDFs are open', async () => {
     await open('sheet', ['One.pdf', 'Two.pdf'])

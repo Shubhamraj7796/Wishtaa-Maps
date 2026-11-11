@@ -75,6 +75,7 @@ export default function PdfPanel({ mode }: { mode: 'side' | 'sheet' }) {
 
   // Escape: close the markup list, then the Outline drawer, then leave Focus mode, then go back to Normal.
   useEffect(() => {
+    if (panel.collapsed) return // collapsed: Escape does nothing here (it would otherwise open the panel again)
     if (size === 'normal' && !panel.drawer && !focus && panel.tab !== 'markup') return
     const esc = (e: KeyboardEvent) => {
       if (e.key !== 'Escape' || typing(e.target) || document.querySelector('[role="dialog"][aria-modal="true"]') || document.querySelector('[data-flyout]')) return
@@ -87,7 +88,7 @@ export default function PdfPanel({ mode }: { mode: 'side' | 'sheet' }) {
     }
     window.addEventListener('keydown', esc)
     return () => window.removeEventListener('keydown', esc)
-  }, [size, panel.drawer, panel.tab, focus])
+  }, [size, panel.drawer, panel.tab, focus, panel.collapsed])
 
   const room = () => (mode === 'side' ? (aside.current?.parentElement?.clientWidth ?? window.innerWidth) : (aside.current?.parentElement?.clientHeight ?? window.innerHeight))
   const setLength = (v: number, keep = false) => {

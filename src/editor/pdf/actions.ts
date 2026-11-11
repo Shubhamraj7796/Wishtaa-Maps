@@ -18,7 +18,7 @@ import { bumpDevice, closePdf, loadPdfjs, pdfStore, rememberPassword, trimOpenPd
 import * as W from './workspace'
 import { nearestRow } from './spreads'
 import { liveViewOf } from './spreadState'
-import { beginCapture, endCapture } from './capture'
+import { beginCapture, endCapture, leaveCapture } from './capture'
 import { loadPdfUi, savePdfUi } from './uiPrefs'
 import { resetDefaultLayout, saveDefaultLayout, startingLayout } from './layoutDefault'
 
@@ -124,10 +124,26 @@ export const setPdfCollapsed = (collapsed: boolean) => {
  * store: tabs, split, page, zoom, place, layout, markup tool, size. Closing (X) is a different thing and resets the tools.
  */
 export function collapsePdf(): boolean {
-  if (!get().pdfPanel.open || get().pdfPanel.collapsed) return false
+  const p = get().pdfPanel
+  if (!p.open || p.collapsed) return false
+  // An open question (Compressed or Original, a password) has to be answered first.
+  if (typeof document !== 'undefined' && document.querySelector('[role="dialog"][aria-modal="true"]')) return false
+  // A text box, link or note with words typed into it is never lost: collapsing waits until it is finished or cancelled.
+  if (hasTypedDraft()) {
+    showNotice('Finish or cancel the text box first.')
+    return false
+  }
+  // A capture is one drag, so ending the session loses nothing; its options and last targets are kept. The tool goes back to Select.
+  if (p.tool === 'capture') leaveCapture()
   focusTab = true
   setPdfCollapsed(true)
   return true
+}
+/** Whether a text box, a link target or a note on the PDF has words typed into it that are not saved yet. */
+export function hasTypedDraft(): boolean {
+  if (typeof document === 'undefined') return false
+  const fields = document.querySelectorAll<HTMLTextAreaElement | HTMLInputElement>('[data-pdf-panel] textarea, [data-pdf-panel] input[aria-label="Note"]')
+  return [...fields].some((f) => f.value.trim() !== '')
 }
 /** Brings a collapsed panel back exactly as it was. `fromTab` is a click on the tab or button (the focus then goes to the bar's collapse button). */
 export function restorePdf(fromTab = false): boolean {
