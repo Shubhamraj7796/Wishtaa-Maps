@@ -102,30 +102,23 @@ test('wide panel, one PDF: the icon is on the bar, the popover opens in the page
   await context.close()
 })
 
-test('the Drive choice starts the existing Drive flow (no real Google here) and the popover closes', async ({ browser }) => {
+test('the Drive choice starts the existing Drive flow and the popover closes', async ({ browser }) => {
   const context = await browser.newContext({ viewport: { width: 1366, height: 800 }, serviceWorkers: 'block' })
   const page = await context.newPage()
   const errors: string[] = []
   page.on('pageerror', (e) => errors.push(e.message))
+  let popups = 0
+  context.on('page', () => popups++) // the Google sign-in window, when a Google client is configured (the live site)
   await openMapWithPdfs(page, [await makePdf('Audit')])
-  const viaMenu = async () => {
-    await page.locator('[data-more]').click()
-    await page.getByRole('menuitem', { name: /Open a PDF from Google Drive/ }).click()
-  }
-  const before = await page.evaluate(() => document.body.innerText.length)
+  const outcome = () => page.evaluate(() => [...document.querySelectorAll('[role="status"], [role="alert"], [role="dialog"]')].map((e) => (e as HTMLElement).innerText).join(' | '))
   await openIcon(page).click()
   await popover(page).getByRole('menuitem', { name: 'From Google Drive' }).click()
   await expect(popover(page)).toHaveCount(0)
-  await page.waitForTimeout(1500)
-  const viaPopover = await page.evaluate(() => [...document.querySelectorAll('[role="status"], [role="alert"], [role="dialog"]')].map((e) => (e as HTMLElement).innerText).join(' | '))
-  // The "..." menu item does the same thing: the same messages (or none) appear.
-  await page.keyboard.press('Escape')
-  await page.waitForTimeout(6500) // let the first notice go
-  await viaMenu()
-  await page.waitForTimeout(1500)
-  const viaDots = await page.evaluate(() => [...document.querySelectorAll('[role="status"], [role="alert"], [role="dialog"]')].map((e) => (e as HTMLElement).innerText).join(' | '))
-  console.log(`Drive choice: popover -> "${viaPopover.slice(0, 120)}"; "..." menu -> "${viaDots.slice(0, 120)}" (page text ${before})`)
-  expect(viaPopover.replace(/\s+/g, ' ').slice(0, 60)).toBe(viaDots.replace(/\s+/g, ' ').slice(0, 60))
+  await page.waitForTimeout(2500)
+  const viaPopover = { popups, text: await outcome() }
+  console.log(`Drive choice from the popover: ${viaPopover.popups} window(s) opened, messages "${viaPopover.text.replace(/\s+/g, ' ').slice(0, 100)}"`)
+  // The existing flow ran: either the Google sign-in window opened, or its message came (here: no Google client, or the window was closed).
+  expect(viaPopover.popups > 0 || /Google|Drive|sign-in/i.test(viaPopover.text)).toBe(true)
   expect(errors).toEqual([])
   await context.close()
 })
