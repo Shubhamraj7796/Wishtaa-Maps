@@ -98,10 +98,10 @@ describe('expanding the PDF', () => {
   it('collapses to a small tab and comes back, with the PDF still open', () => {
     render(<PdfPanel mode="side" />)
     fireEvent.click(screen.getByRole('button', { name: 'More PDF options' })) // Hide moved into the "..." menu
-    fireEvent.click(screen.getByRole('menuitem', { name: /Hide the PDF panel/ }))
+    fireEvent.click(screen.getByRole('menuitem', { name: /Collapse PDF/ }))
     expect(size()).toBe('collapsed')
     expect(st().pdfPanel.open).toBe(true)
-    fireEvent.click(screen.getByRole('button', { name: 'Show the PDF panel' }))
+    fireEvent.click(screen.getByRole('button', { name: /^Open PDF/ }))
     expect(size()).toBe('normal')
   })
 

@@ -87,7 +87,7 @@ describe('Group A: one thin top bar', () => {
     expect(screen.getByRole('menuitem', { name: /Open a PDF from this device/ })).toBeTruthy()
     expect(screen.getByRole('menuitem', { name: /Markup list/ })).toBeTruthy()
     expect(screen.getByRole('menuitemcheckbox', { name: /Page thumbnails/ })).toBeTruthy()
-    expect(screen.getByRole('menuitem', { name: /Hide the PDF panel/ })).toBeTruthy()
+    expect(screen.getByRole('menuitem', { name: /Collapse PDF/ })).toBeTruthy()
   })
 
   it('zoom is in the View menu now', async () => {

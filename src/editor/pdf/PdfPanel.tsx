@@ -3,9 +3,10 @@ import type { PdfSource } from '@/core/pdf/types'
 import { Icon } from '@/ui/icons'
 import { useTooltip } from '@/ui/Tooltip'
 import { useEditor } from '../store'
-import { addPdfFiles, focusPdfPane, reopenPdf, refetchFromDrive, setPdfCollapsed, setPdfDrawer, setPdfFocusMode, setPdfRatio, setPdfSize, setPdfTab, setPdfTool, showSource } from './actions'
+import { addPdfFiles, focusPdfPane, reopenPdf, refetchFromDrive, setPdfDrawer, setPdfFocusMode, setPdfRatio, setPdfSize, setPdfTab, setPdfTool, showSource } from './actions'
 import { SplitDropZones, Tabs } from './Tabs'
 import { CaptureBar } from './CaptureBar'
+import { CollapsedTab } from './CollapsedTab'
 import { PdfBar } from './PdfBar'
 import { btn } from './menus'
 import { accessPdf, bumpDevice, getDeviceVersion, rememberPassword, subscribeDevice, type PdfAccess } from './runtime'
@@ -156,16 +157,7 @@ export default function PdfPanel({ mode }: { mode: 'side' | 'sheet' }) {
       : { height: size === 'wide' ? '70%' : sheet, paddingBottom: 'env(safe-area-inset-bottom)' }
   const place = full ? 'absolute inset-0 z-[45]' : mode === 'side' ? 'relative z-[35]' : 'absolute inset-x-0 bottom-0 z-[45] border-t border-line shadow-2xl'
 
-  if (panel.collapsed) {
-    return (
-      <aside aria-label="PDF source (hidden)" data-pdf-panel={mode} data-pdf-size="collapsed" className={mode === 'side' ? 'relative z-10 flex w-10 shrink-0 flex-col items-center border-r border-line bg-surface py-2' : 'absolute bottom-3 right-3 z-30'}>
-        <button type="button" className={`${btn} ${mode === 'sheet' ? 'h-12 w-12 rounded-full border border-line bg-surface shadow-lg' : ''}`} aria-label="Show the PDF panel" title="Show the PDF panel" onClick={() => setPdfCollapsed(false)}>
-          <Icon name="pdf" size={18} />
-        </button>
-        {mode === 'side' && <span className="mt-2 text-[10px] text-muted [writing-mode:vertical-rl]">{source?.name ?? 'PDF'}</span>}
-      </aside>
-    )
-  }
+  if (panel.collapsed) return <CollapsedTab mode={mode} name={source?.name ?? 'PDF'} tabs={panel.tabs.length} />
 
   return (
     <aside
@@ -188,7 +180,7 @@ export default function PdfPanel({ mode }: { mode: 'side' | 'sheet' }) {
         </button>
       ) : (
         <>
-          <PdfBar panelW={panelW} source={source} list={list} readOnly={readOnly} showHidden={showHidden} setShowHidden={setShowHidden} hiddenCount={hiddenCount} onOutline={() => setOutline(true)} />
+          <PdfBar mode={mode} panelW={panelW} source={source} list={list} readOnly={readOnly} showHidden={showHidden} setShowHidden={setShowHidden} hiddenCount={hiddenCount} onOutline={() => setOutline(true)} />
           {panel.tabs.length > 1 && panelW >= 700 && <Tabs />}
         </>
       )}
