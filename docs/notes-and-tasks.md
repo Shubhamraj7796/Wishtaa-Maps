@@ -12,3 +12,11 @@ Several notes per topic, tasks of their own, and a Task view. Built in five smal
 - **Search and files.** Map search finds a topic by the title or text of any of its notes (`core/search.ts`); the per-file index appends the other notes to the topic's note text, so the Files page Notes list and file search see them (`core/files/indexer.ts`).
 - **Outline export.** Copying branches as an outline now writes the notes under their topic as `[Note] Title: text` lines (one level deeper). Reading an outline back skips these lines, so they never become topics.
 - **Not in this step:** the note popup and its editor (step 3). Pictures inside a note: the note editor has never had a picture tool and its cleaner drops images, so this is not changed here.
+
+## Step 3: the note popup
+- `NotePopup.tsx` (in `ItemPopup`): title field (own notes only; the first note of a topic is "First note of this topic"), `RichNoteEditor` (TipTap, the same sanitizer as before), footer with created and edited times, a Delete icon (removes at once, a notice offers Undo; for the first note it empties `topic.note`), and a close that first saves the title and the text, then removes a new note that is completely empty.
+- `RichNoteEditor.tsx` holds the editor and its **icon toolbar** (`IconTile`: shared tooltip, `aria-label`, chosen = highlighted background; no native `title`). Autosave 500 ms after typing stops; `handle.flush()` is called before the popup closes; the editor follows changes from outside (undo, another device) unless typing is waiting to be saved. Read mode: no toolbar, nothing saved.
+- The side panel's **Notes tab** (`NotesPanel.tsx`) is now the list of the selected topic's notes (the same rows as the popover) with the Add icon.
+- Insert > Notes opens that tab; **Add a note** creates a note and opens it in the popup.
+- **Pictures inside a note:** the note editor never had a picture tool and the cleaner (`sanitizeNote`) drops images, so none were added. It needs the picture store (upload once, the 500 picture cap, Drive pictures) and is a separate decision.
+- Tests: `notePopup.test.tsx` (jsdom), `e2e/notes-tasks.spec.ts` (real Chrome: typing, bold, Escape, autosave, reload, count, list, Outline icon, search, phone-size full screen, tablet centred).
