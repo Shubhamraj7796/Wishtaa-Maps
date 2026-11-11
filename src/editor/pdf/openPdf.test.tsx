@@ -219,3 +219,58 @@ describe('the Open a PDF icon in the top bar', () => {
     expect(within(bar()).getByLabelText('Page number')).toBeTruthy()
   })
 })
+
+describe('the empty panel (no PDF open)', () => {
+  const renderEmpty = () =>
+    render(
+      <>
+        <PdfPanel mode="side" />
+        <TooltipLayer />
+      </>
+    )
+
+  it('shows two large buttons WITH words, and no "use the + button" text', async () => {
+    renderEmpty()
+    expect(screen.getByText('No PDF yet')).toBeTruthy()
+    const device = screen.getByRole('button', { name: 'Open from this device' })
+    const drive = screen.getByRole('button', { name: 'Open from Google Drive' })
+    expect(device.textContent).toContain('Open from this device')
+    expect(drive.textContent).toContain('Open from Google Drive')
+    expect(device.querySelector('svg')).toBeTruthy()
+    expect(device.className).toContain('min-h-12') // a big target (48 px)
+    expect(document.body.textContent).not.toContain('use the + button')
+  })
+
+  it('the buttons call the same actions as the popover and the "..." menu', async () => {
+    renderEmpty()
+    fireEvent.click(screen.getByRole('button', { name: 'Open from this device' }))
+    expect(picked.device).toHaveBeenCalledTimes(1)
+    fireEvent.click(screen.getByRole('button', { name: 'Open from Google Drive' }))
+    expect(picked.drive).toHaveBeenCalledTimes(1)
+  })
+
+  it('the bar still has the Open a PDF icon, and dropping a PDF is still allowed', async () => {
+    renderEmpty()
+    expect(within(document.querySelector('[data-pdf-bar]') as HTMLElement).getByRole('button', { name: 'Open a PDF' })).toBeTruthy()
+    const zone = screen.getByText('No PDF yet').closest('div[class*="border-dashed"]') as HTMLElement
+    expect(zone).toBeTruthy()
+    const f = await file('Dropped.pdf')
+    await act(async () => void fireEvent.drop(zone, { dataTransfer: { files: [f], types: ['Files'] } }))
+    await waitFor(() => expect(Object.values(st().pdf.sources).some((s) => s.name === 'Dropped.pdf')).toBe(true), { timeout: 5000 })
+  })
+
+  it('in Read mode it only says the map has no PDF (nothing can be added)', async () => {
+    act(() => useEditor.setState({ readOnly: true }))
+    renderEmpty()
+    expect(screen.getByText('This map has no PDF.')).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Open from this device' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Open from Google Drive' })).toBeNull()
+    act(() => useEditor.setState({ readOnly: false }))
+  })
+
+  it('on a narrow panel it is the same: large, labelled, nothing cut off', async () => {
+    paneWidth = 390
+    renderEmpty()
+    expect(screen.getByRole('button', { name: 'Open from this device' }).textContent).toContain('Open from this device')
+  })
+})

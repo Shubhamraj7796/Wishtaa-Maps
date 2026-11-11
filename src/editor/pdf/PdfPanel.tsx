@@ -3,7 +3,7 @@ import type { PdfSource } from '@/core/pdf/types'
 import { Icon } from '@/ui/icons'
 import { useTooltip } from '@/ui/Tooltip'
 import { useEditor } from '../store'
-import { addPdfFiles, focusPdfPane, reopenPdf, refetchFromDrive, setPdfDrawer, setPdfFocusMode, setPdfRatio, setPdfSize, setPdfTab, setPdfTool, showSource } from './actions'
+import { addPdfFiles, focusPdfPane, openPdfFromDrive, pickPdfFromDevice, reopenPdf, refetchFromDrive, setPdfDrawer, setPdfFocusMode, setPdfRatio, setPdfSize, setPdfTab, setPdfTool, showSource } from './actions'
 import { SplitDropZones, Tabs } from './Tabs'
 import { CaptureBar } from './CaptureBar'
 import { CollapsedTab } from './CollapsedTab'
@@ -425,9 +425,26 @@ function Empty() {
         if (!readOnly) void addPdfFiles([...e.dataTransfer.files])
       }}
     >
-      <div>
+      <div className="w-full">
         <p className="font-medium">No PDF yet</p>
-        <p className="mt-1 text-muted">{readOnly ? 'This map has no PDF.' : 'Drop a PDF here, or use the + button to choose one from this device or Google Drive.'}</p>
+        {readOnly ? (
+          <p className="mt-1 text-muted">This map has no PDF.</p>
+        ) : (
+          <>
+            <p className="mt-1 text-muted">Choose a PDF, or drop one here.</p>
+            {/* The one place with words on its buttons: with no PDF open there is nothing else to read, so the choices say what they do. */}
+            <div className="mx-auto mt-4 flex w-full max-w-xs flex-col gap-2">
+              <button type="button" data-open-device-large onClick={() => pickPdfFromDevice()} className="flex min-h-12 items-center gap-3 rounded-ui bg-brand px-4 py-3 text-left text-sm font-semibold text-brand-ink hover:opacity-90">
+                <Icon name="laptop" size={22} />
+                Open from this device
+              </button>
+              <button type="button" data-open-drive-large onClick={() => void openPdfFromDrive()} className="flex min-h-12 items-center gap-3 rounded-ui border border-line bg-surface px-4 py-3 text-left text-sm font-semibold text-ink hover:bg-bg">
+                <Icon name="cloud" size={22} />
+                Open from Google Drive
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   )
