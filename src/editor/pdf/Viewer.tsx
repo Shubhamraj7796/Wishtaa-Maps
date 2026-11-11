@@ -187,8 +187,8 @@ export function Viewer({ source, handle, showHidden, active = true }: { source: 
 
   // What this pane shows, for the page buttons and the View menu.
   useEffect(() => {
-    publishView(source.id, { rows: rowPages, paneW: viewW, two })
-  }, [source.id, rowPages, viewW, two])
+    publishView(source.id, { rows: rowPages, paneW: viewW, two, percent: Math.round((scale / PX_PER_POINT) * 100) })
+  }, [source.id, rowPages, viewW, two, scale])
   useEffect(() => () => forgetView(source.id), [source.id])
 
   /** Paged: the previous or next page or spread. */

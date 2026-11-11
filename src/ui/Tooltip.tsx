@@ -81,16 +81,21 @@ export function TooltipLayer() {
   useEffect(() => {
     if (!tip) return
     const away = () => hideTip()
+    // A scroll that does not move the control (a menu that scrolled a pixel, a page behind it) leaves the tooltip where it is.
+    const scrolled = () => {
+      const r = tip.el.getBoundingClientRect()
+      if (Math.abs(r.top - tip.anchor.top) > 1 || Math.abs(r.left - tip.anchor.left) > 1) hideTip()
+    }
     const esc = (e: KeyboardEvent) => e.key === 'Escape' && hideTip()
     const down = (e: PointerEvent) => !(e.target as Element | null)?.closest?.('[data-tip-anchor]') && hideTip()
-    window.addEventListener('scroll', away, true)
+    window.addEventListener('scroll', scrolled, true)
     window.addEventListener('resize', away)
     window.addEventListener('keydown', esc, true)
     window.addEventListener('pointerdown', down, true)
     // A control that was taken off the page (a menu that closed) cannot keep its tooltip.
     const watch = window.setInterval(() => !tip.el.isConnected && hideTip(), 250)
     return () => {
-      window.removeEventListener('scroll', away, true)
+      window.removeEventListener('scroll', scrolled, true)
       window.removeEventListener('resize', away)
       window.removeEventListener('keydown', esc, true)
       window.removeEventListener('pointerdown', down, true)
@@ -108,7 +113,7 @@ export function TooltipLayer() {
       data-tooltip
       data-side={at.side}
       className="pointer-events-none fixed z-[1000] max-w-[min(18rem,92vw)] rounded-md bg-ink px-2 py-1 text-xs font-medium leading-snug text-surface shadow-lg motion-safe:animate-[fadein_120ms_ease-out]"
-      style={{ left: at.left, top: at.top }}
+      style={{ left: at.left, top: at.top, width: 'max-content' }}
     >
       {tip.text}
       {tip.keys && <span className="ml-1.5 opacity-70">({tip.keys})</span>}
@@ -151,10 +156,8 @@ export function useTooltip(text: string, keys?: string): Handlers {
     },
     onPointerDown: (e) => {
       longPressed.current = false
-      if (!prefersCoarse(e)) {
-        hideTip() // pressing a control runs it: the tooltip has done its job
-        return
-      }
+      hideTip() // pressing a control runs it (or starts a long press): any tooltip showing has done its job
+      if (!prefersCoarse(e)) return
       touching.current = true
       const el = e.currentTarget
       window.clearTimeout(touchTimer)

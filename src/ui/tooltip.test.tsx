@@ -91,7 +91,10 @@ describe('tooltip: hover with a mouse', () => {
     expect(tip()).toBeNull()
     fireEvent.pointerEnter(undo, mouse)
     wait(HOVER_MS + 10)
-    fireEvent.scroll(window)
+    fireEvent.scroll(window) // the control did not move: the tooltip stays
+    expect(tip()).toBeTruthy()
+    vi.spyOn(undo, 'getBoundingClientRect').mockReturnValue({ top: -40, left: 0, right: 0, bottom: 0, width: 0, height: 0, x: 0, y: -40, toJSON: () => ({}) } as DOMRect)
+    fireEvent.scroll(window) // the control moved: the tooltip goes
     expect(tip()).toBeNull()
     fireEvent.pointerEnter(undo, mouse)
     wait(HOVER_MS + 10)
@@ -173,6 +176,21 @@ describe('tooltip: long-press on touch', () => {
     fireEvent.pointerUp(undo, touch)
     fireEvent.click(undo)
     expect(onClick).toHaveBeenCalledTimes(1)
+  })
+
+  it('a tooltip left from a long press goes when the next press starts (it is not kept alive)', () => {
+    render(<Bar />)
+    const undo = screen.getByRole('button', { name: 'Undo' })
+    fireEvent.pointerDown(undo, touch)
+    wait(LONG_PRESS_MS + 10)
+    fireEvent.pointerUp(undo, touch)
+    fireEvent.click(undo)
+    expect(tip()).toBeTruthy()
+    fireEvent.pointerDown(undo, touch)
+    expect(tip()).toBeNull()
+    fireEvent.pointerUp(undo, touch)
+    wait(TOUCH_HIDE_MS + 50)
+    expect(tip()).toBeNull()
   })
 
   it('the browser menu of a long press is not shown', () => {

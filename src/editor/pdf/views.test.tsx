@@ -224,10 +224,11 @@ describe('View menu: zoom', () => {
     openMenu()
     view(/Fit page/)
     expect(width()).toBeLessThan(fitWidth)
-    expect(screen.getByRole('button', { name: /Zoom: fit page/ }).textContent).toBe('Fit page')
+    expect(screen.getByRole('menuitemradio', { name: 'Fit page' }).getAttribute('aria-checked')).toBe('true')
     view(/Actual size/)
     expect(st().pdfPanel.zoom).toBe(1)
-    expect(screen.getByRole('button', { name: /Zoom 100 percent/ })).toBeTruthy()
+    expect(screen.getByRole('button', { name: /Zoom 100 percent/ }).textContent).toBe('100%') // the percentage stays text
+    expect(screen.getByRole('menuitemradio', { name: /Actual size/ }).getAttribute('aria-checked')).toBe('true')
     view(/Fit width/)
     expect(st().pdfPanel.zoom).toBeNull()
     expect(width()).toBeCloseTo(fitWidth, 0)
@@ -245,8 +246,11 @@ describe('View menu: zoom', () => {
   it('a percentage chosen from the menu', async () => {
     await open()
     openMenu()
+    expect(screen.queryByRole('button', { name: '150%' })).toBeNull() // the list opens from the percentage
+    fireEvent.click(document.querySelector('[data-zoom-percent]') as HTMLElement)
     fireEvent.click(screen.getByRole('button', { name: '150%' }))
     expect(st().pdfPanel.zoom).toBe(1.5)
+    expect(screen.getByRole('button', { name: /Zoom 150 percent/ }).textContent).toBe('150%')
   })
 })
 
@@ -310,7 +314,8 @@ describe('Two-page view makes room (Part 1)', () => {
     const page = width()
     view(/Fit height/)
     expect(st().pdfPanel.views[id()]?.fit).toBe('height')
-    expect(screen.getByRole('button', { name: /Zoom: fit height/ }).textContent).toBe('Fit height')
+    expect(screen.getByRole('menuitemradio', { name: 'Fit height' }).getAttribute('aria-checked')).toBe('true')
+    expect(screen.getByRole('menuitemradio', { name: 'Fit page' }).getAttribute('aria-checked')).toBe('false')
     expect(width()).toBeGreaterThanOrEqual(page)
   })
 
@@ -440,14 +445,15 @@ describe('First page alone and 1-page flipping (Part 2, B1)', () => {
     expect(st().pdfPanel.views[id()]?.cover).toBe(true)
   })
 
-  it('1-page flipping is offered only when two pages are chosen', async () => {
+  it('1-page flipping can be used only when two pages are chosen (greyed out otherwise)', async () => {
     await open()
     openMenu()
-    expect(screen.queryByRole('menuitemcheckbox', { name: /1-page flipping/ })).toBeNull()
+    const flip = () => screen.getByRole('menuitemcheckbox', { name: /1-page flipping/ }) as HTMLButtonElement
+    expect(flip().disabled).toBe(true) // greyed out, not hidden
     view(/Two-page view/)
-    expect(screen.getByRole('menuitemcheckbox', { name: /1-page flipping/ })).toBeTruthy()
+    expect(flip().disabled).toBe(false)
     view(/Single-page view/)
-    expect(screen.queryByRole('menuitemcheckbox', { name: /1-page flipping/ })).toBeNull()
+    expect(flip().disabled).toBe(true)
   })
 
   it('with scrolling off, a turn moves by one page: 1-2, 2-3, 3-4; the page box follows', async () => {

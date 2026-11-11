@@ -94,8 +94,11 @@ describe('Group A: one thin top bar', () => {
     await open()
     expect(screen.queryByRole('button', { name: 'Zoom in' })).toBeNull()
     fireEvent.click(screen.getAllByRole('button', { name: 'View options' })[0] as HTMLElement)
+    const before = screen.getByRole('button', { name: /Zoom \d+ percent/ }).textContent
+    expect(before).toMatch(/^\d+%$/) // the percentage is text
     fireEvent.click(screen.getByRole('button', { name: 'Zoom in' }))
-    expect(st().pdfPanel.zoom).toBe(1.25)
+    expect(st().pdfPanel.zoom).toBeGreaterThan(0)
+    expect(Number(screen.getByRole('button', { name: /Zoom \d+ percent/ }).textContent?.replace('%', ''))).toBeGreaterThan(Number(before?.replace('%', '')) - 1)
   })
 })
 

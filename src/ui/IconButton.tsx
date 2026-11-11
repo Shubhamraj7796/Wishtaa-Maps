@@ -59,7 +59,7 @@ interface TileProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'title
   keys?: string
   selected?: boolean
   size?: number
-  role?: Role | 'button'
+  role?: Role | 'button' | 'menuitem'
 }
 
 /**
@@ -68,7 +68,7 @@ interface TileProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'title
  */
 export function IconTile({ icon, label, keys, selected = false, size = ICON_PX, className = '', role, disabled, ...rest }: TileProps) {
   const tip = useTooltip(label, keys)
-  const state = isChecked(role) ? { 'aria-checked': selected } : { 'aria-pressed': selected }
+  const state = isChecked(role) ? { 'aria-checked': selected } : role === 'menuitem' ? {} : { 'aria-pressed': selected }
   return (
     <button
       type="button"
@@ -111,11 +111,34 @@ export function IconToggleGroup<T extends string>({ label, value, onChange, item
 }
 
 /** A round colour button (Document colour): the colour is the icon, a ring shows the chosen one. */
-export function Swatch({ label, color, selected, onClick, role = 'radio', filter, className = '' }: { label: string; color: string; selected: boolean; onClick: () => void; role?: 'radio' | 'menuitemradio'; filter?: string; className?: string }) {
+export function Swatch({ label, color, selected, onClick, role = 'radio', filter, className = '', ...rest }: { label: string; color: string; selected: boolean; onClick: () => void; role?: 'radio' | 'menuitemradio'; filter?: string; className?: string } & Record<`data-${string}`, string | undefined>) {
   const tip = useTooltip(label)
   return (
-    <button type="button" role={role} aria-label={label} aria-checked={selected} onClick={onClick} {...tip} className={`grid select-none place-items-center rounded-full ${ICON_BOX} ${className}`}>
+    <button type="button" role={role} aria-label={label} aria-checked={selected} onClick={onClick} {...tip} {...rest} className={`grid select-none place-items-center rounded-full ${ICON_BOX} ${className}`}>
       <span aria-hidden="true" className={`h-6 w-6 rounded-full border ${selected ? 'border-ink ring-2 ring-brand ring-offset-1 ring-offset-surface' : 'border-line'}`} style={{ background: color, filter }} />
+    </button>
+  )
+}
+
+/**
+ * A button of any look that shows its name through the shared tooltip (rule 8) instead of the browser's `title`: for the places that keep
+ * their own styling (the floating pen bar, flyouts). It has no icon logic of its own; give it an `aria-label` or visible text.
+ */
+export function TipButton({ tip, keys, children, ...rest }: Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'title'> & { tip: string; keys?: string }) {
+  const t = useTooltip(tip, keys)
+  return (
+    <button
+      type="button"
+      {...t}
+      {...rest}
+      onPointerEnter={(e) => (t.onPointerEnter(e), rest.onPointerEnter?.(e))}
+      onPointerLeave={(e) => (t.onPointerLeave(e), rest.onPointerLeave?.(e))}
+      onPointerDown={(e) => (t.onPointerDown(e), rest.onPointerDown?.(e))}
+      onPointerUp={(e) => (t.onPointerUp(e), rest.onPointerUp?.(e))}
+      onFocus={(e) => (t.onFocus(e), rest.onFocus?.(e))}
+      onBlur={(e) => (t.onBlur(e), rest.onBlur?.(e))}
+    >
+      {children}
     </button>
   )
 }

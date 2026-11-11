@@ -58,6 +58,9 @@ for (const size of SIZES) {
     const menu = page.locator('[data-view-menu]')
     await expect(menu).toBeVisible()
     await page.waitForTimeout(300)
+    const mb = (await menu.boundingBox())!
+    expect(mb.x).toBeGreaterThanOrEqual(0)
+    expect(mb.x + mb.width).toBeLessThanOrEqual(size.viewport.width) // never runs off the window
     const full = `${LABEL}-view-menu-${size.name}-page.png`
     const crop = `${LABEL}-view-menu-${size.name}.png`
     await page.screenshot({ path: join(OUT, full) })

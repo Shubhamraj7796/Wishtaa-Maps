@@ -38,7 +38,7 @@ export const PageTwo = make('PageTwo', (
 /** The first page alone: an empty (dashed) place on the left, the first page on the right, then the pairs. */
 export const PageFirstAlone = make('PageFirstAlone', (
   <>
-    <rect x="2.5" y="4.5" width="9" height="15" rx="1.5" strokeDasharray="2.2 2.2" opacity="0.65" />
+    <rect x="2.5" y="4.5" width="9" height="15" rx="1.5" strokeDasharray="2 1.6" opacity="0.85" />
     <rect x="12.5" y="4.5" width="9" height="15" rx="1.5" />
     <path d="M15 9.5h4" />
   </>
@@ -60,11 +60,12 @@ export const FlipOne = make('FlipOne', (
   </>
 ))
 
-/** Right-to-left reading: an arrow pointing left over lines that start on the right. */
+/** Right-to-left reading: a spread with an arrow under it pointing left (the first page is on the right). */
 export const RightToLeft = make('RightToLeft', (
   <>
-    <path d="M20 7H5M5 7l3.5-3.5M5 7l3.5 3.5" />
-    <path d="M20 13.5H9M20 18H13" />
+    <rect x="3.5" y="3" width="8" height="10" rx="1.4" />
+    <rect x="12.5" y="3" width="8" height="10" rx="1.4" />
+    <path d="M20.5 18.5h-17M3.5 18.5l3-3M3.5 18.5l3 3" />
   </>
 ))
 
@@ -92,11 +93,12 @@ export const FitHeight = make('FitHeight', (
   </>
 ))
 
-/** Actual size: 1 : 1. */
+/** Actual size: 1 : 1 inside a frame. */
 export const ActualSize = make('ActualSize', (
   <>
-    <path d="M4.5 9.5l2.2-1.7v8.7M17.3 9.5l2.2-1.7v8.7" />
-    <path d="M12 10.8v.01M12 14.8v.01" strokeWidth="2.6" />
+    <rect x="2.5" y="4.5" width="19" height="15" rx="2.2" />
+    <path d="M6.6 11l1.7-1.2v5.4M15.7 11l1.7-1.2v5.4" />
+    <path d="M12 11.4v.01M12 14.2v.01" strokeWidth="2.3" />
   </>
 ))
 
@@ -112,19 +114,19 @@ export const Presentation = make('Presentation', (
 /** A new topic after the one that is chosen: a topic above, a dashed new one below. */
 export const SiblingAfter = make('SiblingAfter', (
   <>
-    <rect x="4" y="3.5" width="12" height="6" rx="1.4" />
-    <rect x="4" y="14.5" width="12" height="6" rx="1.4" strokeDasharray="2.4 2.2" />
+    <rect x="2.5" y="3.5" width="11" height="6" rx="1.4" />
+    <rect x="2.5" y="14.5" width="11" height="6" rx="1.4" strokeDasharray="2.4 2.2" />
     <path d="M19.5 12v6M16.5 15h6" />
   </>
 ))
 
-/** A new branch: a centre with a line to a new topic. */
+/** A new branch: a centre dot with a line out to two topics. */
 export const NewBranch = make('NewBranch', (
   <>
-    <circle cx="5" cy="12" r="2.4" />
-    <path d="M7.4 12h3.6l4-5.2M11 12l4 5.2" />
-    <rect x="15.5" y="3.6" width="6" height="5.4" rx="1.3" strokeDasharray="2.2 2" />
-    <rect x="15.5" y="15" width="6" height="5.4" rx="1.3" />
+    <circle cx="4.5" cy="12" r="2" />
+    <path d="M6.5 12H10M10 6.2v11.6M10 6.2h4.5M10 17.8h4.5" />
+    <rect x="14.5" y="3.5" width="7" height="5.4" rx="1.3" />
+    <rect x="14.5" y="15.1" width="7" height="5.4" rx="1.3" />
   </>
 ))
 

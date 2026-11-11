@@ -7,6 +7,8 @@ export interface LiveView {
   paneW: number
   /** Two pages are actually showing (chosen, and the pane is wide enough). */
   two: boolean
+  /** The zoom the pages are shown at, in percent (100 is the size on paper), also while Fit is on. */
+  percent?: number
 }
 
 const live = new Map<string, LiveView>()
@@ -15,7 +17,7 @@ let version = 0
 
 export function publishView(id: string, view: LiveView) {
   const was = live.get(id)
-  if (was && was.paneW === view.paneW && was.two === view.two && sameRows(was.rows, view.rows)) return
+  if (was && was.paneW === view.paneW && was.two === view.two && was.percent === view.percent && sameRows(was.rows, view.rows)) return
   live.set(id, view)
   version++
   listeners.forEach((l) => l())
