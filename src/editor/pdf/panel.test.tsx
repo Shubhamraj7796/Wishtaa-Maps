@@ -215,7 +215,8 @@ describe('the floating markup tools', () => {
     const pen = document.querySelector('[data-tool="pen"]') as HTMLElement
     expect(pen.querySelector('span')?.getAttribute('style')).toContain('rgb(239, 68, 68)')
     expect((document.querySelector('[data-tool="highlight"]') as HTMLElement).querySelector('span')?.getAttribute('style')).toContain('rgb(250, 204, 21)')
-    expect(pen.title).toBe('Pen (P)')
+    expect(pen.getAttribute('title')).toBeNull() // the shared tooltip, not the browser's
+    expect(pen.getAttribute('aria-label')).toBe('Pen')
     fireEvent.click(pen)
     expect(st().pdfPanel.tool).toBe('pen')
     expect(pen.getAttribute('aria-pressed')).toBe('true')

@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import type { MarkupObject, Point, Rect } from '@/core/pdf/types'
-import { Icon } from '@/ui/icons'
+import { IconTile } from '@/ui/IconButton'
 import { pointerMayDraw, noteStylus } from '../markup/layers'
 import { setLasso } from './actions'
 import { clampMove, copyOf, lassoPick, moved, NO_MOVE, selectionBounds, type Move } from './lasso'
@@ -15,8 +15,6 @@ interface Surface {
 }
 
 type ToPoint = (e: { clientX: number; clientY: number }, el: Element) => Point
-
-const tap = 'grid h-8 min-w-8 shrink-0 place-items-center rounded px-1.5 text-xs hover:bg-bg [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:min-w-11'
 
 /** The lasso tool: draw a loop round markup on this page to pick it. A tap on empty page lets the picture go. */
 export function LassoDraw({ list, box, toPoint, surface, onPick }: { list: MarkupObject[]; box: Surface; toPoint: ToPoint; surface: string; onPick: (ids: string[]) => void }) {
@@ -186,16 +184,9 @@ export function LassoSelection({ list, ids, box, rotationOf, onPreview, onDone }
             </button>
           ))}
         </div>
-        <button type="button" className={tap} data-lasso-copy onClick={copy}>
-          <Icon name="copy" size={15} />
-          <span className="sr-only">Copy the chosen markup</span>
-        </button>
-        <button type="button" className={`${tap} text-bad`} data-lasso-delete aria-label="Delete the chosen markup" onClick={() => deleteManyMarkup(ids)}>
-          <Icon name="trash" size={15} />
-        </button>
-        <button type="button" className={tap} aria-label="Done" onClick={onDone}>
-          <Icon name="close" size={15} />
-        </button>
+        <IconTile icon="copy" label="Copy the chosen markup" data-lasso-copy="" onClick={copy} />
+        <IconTile icon="trash" label="Delete the chosen markup" className="text-bad" data-lasso-delete="" onClick={() => deleteManyMarkup(ids)} />
+        <IconTile icon="close" label="Done" onClick={onDone} />
       </div>
     </div>
   )

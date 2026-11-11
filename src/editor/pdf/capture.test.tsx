@@ -240,11 +240,12 @@ describe('Keep capturing, undo and the confirmation', () => {
     expect(st().pdfPanel.tool).toBe('select')
   })
 
-  it('the bar shows Into, the three Add as chips and Keep capturing', () => {
+  it('the bar shows Into, the three Add as icons and Keep capturing', () => {
     start(chapter)
     render(<CaptureBar />)
     expect(screen.getByRole('radiogroup', { name: 'Add as' })).toBeTruthy()
-    expect(screen.getAllByRole('radio').map((r) => r.textContent)).toEqual(['Sub-topic', 'Next sibling', 'New branch'])
+    expect(screen.getAllByRole('radio').map((r) => r.getAttribute('aria-label'))).toEqual(['Sub-topic', 'Next sibling', 'New branch']) // icons: the names are the labels
+    expect(screen.getAllByRole('radio').every((r) => r.textContent === '')).toBe(true)
     expect((screen.getByRole('radio', { name: 'Sub-topic' }) as HTMLElement).getAttribute('aria-checked')).toBe('true')
     fireEvent.click(screen.getByRole('radio', { name: 'New branch' }))
     expect(cap().mode).toBe('branch')

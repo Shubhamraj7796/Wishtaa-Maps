@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import type { PdfHandle } from '@/core/pdf/engine'
 import { editKey, type MarkupKind, type MarkupObject, type PdfSource } from '@/core/pdf/types'
+import { IconTile } from '@/ui/IconButton'
 import { Icon } from '@/ui/icons'
 import { useEditor } from '../store'
 import { showSource } from './actions'
@@ -9,7 +10,6 @@ import { PALETTE } from './toolPrefs'
 
 const KIND_NAME: Record<MarkupKind, string> = { highlight: 'Highlight', underline: 'Underline', strike: 'Strikethrough', pen: 'Pen drawing', text: 'Text box', rect: 'Rectangle', ellipse: 'Ellipse', line: 'Line', arrow: 'Arrow', whiteout: 'Whiteout', link: 'Link' }
 
-const tap = 'grid h-9 min-w-9 shrink-0 place-items-center rounded-ui px-1.5 text-sm hover:bg-bg disabled:opacity-40 [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:min-w-11'
 
 /** What can be done to the markup that was clicked: its colour, a note, a topic from it, delete. */
 export function SelectedMarkup() {
@@ -33,26 +33,14 @@ export function SelectedMarkup() {
       {noting ? (
         <>
           <input autoFocus value={note} onChange={(e) => setNote(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && (updateMarkup(id, { note: note.trim() || undefined }), setNoting(false))} aria-label="Note" placeholder="Note" className="min-w-0 flex-1 rounded border border-line bg-surface px-1.5 py-1 text-sm text-ink" />
-          <button type="button" className={tap} onClick={() => (updateMarkup(id, { note: note.trim() || undefined }), setNoting(false))}>
-            Save
-          </button>
+          <IconTile icon="check" label="Save note" onClick={() => (updateMarkup(id, { note: note.trim() || undefined }), setNoting(false))} />
         </>
       ) : (
-        <button type="button" className={tap} onClick={() => (setNote(m.note ?? ''), setNoting(true))}>
-          {m.note ? 'Edit note' : 'Add note'}
-        </button>
+        <IconTile icon="notes" label={m.note ? 'Edit note' : 'Add note'} selected={!!m.note} onClick={() => (setNote(m.note ?? ''), setNoting(true))} />
       )}
-      {m.kind === 'highlight' && wordsOf(m) && (
-        <button type="button" className={tap} onClick={() => topicFromMarkup(id)}>
-          Make topic
-        </button>
-      )}
-      <button type="button" className={`${tap} text-bad`} aria-label="Delete this markup" onClick={() => deleteMarkup(id)}>
-        <Icon name="trash" size={16} />
-      </button>
-      <button type="button" className={tap} aria-label="Done" onClick={() => selectMarkup(null)}>
-        <Icon name="close" size={16} />
-      </button>
+      {m.kind === 'highlight' && wordsOf(m) && <IconTile icon="newTopic" label="Make topic" onClick={() => topicFromMarkup(id)} />}
+      <IconTile icon="trash" label="Delete this markup" className="text-bad" onClick={() => deleteMarkup(id)} />
+      <IconTile icon="close" label="Done" onClick={() => selectMarkup(null)} />
     </div>
   )
 }

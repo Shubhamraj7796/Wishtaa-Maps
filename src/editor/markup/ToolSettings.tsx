@@ -1,5 +1,7 @@
 import { useSyncExternalStore } from 'react'
 import { Icon } from '@/ui/icons'
+import { TipButton } from '@/ui/IconButton'
+import { Tooltip } from '@/ui/Tooltip'
 import { getPen, setPen, subscribePen, type PenPrefs } from '../pdf/penPrefs'
 import { ALL_TOOLS, type ToolId } from '../pdf/toolPrefs'
 
@@ -65,12 +67,12 @@ export function ToolSettings({ tools, onTools, onReset, onClose, side, top }: { 
                 <input type="checkbox" checked={on} disabled={t === 'select'} onChange={() => toggle(t)} aria-label={`Show ${NAMES[t]}`} />
                 <span className="truncate">{NAMES[t]}</span>
               </label>
-              <button type="button" disabled={!on || i === 0} aria-label={`Move ${NAMES[t]} up`} title="Move up" onClick={() => move(i, -1)} className="grid h-7 w-7 place-items-center rounded hover:bg-bg disabled:opacity-30 [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-11">
+              <TipButton tip={"Move up"} type="button" disabled={!on || i === 0} aria-label={`Move ${NAMES[t]} up`} onClick={() => move(i, -1)} className="grid h-7 w-7 place-items-center rounded hover:bg-bg disabled:opacity-30 [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-11">
                 <Icon name="chevronDown" size={14} className="rotate-180" />
-              </button>
-              <button type="button" disabled={!on || i === tools.length - 1} aria-label={`Move ${NAMES[t]} down`} title="Move down" onClick={() => move(i, 1)} className="grid h-7 w-7 place-items-center rounded hover:bg-bg disabled:opacity-30 [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-11">
+              </TipButton>
+              <TipButton tip={"Move down"} type="button" disabled={!on || i === tools.length - 1} aria-label={`Move ${NAMES[t]} down`} onClick={() => move(i, 1)} className="grid h-7 w-7 place-items-center rounded hover:bg-bg disabled:opacity-30 [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-11">
                 <Icon name="chevronDown" size={14} />
-              </button>
+              </TipButton>
             </li>
           )
         })}
@@ -79,10 +81,12 @@ export function ToolSettings({ tools, onTools, onReset, onClose, side, top }: { 
       <ul className="mb-3 space-y-0.5">
         {PEN_ROWS.map((r) => (
           <li key={r.key}>
-            <label className="flex items-center gap-2 py-1 [@media(pointer:coarse)]:min-h-11" title={r.hint}>
-              <input type="checkbox" checked={pen[r.key]} onChange={(e) => setPen({ [r.key]: e.target.checked })} />
-              <span>{r.label}</span>
-            </label>
+            <Tooltip label={r.hint}>
+              <label className="flex items-center gap-2 py-1 [@media(pointer:coarse)]:min-h-11">
+                <input type="checkbox" checked={pen[r.key]} onChange={(e) => setPen({ [r.key]: e.target.checked })} />
+                <span>{r.label}</span>
+              </label>
+            </Tooltip>
           </li>
         ))}
       </ul>

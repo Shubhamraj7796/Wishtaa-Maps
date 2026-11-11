@@ -1,10 +1,12 @@
 import { useEffect, useState, useSyncExternalStore } from 'react'
 import type { PdfSource } from '@/core/pdf/types'
+import { IconTile } from '@/ui/IconButton'
 import { Icon } from '@/ui/icons'
+import { Tooltip } from '@/ui/Tooltip'
 import { useEditor } from '../store'
 import { chooseLayout, closePdfPanel, openPdfFromDrive, openPdfTab, pickPdfFromDevice, removePdfFromDevice, removePdfSource, setAutoCollapse, setPdfCollapsed, setPdfFocusMode, setPdfMarkupBar, setPdfOutlineColumn, setPdfPage, setPdfSize, setPdfSync, setPdfTab, setPdfThumbs, setPdfTool, splitPdf, turnPdf, unsplitPdf } from './actions'
 import { downloadMarkedPdf, saveCopyToDrive } from './exportActions'
-import { btn, Menu, MenuCheck, MenuItem } from './menus'
+import { Menu, MenuCheck, MenuItem } from './menus'
 import { nextSize, SIZE_LABEL } from './layout'
 import { liveViewOf, subscribeViews, viewsVersion } from './spreadState'
 import { nearestRow } from './spreads'
@@ -12,8 +14,7 @@ import { useTouchFriendly } from '../pictures/touch'
 import { loadPdfUi } from './uiPrefs'
 import { ViewMenu } from './ViewMenu'
 
-/** Widths of the panel at which the less-used buttons of the top bar move into the "..." menu. */
-const WIDE_BAR = 700
+/** Widths of the panel at which the less-used buttons of the top bar move into the "..." menu (every button is an icon, so they fit from here). */
 const MID_BAR = 560
 /** A touch screen needs bigger buttons, so it goes slim sooner. */
 const SLIM_BAR = 440
@@ -32,7 +33,6 @@ export function PdfBar({ panelW, source, list, readOnly, showHidden, setShowHidd
   const twoOn = useEditor((s) => (source ? s.pdfPanel.views[source.id]?.two === true : false))
   const second = tabs.find((t) => t !== source?.id) ?? list.find((s) => s.id !== source?.id)?.id
   const close = () => setMenu(null)
-  const wide = panelW >= WIDE_BAR
   const mid = panelW >= MID_BAR
   const touch = useTouchFriendly()
   const slim = panelW < (touch ? SLIM_TOUCH : SLIM_BAR)
@@ -43,16 +43,16 @@ export function PdfBar({ panelW, source, list, readOnly, showHidden, setShowHidd
   return (
     <div data-pdf-bar className="relative z-30 flex h-11 shrink-0 items-center gap-0.5 border-b border-line px-1">
       {!slim && (
-        <button type="button" className={btn} aria-label="Close the PDF panel" title="Close the PDF (it stays in the map)" onClick={closePdfPanel}>
-          <Icon name="close" size={16} />
-        </button>
+        <IconTile icon="close" label="Close the PDF panel" onClick={closePdfPanel} />
       )}
 
       <div className="relative min-w-0 flex-1">
-        <button type="button" aria-haspopup="menu" aria-expanded={menu === 'source'} onClick={() => setMenu(menu === 'source' ? null : 'source')} className="flex w-full items-center gap-1 truncate rounded px-2 py-1 text-left text-sm font-medium hover:bg-bg [@media(pointer:coarse)]:min-h-11" title={source?.name ?? 'Choose a PDF'}>
-          <span className="truncate">{source?.name ?? 'No PDF'}</span>
-          <Icon name="chevronDown" size={14} />
-        </button>
+        <Tooltip label={source?.name ?? 'Choose a PDF'}>
+          <button type="button" aria-haspopup="menu" aria-expanded={menu === 'source'} onClick={() => setMenu(menu === 'source' ? null : 'source')} className="flex w-full items-center gap-1 truncate rounded px-2 py-1 text-left text-sm font-medium hover:bg-bg [@media(pointer:coarse)]:min-h-11">
+            <span className="truncate">{source?.name ?? 'No PDF'}</span>
+            <Icon name="chevronDown" size={14} />
+          </button>
+        </Tooltip>
         {menu === 'source' && (
           <Menu onClose={close} label="PDFs">
             {list.map((s) => (
@@ -107,39 +107,24 @@ export function PdfBar({ panelW, source, list, readOnly, showHidden, setShowHidd
 
       {source && <PageControls source={source} compact={!mid} arrows={panelW >= 520 || paged} />}
       {source && !slim && (
-        <button type="button" data-two-toggle className={`${btn} ${twoOn ? 'bg-brand/15 text-ink' : ''}`} aria-pressed={twoOn} aria-label="Two pages side by side" title={twoOn ? 'Back to one page' : 'Two pages side by side, like an open book (the panel goes full screen)'} onClick={() => chooseLayout(source.id, { two: !twoOn })}>
-          <Icon name="openBook" size={15} />
-        </button>
+        <IconTile icon="pageTwo" label="Two pages side by side" data-two-toggle="" selected={twoOn} onClick={() => chooseLayout(source.id, { two: !twoOn })} />
       )}
       {source && <ViewMenu sourceId={source.id} />}
       {source && (
-        <button type="button" className={`${btn} ${tool === 'capture' ? 'bg-brand/15 text-ink' : ''}`} aria-pressed={tool === 'capture'} aria-label="Capture area" title="Take part of a page as a picture, as a new topic (works on scans and handwriting)" disabled={readOnly} onClick={() => setPdfTool(tool === 'capture' ? 'select' : 'capture')}>
-          <Icon name="camera" size={15} />
-          {wide && <span className="ml-1">Capture area</span>}
-        </button>
-      )}
-      {source && wide && (
-        <button type="button" className={`${btn} ${other ? 'bg-brand/15 text-ink' : ''}`} aria-pressed={!!other} disabled={!other && !second} title={other ? 'Back to one PDF' : second ? 'Show two PDFs side by side' : 'Open a second PDF to split the view'} onClick={() => (other ? unsplitPdf() : second && splitPdf(second, 'right'))}>
-          <Icon name="split" size={15} />
-          <span className="ml-1">{other ? 'One PDF' : 'Split'}</span>
-        </button>
-      )}
-      {source && !readOnly && (
-        <button type="button" data-markup-toggle className={`${btn} ${markupBar ? 'bg-brand/15 text-ink' : ''}`} aria-pressed={markupBar} aria-label="Markup" title="Markup: pen, highlighter, shapes (the tools float over the page)" onClick={() => setPdfMarkupBar(!markupBar)}>
-          <Icon name="edit" size={15} />
-          {wide && <span className="ml-1">Markup</span>}
-        </button>
+        <IconTile icon="camera" label="Capture area" selected={tool === 'capture'} disabled={readOnly} onClick={() => setPdfTool(tool === 'capture' ? 'select' : 'capture')} />
       )}
       {source && mid && (
-        <button type="button" data-focus-button className={btn} aria-label="Focus mode" title="Focus: hide every control, only the page (Esc brings them back)" onClick={() => setPdfFocusMode(true)}>
-          <Icon name="focus" size={15} />
-        </button>
+        <IconTile icon="split" label={other ? 'One PDF' : 'Split'} selected={!!other} disabled={!other && !second} onClick={() => (other ? unsplitPdf() : second && splitPdf(second, 'right'))} />
+      )}
+      {source && !readOnly && (
+        <IconTile icon="edit" label="Markup" data-markup-toggle="" selected={markupBar} onClick={() => setPdfMarkupBar(!markupBar)} />
+      )}
+      {source && mid && (
+        <IconTile icon="focus" label="Focus mode" data-focus-button="" onClick={() => setPdfFocusMode(true)} />
       )}
 
       <div className="relative">
-        <button type="button" data-more className={btn} aria-haspopup="menu" aria-expanded={menu === 'more'} aria-label="More PDF options" title="More: open a PDF, split, Focus, thumbnails, markup list and settings" onClick={() => setMenu(menu === 'more' ? null : 'more')}>
-          <span aria-hidden="true" className="text-base leading-none">⋯</span>
-        </button>
+        <IconTile icon="more" label="More PDF options" data-more="" aria-haspopup="menu" aria-expanded={menu === 'more'} selected={menu === 'more'} onClick={() => setMenu(menu === 'more' ? null : 'more')} />
         {menu === 'more' && (
           <Menu onClose={close} right label="More">
             {!readOnly && (
@@ -149,7 +134,7 @@ export function PdfBar({ panelW, source, list, readOnly, showHidden, setShowHidd
                 <hr className="my-1 border-line" />
               </>
             )}
-            {!wide && source && (
+            {!mid && source && (
               <>
                 {other ? (
                   <MenuItem onClick={doThenClose(() => unsplitPdf())}>One PDF (merge the split view)</MenuItem>
@@ -198,16 +183,13 @@ export function PdfBar({ panelW, source, list, readOnly, showHidden, setShowHidd
         )}
       </div>
 
-      <button
-        type="button"
-        className={btn}
-        data-expand
-        aria-label={full ? 'Restore the PDF to its normal size' : `Make the PDF bigger (now ${SIZE_LABEL[size]}; next ${SIZE_LABEL[nextSize(size)]})`}
-        title={full ? 'Restore (Esc)' : `${SIZE_LABEL[size]}. Click for ${SIZE_LABEL[nextSize(size)]}`}
+      <IconTile
+        icon={full ? 'shrink' : 'expand'}
+        label={full ? 'Restore the PDF to its normal size' : `Make the PDF bigger (now ${SIZE_LABEL[size]}; next ${SIZE_LABEL[nextSize(size)]})`}
+        keys={full ? 'Esc' : undefined}
+        data-expand=""
         onClick={() => setPdfSize(nextSize(size))}
-      >
-        <Icon name={full ? 'shrink' : 'expand'} size={16} />
-      </button>
+      />
     </div>
   )
 }
@@ -231,14 +213,14 @@ function PageControls({ source, compact, arrows }: { source: PdfSource; compact:
   }
   return (
     <div className="flex shrink-0 items-center gap-0.5 text-xs text-muted">
-      {arrows && <button type="button" className={btn} aria-label={shown ? 'Previous spread' : 'Previous page'} onClick={() => turnPdf(-1)} disabled={atStart}>‹</button>}
+      {arrows && <IconTile icon="chevronLeft" label={shown ? 'Previous spread' : 'Previous page'} onClick={() => turnPdf(-1)} disabled={atStart} />}
       <label className="flex items-center gap-1">
         <span className="sr-only">Page</span>
         <input value={text} onChange={(e) => setText(e.target.value)} onBlur={go} onKeyDown={(e) => e.key === 'Enter' && go()} inputMode="numeric" aria-label="Page number" className="w-10 rounded border border-line bg-surface px-1 py-0.5 text-center text-ink [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-12" />
         {!compact && <span>of {source.pages}</span>}
         {shown && !compact && <span data-spread-label>(showing {shown})</span>}
       </label>
-      {arrows && <button type="button" className={btn} aria-label={shown ? 'Next spread' : 'Next page'} onClick={() => turnPdf(1)} disabled={atEnd}>›</button>}
+      {arrows && <IconTile icon="chevronRight" label={shown ? 'Next spread' : 'Next page'} onClick={() => turnPdf(1)} disabled={atEnd} />}
     </div>
   )
 }

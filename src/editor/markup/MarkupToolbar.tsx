@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Icon, type IconName } from '@/ui/icons'
+import { TipButton } from '@/ui/IconButton'
+import { Tooltip } from '@/ui/Tooltip'
 import { useTouchFriendly } from '../pictures/touch'
 import type { PdfTool } from '../store'
 import { ToolSettings } from './ToolSettings'
@@ -206,33 +208,33 @@ export function MarkupToolbar({ tool, onTool, styles, onStyle, shape, extras, pl
     const k = keyOf(t)
     return (
       <div className="relative" key={`${t}${key2 ?? ''}`}>
-        <button type="button" data-tool={t} aria-pressed={active} aria-label={text} title={`${text}${k ? ` (${k})` : ''}`} onClick={(e) => choose(key2 === 'shapes' ? shape : t, key2 ?? styleKey, e)} className={`${btn} ${active ? on : 'text-muted'}`} style={{ width: size, height: size }}>
+        <TipButton tip={text} keys={k} data-tool={t} aria-pressed={active} aria-label={text} onClick={(e) => choose(key2 === 'shapes' ? shape : t, key2 ?? styleKey, e)} className={`${btn} ${active ? on : 'text-muted'}`} style={{ width: size, height: size }}>
           <Icon name={icon} size={20} />
           {colorKey && dot(styles[colorKey].color)}
-        </button>
+        </TipButton>
         {(key2 || styleKey) && (
-          <button type="button" aria-label={`Colour and size: ${text}`} title="Colour and size" onClick={(e) => openFlyout(key2 ?? (styleKey as StyleKey), key2 === 'shapes' ? shape : t, e)} className="absolute right-0 top-0 grid h-5 w-5 place-items-center rounded text-muted hover:bg-bg">
+          <TipButton tip={"Colour and size"} type="button" aria-label={`Colour and size: ${text}`} onClick={(e) => openFlyout(key2 ?? (styleKey as StyleKey), key2 === 'shapes' ? shape : t, e)} className="absolute right-0 top-0 grid h-5 w-5 place-items-center rounded text-muted hover:bg-bg">
             <Icon name="chevronDown" size={10} />
-          </button>
+          </TipButton>
         )}
       </div>
     )
   }
   const extraButton = (x: ToolbarExtra) => (
-    <button key={x.key} type="button" aria-label={x.label} title={x.label} disabled={x.disabled} onClick={() => (x.onClick(), setFlyout(null))} className={`${btn} text-muted`} style={{ width: size, height: size }}>
+    <TipButton tip={x.label} key={x.key} type="button" aria-label={x.label} disabled={x.disabled} onClick={() => (x.onClick(), setFlyout(null))} className={`${btn} text-muted`} style={{ width: size, height: size }}>
       <Icon name={x.icon} size={20} />
-    </button>
+    </TipButton>
   )
   const fadeButton = (
-    <button key="fade" type="button" aria-pressed={place.fade} aria-label="Fade the tools when not in use" title="Fade the tools when not in use" onClick={() => setPlace({ ...place, fade: !place.fade })} className={`${btn} ${place.fade ? on : 'text-muted'}`} style={{ width: size, height: size }}>
+    <TipButton tip={"Fade the tools when not in use"} key="fade" type="button" aria-pressed={place.fade} aria-label="Fade the tools when not in use" onClick={() => setPlace({ ...place, fade: !place.fade })} className={`${btn} ${place.fade ? on : 'text-muted'}`} style={{ width: size, height: size }}>
       <Icon name="preview" size={18} />
-    </button>
+    </TipButton>
   )
 
   const settingsButton = onTools && (
-    <button key="settings" type="button" data-settings aria-haspopup="dialog" aria-expanded={flyout?.key === 'settings'} aria-label="Customise the tools" title="Customise the tools: which ones show, their order and how the pen behaves" onClick={(e) => setFlyout(flyout?.key === 'settings' ? null : { key: 'settings', top: flyTop(e.currentTarget) })} className={`${btn} ${flyout?.key === 'settings' ? on : 'text-muted'}`} style={{ width: size, height: size }}>
+    <TipButton tip={"Customise the tools: which ones show, their order and how the pen behaves"} key="settings" type="button" data-settings aria-haspopup="dialog" aria-expanded={flyout?.key === 'settings'} aria-label="Customise the tools" onClick={(e) => setFlyout(flyout?.key === 'settings' ? null : { key: 'settings', top: flyTop(e.currentTarget) })} className={`${btn} ${flyout?.key === 'settings' ? on : 'text-muted'}`} style={{ width: size, height: size }}>
       <Icon name="format" size={18} />
-    </button>
+    </TipButton>
   )
 
   if (readOnly) return null
@@ -254,19 +256,19 @@ export function MarkupToolbar({ tool, onTool, styles, onStyle, shape, extras, pl
       onFocus={wake}
     >
       {folded ? (
-        <button type="button" aria-label="Show the markup tools" title="Show the markup tools (drag to move)" onPointerDown={startDrag} onClick={() => !dragged.current && (setIdleFolded(false), setPlace({ ...place, collapsed: false }))} className={`${btn} touch-none border border-line bg-surface shadow-lg ${on}`} style={{ width: size, height: size }}>
+        <TipButton tip={"Show the markup tools (drag to move)"} type="button" aria-label="Show the markup tools" onPointerDown={startDrag} onClick={() => !dragged.current && (setIdleFolded(false), setPlace({ ...place, collapsed: false }))} className={`${btn} touch-none border border-line bg-surface shadow-lg ${on}`} style={{ width: size, height: size }}>
           <Icon name={ActiveIcon} size={20} />
           {hasStyle(tool) || isShape(tool) ? dot(styles[activeStyleKey].color) : null}
-        </button>
+        </TipButton>
       ) : (
         <>
           <div ref={bar} role="toolbar" aria-orientation="vertical" aria-label={label} className="grid justify-center gap-0.5 rounded-ui border border-line bg-surface p-0.5 shadow-lg" style={{ gridTemplateColumns: `repeat(${cols}, ${size}px)`, width }}>
-            <button type="button" aria-label="Move the markup tools" title="Drag to move the tools; they snap to the left or right edge" onPointerDown={startDrag} className={`${btn} cursor-grab touch-none text-muted`} style={{ width: size, height: half }}>
+            <TipButton tip={"Drag to move the tools; they snap to the left or right edge"} type="button" aria-label="Move the markup tools" onPointerDown={startDrag} className={`${btn} cursor-grab touch-none text-muted`} style={{ width: size, height: half }}>
               ⠿
-            </button>
-            <button type="button" aria-label="Collapse the markup tools" title="Collapse the tools to one small button" onClick={() => (setFlyout(null), setPlace({ ...place, collapsed: true }))} className={`${btn} text-muted`} style={{ width: size, height: half }}>
+            </TipButton>
+            <TipButton tip={"Collapse the tools to one small button"} type="button" aria-label="Collapse the markup tools" onClick={() => (setFlyout(null), setPlace({ ...place, collapsed: true }))} className={`${btn} text-muted`} style={{ width: size, height: half }}>
               <Icon name={toward} size={14} />
-            </button>
+            </TipButton>
             {shownTools.map((id) => {
               switch (id) {
                 case 'select':
@@ -300,9 +302,9 @@ export function MarkupToolbar({ tool, onTool, styles, onStyle, shape, extras, pl
                 {settingsButton}
               </>
             ) : (
-              <button type="button" data-more aria-haspopup="dialog" aria-expanded={flyout?.key === 'more'} aria-label="More: undo, redo and page actions" title="More" onClick={(e) => setFlyout(flyout?.key === 'more' ? null : { key: 'more', top: flyTop(e.currentTarget) })} className={`${btn} ${flyout?.key === 'more' ? on : 'text-muted'}`} style={{ width: size, height: size }}>
+              <TipButton tip={"More"} type="button" data-more aria-haspopup="dialog" aria-expanded={flyout?.key === 'more'} aria-label="More: undo, redo and page actions" onClick={(e) => setFlyout(flyout?.key === 'more' ? null : { key: 'more', top: flyTop(e.currentTarget) })} className={`${btn} ${flyout?.key === 'more' ? on : 'text-muted'}`} style={{ width: size, height: size }}>
                 <Icon name="details" size={20} />
-              </button>
+              </TipButton>
             )}
           </div>
           {flyout && flyout.key !== 'more' && flyout.key !== 'settings' && <Flyout kind={flyout.key} top={flyout.top} side={place.side} styles={styles} onStyle={onStyle} shape={shape} tool={tool} onTool={onTool} presets={presets} onSavePreset={onSavePreset} onRemovePreset={onRemovePreset} onClose={() => setFlyout(null)} />}
@@ -362,22 +364,24 @@ function Flyout({ kind, top, side, styles, onStyle, shape, tool, onTool, presets
       {kind === 'shapes' && (
         <div className="mb-3 flex gap-1" role="radiogroup" aria-label="Shape">
           {SHAPES.map((s) => (
-            <button key={s} type="button" role="radio" aria-checked={shape === s} aria-label={SHAPE_NAME[s]} title={SHAPE_NAME[s]} onClick={() => onTool(s)} className={`grid h-11 w-11 place-items-center rounded-ui border border-line hover:bg-bg ${shape === s && isShape(tool) ? 'bg-brand/20 ring-1 ring-brand/60' : ''}`}>
+            <TipButton tip={SHAPE_NAME[s]} key={s} type="button" role="radio" aria-checked={shape === s} aria-label={SHAPE_NAME[s]} onClick={() => onTool(s)} className={`grid h-11 w-11 place-items-center rounded-ui border border-line hover:bg-bg ${shape === s && isShape(tool) ? 'bg-brand/20 ring-1 ring-brand/60' : ''}`}>
               <Icon name={SHAPE_ICON[s]} size={18} />
-            </button>
+            </TipButton>
           ))}
         </div>
       )}
       <div role="radiogroup" aria-label="Colour" className="flex flex-wrap gap-1.5">
         {PALETTE.map((c) => (
-          <button key={c} type="button" role="radio" aria-checked={st.color.toLowerCase() === c} aria-label={`Colour ${c}`} title={c} onClick={() => onStyle(key, { color: c })} className="grid h-10 w-10 place-items-center rounded-full">
+          <TipButton tip={c} key={c} type="button" role="radio" aria-checked={st.color.toLowerCase() === c} aria-label={`Colour ${c}`} onClick={() => onStyle(key, { color: c })} className="grid h-10 w-10 place-items-center rounded-full">
             <span className={`h-6 w-6 rounded-full border ${st.color.toLowerCase() === c ? 'border-ink ring-2 ring-brand' : 'border-line'}`} style={{ background: c }} />
-          </button>
+          </TipButton>
         ))}
-        <label className="grid h-10 w-10 cursor-pointer place-items-center rounded-full border border-dashed border-line text-xs text-muted" title="Custom colour">
-          <span aria-hidden="true">+</span>
-          <input type="color" aria-label="Custom colour" value={st.color} onChange={(e) => onStyle(key, { color: e.target.value })} className="sr-only" />
-        </label>
+        <Tooltip label="Custom colour">
+          <label className="grid h-10 w-10 cursor-pointer place-items-center rounded-full border border-dashed border-line text-xs text-muted">
+            <span aria-hidden="true">+</span>
+            <input type="color" aria-label="Custom colour" value={st.color} onChange={(e) => onStyle(key, { color: e.target.value })} className="sr-only" />
+          </label>
+        </Tooltip>
       </div>
       {range && (
         <label className="mt-3 block">
@@ -402,17 +406,17 @@ function Flyout({ kind, top, side, styles, onStyle, shape, tool, onTool, presets
         <div className="mt-3" data-presets={key}>
           <div className="mb-1 flex items-center justify-between text-xs text-muted">
             <span>Presets</span>
-            <button type="button" data-save-preset onClick={() => onSavePreset(key)} className="rounded border border-line px-2 py-1 text-ink hover:bg-bg [@media(pointer:coarse)]:min-h-11" title="Keep this colour and thickness for next time">
+            <TipButton tip={"Keep this colour and thickness for next time"} type="button" data-save-preset onClick={() => onSavePreset(key)} className="rounded border border-line px-2 py-1 text-ink hover:bg-bg [@media(pointer:coarse)]:min-h-11" >
               Save current
-            </button>
+            </TipButton>
           </div>
           <div className="flex flex-wrap gap-1">
             {(presets?.[key] ?? []).slice(0, MAX_PRESETS).map((p, i) => (
               <span key={`${p.color}-${p.size}-${i}`} className="relative inline-flex">
-                <button type="button" data-preset={i} aria-label={`Use preset ${i + 1}: ${p.color}, ${p.size}`} title={`${p.color}, ${p.size}`} onClick={() => onStyle(key, p)} className="grid h-10 min-w-10 place-items-center gap-0 rounded-ui border border-line px-1 hover:bg-bg">
+                <TipButton tip={`${p.color}, ${p.size}`} type="button" data-preset={i} aria-label={`Use preset ${i + 1}: ${p.color}, ${p.size}`} onClick={() => onStyle(key, p)} className="grid h-10 min-w-10 place-items-center gap-0 rounded-ui border border-line px-1 hover:bg-bg">
                   <span className="rounded-full border border-black/20" style={{ background: p.color, width: 20, height: Math.max(4, Math.min(16, p.size + 2)) }} />
                   <span className="text-[10px] leading-none text-muted">{p.size}</span>
-                </button>
+                </TipButton>
                 <button type="button" aria-label={`Remove preset ${i + 1}`} onClick={() => onRemovePreset?.(key, i)} className="absolute -right-1 -top-1 grid h-4 w-4 place-items-center rounded-full border border-line bg-surface text-[9px] leading-none text-muted hover:text-ink">
                   ✕
                 </button>

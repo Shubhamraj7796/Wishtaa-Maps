@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Icons first, steps 1 to 4 (shared tooltip, icon set, PDF View menu and bars)
+- **One tooltip for the whole app** (`src/ui/Tooltip.tsx`): hover (after half a second, at once between neighbours), keyboard focus, and a **long-press on touch** that shows the name without running the control. It is drawn in a layer above everything, so a menu or panel never clips it, and it follows the screen edge. The header and Read-toolbar buttons use it now.
+- **Shared controls** (`IconButton`, `IconTile`, `IconToggleGroup`, `Swatch`, `TipButton`): the name is required (aria-label and tooltip), the chosen option is a highlighted background, one size (36 px, 44 px on touch).
+- **14 new icons** in the same style: one page, two pages, first page alone, scrolling, 1-page flipping, right to left, fit width, fit page, fit height, actual size, presentation, new topic after, new branch, make a topic.
+- **PDF View menu rebuilt as icons**: pages (one, two, first page alone), reading (scrolling, 1-page flipping, right to left), four colour swatches, zoom - / % / + (the percentage is the real zoom, also while Fit is on; click it for a list), fit width / page / height, actual size, presentation (greyed), reset. 296 x 257 px with no scrolling (it was 288 x 600 px and scrolled). First page alone and 1-page flipping are greyed out, not hidden, until two pages are chosen. The menu opens to the left when it would run off the window.
+- **PDF top bar**: Capture area, Split, Markup, View, Two pages, Focus, More, the page arrows and the size button are icons only (the PDF name, page number and zoom percentage stay text). Split now fits from a 560 px panel (it was 700 px).
+- **Capture bar**: Add as Sub-topic / Next sibling / New branch and Keep capturing are icon toggles. **Selected markup and lasso bars**: Add note, Make topic, Copy, Delete, Done are icons. The pen bar, its flyouts and the customise panel use the shared tooltip instead of the browser one.
+- Steps 5 to 7 (map toolbar and header captions, Insert menu, Files, menu icons, the rest of `docs/icons-audit.md`) are still to do.
+
 ### Pen and markup: customisable bar, pressure, straight-angle correction, palm rejection, lasso (PDF panel, Part 2 C1 to C3)
 - **Customise the tools** (the sliders button on the pen bar): choose which tools show and their order (Select always stays), with **Reset to defaults** (every tool back, presets forgotten, pen settings back). Kept on this device.
 - **Presets** in each tool's colour-and-size flyout: save the current colour and thickness (up to five per tool), tap one to use it, remove it. **Finer thickness:** lines go down to 0.5 in half steps (the starting values are unchanged); the flyout still has the live preview.

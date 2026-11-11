@@ -2,6 +2,12 @@
 
 Rule 8 in `CLAUDE.md`: an icon with a tooltip wherever it can be understood alone; a short word only where it cannot. This file is the working list for the Icons First work. Part 1 is the decision per area (made with the owner on 2026-11-11). Part 2 is the exact list the code scan found today (a control whose visible content is words), so nothing is missed. The scan is a list of places to look at, not of things that must all change.
 
+## Progress
+
+- Steps 1 to 4 done: shared Tooltip and controls, the 14 icons, the PDF View menu, the PDF top bar, the capture bar, the selected-markup and lasso bars, and the pen bar tooltips.
+- Steps 5 to 7 to do: map toolbar and header (captions, native titles), Insert menu, quick toolbar, picture bars, Files, leading icons in the menus, then whatever Part 2 still lists.
+- The scan below counts controls with words; rows in the PDF panel that are meant to keep words (menus of rare commands, the customise checklist, Into: / Change, dialogs) still appear in it.
+
 ## Part 1: decisions
 
 | Area | Becomes icon only (tooltip + aria-label) | Keeps a short word, and why |
@@ -20,7 +26,7 @@ Rule 8 in `CLAUDE.md`: an icon with a tooltip wherever it can be understood alon
 | Menus: file, account, right-click | - | Rare commands: words with a leading icon |
 | Dialogs, sign-in, Preferences, privacy and terms, settings forms | - | Words are needed; primary buttons (Add, Cancel, Save) keep them |
 
-## Part 2: the scan (398 controls with words, 76 files)
+## Part 2: the scan (363 controls with words, 76 files)
 
 Format: `line  element  words`.
 
@@ -284,23 +290,9 @@ Format: `line  element  words`.
 ### Markup toolbar
 
 - `src/editor/markup/MarkupToolbar.tsx`
-  - 209  button  choose(key2 === 'shapes' ? shape : t, key2 ?? styleKey, e)} 
-  - 214  button  openFlyout(key2 ?? (styleKey as StyleKey), key2 === 'shapes'
-  - 222  button  (x.onClick(), setFlyout(null))} className=
-  - 227  button  setPlace(
-  - 233  button  setFlyout(flyout?.key === 'settings' ? null :
-  - 257  button  !dragged.current && (setIdleFolded(false), setPlace(
-  - 267  button  (setFlyout(null), setPlace(
-  - 303  button  setFlyout(flyout?.key === 'more' ? null :
-  - 365  button  onTool(s)} className=
-  - 373  button  onStyle(key,
-  - 405  button  onSavePreset(key)} className="rounded border border-line px-
-  - 412  button  onStyle(key, p)} className="grid h-10 min-w-10 place-items-c
-  - 416  button  onRemovePreset?.(key, i)} className="absolute -right-1 -top-
+  - 420  button  onRemovePreset?.(key, i)} className="absolute -right-1 -top-
 - `src/editor/markup/ToolSettings.tsx`
-  - 68  button  move(i, -1)} className="grid h-7 w-7 place-items-center roun
-  - 71  button  move(i, 1)} className="grid h-7 w-7 place-items-center round
-  - 89  button  Reset to defaults
+  - 93  button  Reset to defaults
 - `src/editor/markup/layers.tsx`
   - 422  button  Cancel
 
@@ -407,17 +399,15 @@ Format: `line  element  words`.
 - `src/ui/IconButton.tsx`
   - 33  button  (tip.onPointerEnter(e), rest.onPointerEnter?.(e))} onPointer
   - 73  button  (tip.onPointerEnter(e), rest.onPointerEnter?.(e))} onPointer
+  - 130  button  (t.onPointerEnter(e), rest.onPointerEnter?.(e))} onPointerLe
 
 ### PDF panel
 
 - `src/editor/pdf/CaptureBar.tsx`
-  - 50  button  Cancel (Esc)
-  - 56  button  Change
-  - 64  button  setCaptureMode(m.id)}>
-  - 74  button  setMenu(!menu)}> …
+  - 52  button  Cancel (Esc)
+  - 60  button  Change
 - `src/editor/pdf/LassoLayer.tsx`
-  - 184  button  m.color.toLowerCase() === c)} aria-label=
-  - 193  button  deleteManyMarkup(ids)}>
+  - 182  button  m.color.toLowerCase() === c)} aria-label=
 - `src/editor/pdf/OutlineDialog.tsx`
   - 80  button  setMode(m)} className=
   - 110  button  Cancel
@@ -426,7 +416,7 @@ Format: `line  element  words`.
   - 33  button  answerPassword(null)}> Cancel
   - 36  button  Open
 - `src/editor/pdf/PdfBar.tsx`
-  - 52  button  setMenu(menu === 'source' ? null : 'source')} className="fle
+  - 51  button  setMenu(menu === 'source' ? null : 'source')} className="fle
   - 59  MenuItem  (openPdfTab(s.id), close())} active=
   - 67  MenuItem  Open a PDF from this device…
   - 68  MenuItem  void openPdfFromDrive())}>Open a PDF from Google Drive…
@@ -439,38 +429,29 @@ Format: `line  element  words`.
   - 99  MenuItem  Start an outline from this PDF…
   - 100  MenuItem  void removePdfFromDevice(source.hash))}>Remove from this dev
   - 101  MenuItem  removePdfSource(source.id))}>Remove from this map
-  - 110  button  chooseLayout(source.id,
-  - 116  button  setPdfTool(tool === 'capture' ? 'select' : 'capture')}>
-  - 122  button  (other ? unsplitPdf() : second && splitPdf(second, 'right'))
-  - 128  button  setPdfMarkupBar(!markupBar)}>
-  - 134  button  setPdfFocusMode(true)}>
-  - 140  button  setMenu(menu === 'more' ? null : 'more')}>
-  - 147  MenuItem  Open a PDF from this device…
-  - 148  MenuItem  void openPdfFromDrive())}>Open a PDF from Google Drive…
-  - 155  MenuItem  unsplitPdf())}>One PDF (merge the split view)
-  - 157  MenuItem  second && splitPdf(second, 'right'))}>
-  - 162  MenuCheck  setPdfSync(!panel.sync)}> Sync scrolling
-  - 166  MenuItem  setPdfFocusMode(true))}>Focus mode (hide every control)
-  - 167  MenuItem  setPdfFocusMode(true))}>Focus mode
-  - 169  MenuCheck  setPdfThumbs(!thumbs)}> Page thumbnails
-  - 174  MenuItem  setPdfTab(panel.tab === 'markup' ? 'pages' : 'markup'))}>
-  - 177  MenuCheck  setShowHidden(!showHidden)}> Show
-  - 192  MenuItem  setPdfOutlineColumn(!panel.outlineColumn))}>
-  - 194  MenuItem  Close the PDF (it stays in the map)
-  - 195  MenuItem  setPdfSize(nextSize(size)))}>
-  - 196  MenuItem  setPdfCollapsed(true))}>Hide the PDF panel (the PDF stays op
-  - 201  button  setPdfSize(nextSize(size))} >
-  - 234  button  turnPdf(-1)} disabled=
-  - 241  button  turnPdf(1)} disabled=
+  - 132  MenuItem  Open a PDF from this device…
+  - 133  MenuItem  void openPdfFromDrive())}>Open a PDF from Google Drive…
+  - 140  MenuItem  unsplitPdf())}>One PDF (merge the split view)
+  - 142  MenuItem  second && splitPdf(second, 'right'))}>
+  - 147  MenuCheck  setPdfSync(!panel.sync)}> Sync scrolling
+  - 151  MenuItem  setPdfFocusMode(true))}>Focus mode (hide every control)
+  - 152  MenuItem  setPdfFocusMode(true))}>Focus mode
+  - 154  MenuCheck  setPdfThumbs(!thumbs)}> Page thumbnails
+  - 159  MenuItem  setPdfTab(panel.tab === 'markup' ? 'pages' : 'markup'))}>
+  - 162  MenuCheck  setShowHidden(!showHidden)}> Show
+  - 177  MenuItem  setPdfOutlineColumn(!panel.outlineColumn))}>
+  - 179  MenuItem  Close the PDF (it stays in the map)
+  - 180  MenuItem  setPdfSize(nextSize(size)))}>
+  - 181  MenuItem  setPdfCollapsed(true))}>Hide the PDF panel (the PDF stays op
 - `src/editor/pdf/PdfPanel.tsx`
-  - 160  button  setPdfCollapsed(false)}>
-  - 184  button  setPdfFocusMode(false)} className="absolute left-1/2 top-0 z
-  - 211  button  setPdfDrawer(true)}>
-  - 223  button  setPdfDrawer(false)}>
-  - 405  button  setPdfTab('pages')}>
-  - 450  button  input.current?.click()}> Reopen PDF
-  - 454  button  (setBusy(true), void refetchFromDrive(source.id).finally(() 
-  - 498  button  Open
+  - 162  button  setPdfCollapsed(false)}>
+  - 186  button  setPdfFocusMode(false)}
+  - 213  button  setPdfDrawer(true)}>
+  - 225  button  setPdfDrawer(false)}>
+  - 407  button  setPdfTab('pages')}>
+  - 452  button  input.current?.click()}> Reopen PDF
+  - 456  button  (setBusy(true), void refetchFromDrive(source.id).finally(() 
+  - 500  button  Open
 - `src/editor/pdf/SelectionBar.tsx`
   - 67  button  done('topic')}>Add as topic
   - 68  button  done('sub')}>Add as sub-topic
@@ -490,23 +471,13 @@ Format: `line  element  words`.
 - `src/editor/pdf/Thumbs.tsx`
   - 51  button  setPdfPage(n)} className=
 - `src/editor/pdf/ViewMenu.tsx`
-  - 63  button  setOpen(!open)} className=
-  - 99  button  set(
-  - 108  button  set(
-  - 111  button  set(
-  - 114  button  set(
-  - 124  button  set(
-  - 134  button  (resetPdfLayout(sourceId), setOpen(false))} className=
+  - 110  button  setPercents(!percents)} className=
+  - 126  button  (set(
 - `src/editor/pdf/tools.tsx`
   - 27  button  updateMarkup(id,
-  - 36  button  (updateMarkup(id,
-  - 41  button  (setNote(m.note ?? ''), setNoting(true))}>
-  - 46  button  topicFromMarkup(id)}> Make topic
-  - 50  button  deleteMarkup(id)}>
-  - 53  button  selectMarkup(null)}>
-  - 85  button  sendHighlightsToOutline(source.id)}> Send all highlights to 
-  - 113  button  topicFromMarkup(m.id)}> Make topic
-  - 119  button  deleteMarkup(m.id)}>
+  - 73  button  sendHighlightsToOutline(source.id)}> Send all highlights to 
+  - 101  button  topicFromMarkup(m.id)}> Make topic
+  - 107  button  deleteMarkup(m.id)}>
 
 ### Picture viewer
 

@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
+import { IconTile } from '@/ui/IconButton'
+import type { IconName } from '@/ui/icons'
+import { Tooltip } from '@/ui/Tooltip'
 import { useEditor, type CaptureMode } from '../store'
 import { beginPickTarget, cancelPickTarget, leaveCapture, setCaptureKeep, setCaptureMode, setCaptureOption, setCaptureTarget, topicLabel } from './capture'
 
-const MODES: { id: CaptureMode; label: string; hint: string }[] = [
-  { id: 'sub', label: 'Sub-topic', hint: 'A new sub-topic after the existing ones' },
-  { id: 'sibling', label: 'Next sibling', hint: 'A new topic next to the target, in capture order' },
-  { id: 'branch', label: 'New branch', hint: 'A new branch from the central topic' },
+const MODES: { id: CaptureMode; label: string; icon: IconName }[] = [
+  { id: 'sub', label: 'Sub-topic', icon: 'subTopic' },
+  { id: 'sibling', label: 'Next sibling', icon: 'siblingAfter' },
+  { id: 'branch', label: 'New branch', icon: 'newBranch' },
 ]
 
 /**
@@ -42,7 +45,6 @@ export function CaptureBar() {
     })
   }, [cap.picking])
 
-  const chip = (on: boolean) => `rounded-full border px-2.5 py-1 text-xs [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:px-3 ${on ? 'border-brand bg-brand/15 font-semibold text-ink' : 'border-line hover:bg-bg'}`
   return (
     <div data-capture-bar role="group" aria-label="Capture settings" className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 border-b border-line bg-surface px-2 py-1.5 text-xs">
       {cap.picking ? (
@@ -52,7 +54,9 @@ export function CaptureBar() {
       ) : (
         <span className="flex min-w-0 items-center gap-1.5">
           <span className="text-muted">Into:</span>
-          <b data-capture-into className="max-w-[14rem] truncate" title={label}>{label}</b>
+          <Tooltip label={label}>
+            <b data-capture-into className="max-w-[14rem] truncate">{label}</b>
+          </Tooltip>
           <button type="button" className="rounded border border-line px-1.5 py-0.5 hover:bg-bg [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:px-3" onClick={beginPickTarget}>
             Change
           </button>
@@ -61,19 +65,12 @@ export function CaptureBar() {
       <span role="radiogroup" aria-label="Add as" className="flex items-center gap-1">
         <span className="text-muted">Add as:</span>
         {MODES.map((m) => (
-          <button key={m.id} type="button" role="radio" aria-checked={cap.mode === m.id} title={m.hint} className={chip(cap.mode === m.id)} onClick={() => setCaptureMode(m.id)}>
-            {m.label}
-          </button>
+          <IconTile key={m.id} role="radio" icon={m.icon} label={m.label} selected={cap.mode === m.id} onClick={() => setCaptureMode(m.id)} />
         ))}
       </span>
-      <label className="flex items-center gap-1.5 [@media(pointer:coarse)]:min-h-11">
-        <input type="checkbox" checked={cap.keep} onChange={(e) => setCaptureKeep(e.target.checked)} />
-        Keep capturing
-      </label>
+      <IconTile role="checkbox" icon="repeat" label="Keep capturing" selected={cap.keep} onClick={() => setCaptureKeep(!cap.keep)} />
       <span className="relative">
-        <button type="button" aria-haspopup="true" aria-expanded={menu} aria-label="More capture options" title="More capture options" className="rounded border border-line px-2 py-0.5 hover:bg-bg [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:px-3" onClick={() => setMenu(!menu)}>
-          …
-        </button>
+        <IconTile icon="more" label="More capture options" aria-haspopup="true" aria-expanded={menu} selected={menu} onClick={() => setMenu(!menu)} />
         {menu && (
           <div data-capture-menu role="group" aria-label="Topic titles" className="absolute left-0 top-full z-50 mt-1 w-64 rounded-ui border border-line bg-surface p-2 text-xs shadow-xl">
             <p className="mb-1 font-semibold">Give the new topic a title</p>

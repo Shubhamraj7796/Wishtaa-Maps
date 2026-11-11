@@ -55,6 +55,9 @@ ICONS FIRST: wherever possible use a clear icon/symbol instead of a text label. 
 devices, and on keyboard focus). Every icon-only control has an accessible name (aria-label). Keep a short text label only where an icon cannot be
 understood on its own. The selected option is shown by a highlighted background, not by an added tick plus words. Use one consistent icon set, one
 consistent size, and one tooltip component for the whole app.
+How to apply it: use `IconButton`, `IconTile`, `IconToggleGroup`, `Swatch` or `TipButton` (`src/ui/IconButton.tsx`) and the shared `Tooltip` (`src/ui/Tooltip.tsx`); never a native
+`title`. New icons: lucide if it has one, otherwise `src/ui/customIcons.tsx` in the same 24 px / 1.9 stroke style, registered in `src/ui/icons.tsx`. The work list is
+`docs/icons-audit.md`; the sizes are in `src/ui/iconSize.ts`. Every icon-only control needs its name (aria-label) and a test that finds it by that name.
 
 ## Working conventions (learned in this project)
 - Before every push: `npx tsc --noEmit`, `npm run lint`, `npx vitest run`. For UI that matters, also the real-browser tests in `e2e/`

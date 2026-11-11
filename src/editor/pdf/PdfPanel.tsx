@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import type { PdfSource } from '@/core/pdf/types'
 import { Icon } from '@/ui/icons'
+import { useTooltip } from '@/ui/Tooltip'
 import { useEditor } from '../store'
 import { addPdfFiles, focusPdfPane, reopenPdf, refetchFromDrive, setPdfCollapsed, setPdfDrawer, setPdfFocusMode, setPdfRatio, setPdfSize, setPdfTab, setPdfTool, showSource } from './actions'
 import { SplitDropZones, Tabs } from './Tabs'
@@ -40,6 +41,7 @@ export default function PdfPanel({ mode }: { mode: 'side' | 'sheet' }) {
   const size = panel.size
   const full = size === 'full'
   const focus = panel.focusMode
+  const tipFocus = useTooltip('Show the controls', 'Esc')
   const hiddenCount = useEditor((s) => (source ? Object.entries(s.pdf.pageEdits).filter(([k, v]) => v.hidden && k.startsWith(`${source.id}:`)).length : 0))
   // The width of the panel decides which buttons stay on the top bar and which go into its "..." menu.
   useEffect(() => {
@@ -181,7 +183,7 @@ export default function PdfPanel({ mode }: { mode: 'side' | 'sheet' }) {
         </div>
       )}
       {focus ? (
-        <button type="button" data-focus-handle aria-label="Show the controls" title="Show the controls (Esc)" onClick={() => setPdfFocusMode(false)} className="absolute left-1/2 top-0 z-[48] grid h-5 w-14 -translate-x-1/2 place-items-center rounded-b-full border border-t-0 border-line bg-surface/90 text-muted shadow hover:text-ink [@media(pointer:coarse)]:h-8">
+        <button type="button" data-focus-handle aria-label="Show the controls" onClick={() => setPdfFocusMode(false)} {...tipFocus} className="absolute left-1/2 top-0 z-[48] grid h-5 w-14 -translate-x-1/2 place-items-center rounded-b-full border border-t-0 border-line bg-surface/90 text-muted shadow hover:text-ink [@media(pointer:coarse)]:h-8">
           <Icon name="chevronDown" size={14} />
         </button>
       ) : (
