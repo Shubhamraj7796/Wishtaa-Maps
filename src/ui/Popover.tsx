@@ -20,8 +20,12 @@ export function Popover({ anchor, onClose, label, children, className = '' }: { 
     if (!el) return
     const p = placeTip(anchor.getBoundingClientRect(), { width: el.offsetWidth, height: el.offsetHeight }, { width: window.innerWidth, height: window.innerHeight }, 6, 8)
     setAt({ left: p.left, top: p.top })
-    el.querySelector<HTMLElement>('[role="menuitem"]:not([disabled])')?.focus()
   }, [anchor])
+  // The first choice takes the focus once the popover is visible (a hidden element cannot be focused).
+  const placed = at !== null
+  useLayoutEffect(() => {
+    if (placed) box.current?.querySelector<HTMLElement>('[role="menuitem"]:not([disabled])')?.focus()
+  }, [placed])
 
   useEffect(() => {
     const items = () => [...(box.current?.querySelectorAll<HTMLElement>('[role="menuitem"]:not([disabled])') ?? [])]
