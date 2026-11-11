@@ -40,6 +40,13 @@ function show(el: Element, text: string, keys: string | undefined) {
   emit()
 }
 
+/** Shows the tooltip of a control for a moment without any hover or focus (for example where a control went after a keyboard shortcut). */
+export function flashTip(el: Element, text: string, keys?: string, ms = TOUCH_HIDE_MS) {
+  show(el, text, keys)
+  window.clearTimeout(touchTimer)
+  touchTimer = window.setTimeout(hideTip, ms)
+}
+
 /** Takes the tooltip away (and any that is waiting to appear). */
 export function hideTip() {
   window.clearTimeout(hoverTimer)

@@ -240,6 +240,14 @@ export function Viewer({ source, handle, showHidden, active = true }: { source: 
     el.scrollTop = (starts[i] as number) + a.frac * ((starts[i + 1] as number) - (starts[i] as number) - GAP)
     setScrollTop(el.scrollTop)
   }
+  // The size of every page is learned in the background. While it is, the rows above the place change height: the place (page and how far
+  // down it) is put back each time, so the page in view does not slide away (this is also what makes a collapsed PDF reopen exactly where it was).
+  useLayoutEffect(() => {
+    const a = anchor.current
+    if (paged || !a || !scroller.current || !infos.size) return
+    placeAnchor(a)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [infos])
   const prevScale = useRef(scale)
   useLayoutEffect(() => {
     const a = anchor.current

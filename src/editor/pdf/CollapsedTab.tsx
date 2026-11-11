@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { Icon } from '@/ui/icons'
-import { Tooltip } from '@/ui/Tooltip'
-import { restorePdf, takeFocusTab } from './actions'
+import { flashTip, Tooltip } from '@/ui/Tooltip'
+import { restorePdf, takeFocusTab, takeTipTab } from './actions'
 
 /**
  * The PDF panel while it is collapsed. On a computer: a slim 36 px edge tab on the side where the PDF sits, with the PDF icon, the file
@@ -12,6 +12,7 @@ export function CollapsedTab({ mode, name, tabs }: { mode: 'side' | 'sheet'; nam
   const button = useRef<HTMLButtonElement>(null)
   useEffect(() => {
     if (takeFocusTab()) button.current?.focus() // the person collapsed it from the keyboard or the bar: focus follows to the tab
+    if (takeTipTab() && button.current) flashTip(button.current, 'Open PDF') // and from the keyboard it also says what the tab is
   }, [])
   const label = `Open PDF: ${name}${tabs > 1 ? ` (${tabs} PDFs open)` : ''}`
   const badge = tabs > 1 && (

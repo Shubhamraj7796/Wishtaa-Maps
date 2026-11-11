@@ -1,4 +1,4 @@
-import { useEffect, useState, useSyncExternalStore, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { IconTile, IconToggleGroup, Swatch } from '@/ui/IconButton'
 import { Tooltip } from '@/ui/Tooltip'
 import { useEditor } from '../store'
@@ -34,6 +34,14 @@ export function ViewMenu({ sourceId, compact = false }: { sourceId: string; comp
   const [percents, setPercents] = useState(false)
   // The menu is 296 px wide: it opens to the right of its button, or to the left when that would run off the window.
   const [toLeft, setToLeft] = useState(false)
+  const wrap = useRef<HTMLDivElement>(null)
+  // Checked after every render while it is open, because choosing Two pages can move the button (the panel goes full screen under it).
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- on purpose without a list: it must look again after every render, and only sets the state when the answer changes
+  useLayoutEffect(() => {
+    if (!open || !wrap.current) return
+    const off = wrap.current.getBoundingClientRect().left + 296 > window.innerWidth - 8
+    if (off !== toLeft) setToLeft(off)
+  })
   const v = useEditor((s) => s.pdfPanel.views[sourceId]) ?? DEFAULT_VIEW
   useSyncExternalStore(subscribeViews, viewsVersion)
   const live = liveViewOf(sourceId)
@@ -58,7 +66,7 @@ export function ViewMenu({ sourceId, compact = false }: { sourceId: string; comp
   }, [open])
 
   return (
-    <div className="relative">
+    <div ref={wrap} className="relative">
       <IconTile
         icon="preview"
         label="View options"
@@ -66,10 +74,7 @@ export function ViewMenu({ sourceId, compact = false }: { sourceId: string; comp
         aria-expanded={open}
         data-view-button=""
         selected={open}
-        onClick={(e) => {
-          setToLeft(e.currentTarget.getBoundingClientRect().left + 296 > window.innerWidth - 8)
-          setOpen(!open)
-        }}
+        onClick={() => setOpen(!open)}
         className={compact ? 'border border-line bg-surface shadow' : ''}
       />
       {open && (

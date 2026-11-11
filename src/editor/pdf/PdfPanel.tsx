@@ -58,6 +58,7 @@ export default function PdfPanel({ mode }: { mode: 'side' | 'sheet' }) {
 
   // Opening starts in the size that suits the device: full screen for a portrait touch screen.
   useEffect(() => {
+    if (useEditor.getState().pdfPanel.collapsed) return // a panel that comes back collapsed (after a reload) keeps its remembered size and stays collapsed
     setPdfSize(startingSize(touch, typeof window !== 'undefined' && window.innerHeight > window.innerWidth))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])

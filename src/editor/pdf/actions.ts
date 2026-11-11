@@ -155,9 +155,15 @@ export function restorePdf(fromTab = false): boolean {
 // Where the keyboard focus goes after a collapse (the edge tab) or a restore (the collapse button), read once by the component that appears.
 let focusTab = false
 let focusBar = false
+let tipTab = false
 export const takeFocusTab = () => {
   const v = focusTab
   focusTab = false
+  return v
+}
+export const takeTipTab = () => {
+  const v = tipTab
+  tipTab = false
   return v
 }
 export const takeFocusBar = () => {
@@ -168,7 +174,7 @@ export const takeFocusBar = () => {
 /** The shortcut and the command: collapse when it is open, open when it is collapsed (nothing when there is no PDF panel). */
 export function togglePdfCollapse() {
   if (get().pdfPanel.collapsed) restorePdf(true)
-  else collapsePdf()
+  else if (collapsePdf()) tipTab = true // from the keyboard: the tab says what it is, so a sighted keyboard user sees where the PDF went
 }
 /** How much of the editor the PDF takes. Page, zoom and place in the PDF are kept; "Fit" fits again. */
 export function setPdfSize(size: PanelSize) {

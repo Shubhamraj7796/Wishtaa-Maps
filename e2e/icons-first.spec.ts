@@ -51,8 +51,8 @@ test('View menu: icons only, no scrolling, names as tooltips (desktop)', async (
   const errors: string[] = []
   page.on('pageerror', (e) => errors.push(e.message))
   await openMapWithPdf(page, await makePdf())
-  await page.getByRole('button', { name: 'Two pages side by side' }).click()
   await page.getByRole('button', { name: 'View options' }).first().click()
+  await page.getByRole('menuitemradio', { name: 'Two-page view' }).click() // (the book button is on the bar only from 520 px)
   const menu = page.locator('[data-view-menu]')
   await expect(menu).toBeVisible()
   await page.waitForTimeout(300)

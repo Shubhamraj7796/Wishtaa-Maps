@@ -53,8 +53,8 @@ for (const size of SIZES) {
     const page = await context.newPage()
     await openMapWithPdf(page, await makePdf())
     // Two pages, so the menu shows its Two-page choices as in the owner's screenshot.
-    await page.getByRole('button', { name: 'Two pages side by side' }).click()
     await page.getByRole('button', { name: 'View options' }).first().click()
+    await page.getByRole('menuitemradio', { name: 'Two-page view' }).click() // (the book button is on the bar only from 520 px)
     const menu = page.locator('[data-view-menu]')
     await expect(menu).toBeVisible()
     await page.waitForTimeout(300)

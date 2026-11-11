@@ -172,6 +172,10 @@ test('the book button: Two pages side by side in one click, the panel makes room
   await openMapWithPdf(page, await makePdf())
   const panel = page.locator('[data-pdf-panel]')
   await expect(panel).toHaveAttribute('data-pdf-size', 'normal')
+  // On a 460 px panel the book button is in the View menu (it shows on the bar from 520 px): the Wide panel has room for it.
+  await expect(page.getByRole('button', { name: 'Two pages side by side' })).toHaveCount(0)
+  await page.locator('[data-expand]').click()
+  await expect(panel).toHaveAttribute('data-pdf-size', 'wide')
   const toggle = page.getByRole('button', { name: 'Two pages side by side' })
   await toggle.click()
   await expect(panel).toHaveAttribute('data-pdf-size', 'full')
@@ -179,12 +183,15 @@ test('the book button: Two pages side by side in one click, the panel makes room
   await expect(page.locator('[data-page="2"] canvas')).toBeVisible()
   await page.screenshot({ path: join(DIR, 'desktop-6-book-button.png') })
   await toggle.click()
-  await expect(panel).toHaveAttribute('data-pdf-size', 'normal') // the size it had before
+  await expect(panel).toHaveAttribute('data-pdf-size', 'wide') // the size it had before
   await expect.poll(() => rows(page).then((r) => r[0])).toBe('1')
-  // Fit height is in the menu, and a size set by hand is never undone.
+  // A size set by hand is never undone: two pages (Full), then Normal by hand, then single page again.
   await toggle.click()
   await page.locator('[data-expand]').click() // full -> normal by hand
-  await toggle.click()
+  await expect(panel).toHaveAttribute('data-pdf-size', 'normal')
+  await page.getByRole('button', { name: 'View options' }).first().click()
+  await page.getByRole('menuitemradio', { name: 'Single-page view' }).click()
+  await page.keyboard.press('Escape')
   await expect(panel).toHaveAttribute('data-pdf-size', 'normal')
   await context.close()
 })

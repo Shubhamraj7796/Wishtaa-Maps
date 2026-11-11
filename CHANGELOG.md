@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Collapse PDF (PDF panel)
+- A **Collapse PDF** icon (first button of the top bar, shortcut **Alt+Shift+F**, also "Collapse PDF" in the "..." menu and the command palette) tucks the panel into a slim **36 px edge tab** on the PDF's side: the PDF icon, the file name written downwards, a badge with the number of open PDF tabs when there are two or more, tooltip "Open PDF". On a touch screen, a phone or a narrow window it is a **floating 48 px button** instead. One click, a tap, Enter or the shortcut opens the PDF exactly as it was.
+- The PDF stays open: tabs, split view, active pane, page, zoom, one or two pages, the markup tool and bar, and the panel size (Full too) are kept. Opening it again puts every pane back at the same place (0 px difference in the browser tests, including a split view and a 200-page PDF). While collapsed the page pictures are let go (fewer canvases and page elements).
+- **Remembered across a reload** (per map, on this device): a collapsed panel comes back collapsed with the same tabs and places; a closed panel stays closed.
+- Collapsing ends **Capture area** (its options and last targets are kept), is **refused with a notice while a text box, link or note has words typed in it**, and waits for an open question (Compressed or Original, password). Escape does not open a collapsed panel.
+- **Fix:** while page sizes are still being learned in the background, the page in view no longer slides away in a PDF whose pages differ in size (the place is put back each time).
+- The two-pages book button is on the top bar from a 520 px panel; below that it is in the View menu. The View menu opens to the left when it would run off the window, even after the panel moved under it.
+
 ### Icons first, steps 1 to 4 (shared tooltip, icon set, PDF View menu and bars)
 - **One tooltip for the whole app** (`src/ui/Tooltip.tsx`): hover (after half a second, at once between neighbours), keyboard focus, and a **long-press on touch** that shows the name without running the control. It is drawn in a layer above everything, so a menu or panel never clips it, and it follows the screen edge. The header and Read-toolbar buttons use it now.
 - **Shared controls** (`IconButton`, `IconTile`, `IconToggleGroup`, `Swatch`, `TipButton`): the name is required (aria-label and tooltip), the chosen option is a highlighted background, one size (36 px, 44 px on touch).
