@@ -50,6 +50,12 @@ Content first, one thin primary bar, floating or on-demand tools, progressive di
 permanent notice rows. For any large layout change, measure the content area before and after (at 1366x768, tablet landscape and tablet
 portrait) and report the numbers.
 
+## 8. Icons first (a standing design rule, next to rule 7)
+ICONS FIRST: wherever possible use a clear icon/symbol instead of a text label. The full name shows as a tooltip on hover (and on long-press on touch
+devices, and on keyboard focus). Every icon-only control has an accessible name (aria-label). Keep a short text label only where an icon cannot be
+understood on its own. The selected option is shown by a highlighted background, not by an added tick plus words. Use one consistent icon set, one
+consistent size, and one tooltip component for the whole app.
+
 ## Working conventions (learned in this project)
 - Before every push: `npx tsc --noEmit`, `npm run lint`, `npx vitest run`. For UI that matters, also the real-browser tests in `e2e/`
   (`npm run e2e:smoke`, `npm run e2e:login`, `npx playwright test e2e/pdf-tabs.spec.ts`).

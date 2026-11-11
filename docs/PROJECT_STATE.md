@@ -53,6 +53,10 @@ person's own Google Drive. Optional accounts (emailed code, password, Google) ad
 - **Capture on a real tablet or phone** (finger drawing of the rectangle, the capture bar at touch size, "Change" in the Outline); only mouse-driven browser tests were run.
 - **The picker notice in a real Brave or a browser with third-party cookies blocked** (only mocked pickers were tried), and that Google's "loaded" event arrives in real use as assumed.
 
+## Standing design rules (from the owner; also in `CLAUDE.md`, rules 7 and 8)
+- **Clean reading UI (rule 7):** content first, one thin primary bar, floating or on-demand tools, progressive disclosure, no permanent notice rows; measure the content area before and after a large layout change.
+- **ICONS FIRST: wherever possible use a clear icon/symbol instead of a text label. The full name shows as a tooltip on hover (and on long-press on touch devices, and on keyboard focus). Every icon-only control has an accessible name (aria-label). Keep a short text label only where an icon cannot be understood on its own. The selected option is shown by a highlighted background, not by an added tick plus words. Use one consistent icon set, one consistent size, and one tooltip component for the whole app.** Status: **adopted on 2026-11-11, not yet applied to the whole app**; a plan (shared Tooltip and IconButton, audit, order of work) is waiting for the owner's "go".
+
 ## Open tasks, in priority order
 1. Owner: run `0003_accounts.sql` and finish the dashboard checklist in `docs/auth-setup.md`; then test sign-in for real.
 2. Owner: fill the placeholders in `/privacy` and `/terms` (contact email, company/owner name, address, region, retention days, ages, law,
