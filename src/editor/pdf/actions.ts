@@ -61,7 +61,12 @@ function ensureWorkspace() {
   const fileId = get().fileId
   if (!p.tabs.length && fileId) {
     const saved = W.loadWorkspace(fileId, valid)
-    if (saved) next = { ...p, ...saved } as PdfPanelState
+    if (saved) {
+      const { collapsed: _c, size: _s, ...rest } = saved // collapsed and its size are restored only by restoreCollapsedPanel, when a map opens
+      void _c
+      void _s
+      next = { ...p, ...rest } as PdfPanelState
+    }
   }
   next = W.prune(next, valid)
   if (!next.sourceId || !valid.has(next.sourceId)) {
@@ -73,8 +78,22 @@ function ensureWorkspace() {
 }
 
 export const closePdfPanel = () => {
-  rememberNow()
   set({ pdfPanel: { ...get().pdfPanel, open: false, tool: 'select', markId: null, drawer: false, collapsed: false, focus: null, focusMode: false, markupBar: false } })
+  rememberNow() // saved as not collapsed, so a closed panel stays closed after a reload
+}
+
+/**
+ * When a map opens: if its PDF panel was collapsed when it was last used on this device, it comes back collapsed (same tabs, split, pages,
+ * zoom, layout, and the same size, Full included). A panel that was closed stays closed. Nothing happens when the PDFs are no longer in the map.
+ */
+export function restoreCollapsedPanel(): boolean {
+  const fileId = get().fileId
+  if (!fileId || get().pdfPanel.open || !Object.keys(get().pdf.sources).length) return false
+  const saved = W.loadWorkspace(fileId, new Set(Object.keys(get().pdf.sources)))
+  if (!saved?.collapsed || !saved.sourceId) return false
+  ensureWorkspace()
+  patch({ open: true, collapsed: true, size: saved.size ?? 'normal', drawer: false })
+  return true
 }
 
 /** Focus mode: all controls hidden except a tiny handle. */
@@ -98,7 +117,7 @@ export const setPdfDrawer = (drawer: boolean) => patch({ drawer })
 export const setPdfToolSide = (toolSide: 'left' | 'right') => void (get().pdfPanel.toolSide !== toolSide && patch({ toolSide }))
 export const setPdfCollapsed = (collapsed: boolean) => {
   patch({ collapsed, ...(collapsed ? { drawer: false } : {}) })
-  rememberSoon() // the collapsed state is remembered with the workspace, so it survives a reload
+  rememberNow() // the collapsed state is remembered with the workspace at once, so it survives a reload
 }
 /**
  * Collapse PDF: the panel tucks away into an edge tab (or a floating button on touch) and the PDF stays open, with everything kept in the
@@ -138,7 +157,9 @@ export function togglePdfCollapse() {
 /** How much of the editor the PDF takes. Page, zoom and place in the PDF are kept; "Fit" fits again. */
 export function setPdfSize(size: PanelSize) {
   rememberSize(size)
+  const was = get().pdfPanel.collapsed
   patch({ size, widenedFrom: null, collapsed: false, ...(size === 'full' ? {} : { drawer: false }) }) // a size chosen by hand is never undone by the layout
+  if (was) rememberNow() // it came back from collapsed: the saved state says so
 }
 
 /** Two-page view needs room: the panel goes to Full, and remembers the size it had so switching back can restore it. */

@@ -29,7 +29,7 @@ import { Icon } from '@/ui/icons'
 import { IconButton } from '@/ui/IconButton'
 import { takePendingShare } from '@/pwa/share'
 import { recordRecentFile } from './account'
-import { pickPdfFromDevice, togglePdfPanel } from '@/editor/pdf/actions'
+import { pickPdfFromDevice, restoreCollapsedPanel, togglePdfPanel } from '@/editor/pdf/actions'
 import { PasswordDialog } from '@/editor/pdf/PasswordDialog'
 import { useTouchFriendly } from '@/editor/pictures/touch'
 import { lazyWithRetry, takeAfterRecover } from './chunkRecovery'
@@ -107,6 +107,7 @@ function Editor({ file }: { file: FileRecord }) {
   useEffect(() => {
     if (openedId !== file.id) return // the map is still opening; opening the panel now would be undone when it finishes
     if (takeAfterRecover() === 'pdf' && !useEditor.getState().pdfPanel.open) togglePdfPanel()
+    else restoreCollapsedPanel() // a panel that was collapsed comes back collapsed
   }, [openedId, file.id])
   // Opening a file adds it to the account's recent list (name and ids only), when signed in.
   useEffect(() => {

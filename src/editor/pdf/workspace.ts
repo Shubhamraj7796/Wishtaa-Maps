@@ -5,6 +5,8 @@
  */
 import { isDocColor, type DocColor } from './docColor'
 
+import type { PanelSize } from './layout'
+
 export interface SourceView {
   /** The page at the top of the view (1-based). */
   page: number
@@ -71,6 +73,10 @@ export interface Workspace {
   /** The active pane's page and zoom, copied from its view so everything that reads them keeps working. */
   page: number
   zoom: number | null
+  /** Collapsed to the edge tab (remembered, so a reload keeps it collapsed). */
+  collapsed?: boolean
+  /** The panel size (remembered only while collapsed, so Full comes back after a reload too). */
+  size?: PanelSize
 }
 
 export const viewOf = (w: Pick<Workspace, 'views'>, id: string | null): SourceView => (id ? w.views[id] ?? DEFAULT_VIEW : DEFAULT_VIEW)
@@ -159,6 +165,9 @@ export interface SavedWorkspace {
   ratio: number
   sync: boolean
   views: Record<string, SourceView>
+  /** Only written while the panel is collapsed. */
+  collapsed?: true
+  size?: PanelSize
 }
 
 const key = (fileId: string) => `wishtaamaps:pdf-workspace:${fileId}`
@@ -166,7 +175,7 @@ const key = (fileId: string) => `wishtaamaps:pdf-workspace:${fileId}`
 export function saveWorkspace(fileId: string, w: Workspace, store: Pick<Storage, 'setItem'> | undefined = safe()) {
   try {
     const views = Object.fromEntries(Object.entries(w.views).map(([id, v]) => [id, { page: v.page, zoom: v.zoom, ...(v.anchor ? { anchor: v.anchor } : {}), ...layoutOf(v) }]))
-    const saved: SavedWorkspace = { v: 1, tabs: w.tabs, active: w.sourceId, other: w.other, side: w.activeSide, ratio: w.ratio, sync: w.sync, views }
+    const saved: SavedWorkspace = { v: 1, tabs: w.tabs, active: w.sourceId, other: w.other, side: w.activeSide, ratio: w.ratio, sync: w.sync, views, ...(w.collapsed ? { collapsed: true as const, size: w.size ?? 'normal' } : {}) }
     store?.setItem(key(fileId), JSON.stringify(saved))
   } catch {
     /* not remembered */
@@ -195,6 +204,7 @@ export function loadWorkspace(fileId: string, valid: ReadonlySet<string>, store:
       sync: s.sync === true,
       page: 1,
       zoom: null,
+      ...(s.collapsed === true ? { collapsed: true, size: s.size === 'wide' || s.size === 'full' ? s.size : 'normal' } : {}),
     }
     return prune(mirror(base), valid)
   } catch {
