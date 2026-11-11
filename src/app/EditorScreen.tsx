@@ -18,6 +18,7 @@ import { InsertMenu } from '@/editor/ui/InsertMenu'
 import { ObjectBar } from '@/editor/ui/ObjectBar'
 import { OutlineView } from '@/editor/ui/OutlineView'
 import { ItemsHost } from '@/editor/items/ItemsHost'
+import { TaskView } from '@/editor/items/TaskView'
 import { CommandPalette, ContextMenu, NoticeToast, SearchBar, ShortcutSheet } from '@/editor/ui/Overlays'
 import { QuickToolbar } from '@/editor/ui/QuickToolbar'
 import { ReadModeSwitch } from '@/editor/ui/ReadModeSwitch'
@@ -200,6 +201,7 @@ function Editor({ file }: { file: FileRecord }) {
       <div role="toolbar" aria-label="Editing tools" className="flex shrink-0 items-center gap-0.5 overflow-x-auto border-b border-line bg-surface px-3 py-1">
         <IconButton icon="map" label="Map view" active={view === 'map'} onClick={() => C.setView('map')} caption="Map" />
         <IconButton icon="outline" label="Outline view" keys={keysOf('viewOutline')} active={view === 'outline'} onClick={() => C.setView('outline')} caption="Outline" />
+        <IconButton icon="taskList" label="Task view" active={view === 'tasks'} onClick={() => C.setView('tasks')} caption="Tasks" />
         <Divider />
         <IconButton icon="undo" label="Undo" keys="Ctrl+Z" disabled={!canUndo} onClick={A.cmdUndo} />
         <IconButton icon="redo" label="Redo" keys="Ctrl+Y" disabled={!canRedo} onClick={A.cmdRedo} />
@@ -239,11 +241,12 @@ function Editor({ file }: { file: FileRecord }) {
             </Suspense>
           </ErrorBoundary>
         )}
-        <main className="relative min-w-0 flex-1" aria-label={view === 'map' ? 'Map canvas' : 'Outline'}>
+        <main className="relative min-w-0 flex-1" aria-label={view === 'map' ? 'Map canvas' : view === 'tasks' ? 'Tasks' : 'Outline'}>
           <div className={view === 'map' ? 'contents' : 'hidden'}>
             <Canvas />
           </div>
           {view === 'outline' && <OutlineView />}
+          {view === 'tasks' && <TaskView />}
           <SearchBar />
           {!readOnly && <ObjectBar />}
           {!readOnly && <QuickToolbar />}

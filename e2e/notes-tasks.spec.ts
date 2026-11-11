@@ -175,3 +175,85 @@ test.describe('tasks on a topic', () => {
     expect(errors).toEqual([])
   })
 })
+
+const ymdOf = (offset: number) => {
+  const d = new Date()
+  d.setDate(d.getDate() + offset)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+async function addAgendaTask(page: Page, title: string, due: string | null, priority?: number) {
+  await page.getByRole('button', { name: 'Add a task' }).click()
+  const dialog = page.getByRole('dialog', { name: /^Task/ })
+  await page.getByLabel('Task title').fill(title)
+  if (due) await dialog.getByLabel('Due date', { exact: true }).fill(due)
+  if (priority) await dialog.getByRole('radio', { name: new RegExp(`^Priority ${priority}`) }).click()
+  await page.keyboard.press('Escape')
+  await expect(dialog).toBeHidden()
+}
+
+test.describe('the Task view', () => {
+  test('Agenda groups by date, tick completes, filters narrow the list, popup opens from a row', async ({ page }) => {
+    const errors: string[] = []
+    page.on('pageerror', (e) => errors.push(e.message))
+    await page.setViewportSize({ width: 1366, height: 768 })
+    await openBlankMap(page)
+    await addTopic(page, 'Dose')
+    await page.locator('[data-topic]', { hasText: 'Dose' }).first().click()
+    await page.getByRole('button', { name: 'Task view' }).click()
+    await expect(page.locator('[data-task-view]')).toBeVisible()
+    await expect(page.getByText(/No tasks in this map yet/)).toBeVisible()
+
+    await addAgendaTask(page, 'Late one', ymdOf(-2), 2)
+    await addAgendaTask(page, 'Due today', ymdOf(0), 1)
+    await addAgendaTask(page, 'Far away', ymdOf(60))
+    await addAgendaTask(page, 'Someday', null)
+    const groups = await page.locator('[data-agenda-group]').evaluateAll((g) => g.map((x) => x.getAttribute('data-agenda-group')))
+    expect(groups).toEqual(['overdue', 'today', 'later', 'nodate'])
+    await expect(page.locator('[data-agenda-group="today"] [data-task-path]')).toHaveText('Central Topic › Dose')
+    await page.screenshot({ path: join(SHOTS, 'task-view-agenda-desktop.png') })
+
+    // Filters are hidden until asked for; priority narrows the list.
+    await expect(page.locator('[data-task-filters]')).toHaveCount(0)
+    await page.getByRole('button', { name: 'Filters' }).click()
+    await page.getByRole('checkbox', { name: 'Show priority 1' }).click()
+    await expect(page.locator('[data-task-item]')).toHaveCount(1)
+    await page.screenshot({ path: join(SHOTS, 'task-view-filters-desktop.png') })
+    await page.getByRole('button', { name: 'Clear the filters' }).click()
+    await expect(page.locator('[data-task-item]')).toHaveCount(4)
+
+    // The tick completes a task: it leaves the open list; Done can be shown from the filters.
+    await page.locator('[data-agenda-group="today"] [role="checkbox"]').click()
+    await expect(page.locator('[data-agenda-group="today"]')).toHaveCount(0)
+    await page.getByRole('checkbox', { name: 'Show Done tasks' }).click()
+    await expect(page.locator('[data-agenda-group="done"]')).toContainText('Due today')
+
+    // A row opens the popup.
+    await page.locator('[data-agenda-group="overdue"] [data-task-row]').click()
+    await expect(page.getByLabel('Task title')).toHaveValue('Late one')
+    await page.keyboard.press('Escape')
+
+    // Map keys do nothing to the hidden map while the Task view is showing.
+    await page.locator('[data-task-view]').click({ position: { x: 5, y: 300 } })
+    await page.keyboard.press('Enter')
+    await page.keyboard.press('Delete')
+    await page.getByRole('button', { name: 'Map view' }).click()
+    await expect(page.locator('[data-topic]')).toHaveCount(2)
+    expect(errors).toEqual([])
+  })
+
+  test('on a phone-size window the Task view fits and the popup is a full-screen sheet', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 780 })
+    await openBlankMap(page)
+    await page.getByRole('button', { name: 'Task view' }).click()
+    await addAgendaTask(page, 'Phone task', ymdOf(0), 1)
+    await page.getByRole('button', { name: 'Filters' }).click()
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
+    expect(overflow).toBeLessThanOrEqual(0)
+    await page.screenshot({ path: join(SHOTS, 'task-view-phone.png') })
+    await page.locator('[data-task-row]').click()
+    const box = await page.getByRole('dialog', { name: /^Task/ }).boundingBox()
+    expect(Math.round(box?.width ?? 0)).toBe(390)
+    await page.screenshot({ path: join(SHOTS, 'task-popup-phone.png') })
+  })
+})

@@ -201,7 +201,8 @@ export function openTab(tab: PanelTab, section?: DetailsSection) {
 }
 
 export function setView(view: ViewMode) {
-  set({ view })
+  // The Task view has no topic to style: the settings panel (a sheet over the list on a phone) is put away on the way in.
+  set(view === 'tasks' ? { view, panelOpen: false } : { view })
   // Back on the map: the topic that was selected in the outline is brought into view (the map and the outline share the selection).
   const id = get().selected[0]
   if (view === 'map' && id) setTimeout(() => ensureVisible(id), 80)

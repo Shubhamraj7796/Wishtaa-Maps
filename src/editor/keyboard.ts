@@ -33,6 +33,8 @@ export function installKeyboard(): () => void {
       return
     }
     if (typing(e.target)) return
+    // The Task view has no map to edit: bare keys (Enter, Tab, Delete, arrows, letters) must not change topics that are not on screen.
+    if (useEditor.getState().view === 'tasks' && !e.ctrlKey && !e.metaKey && !e.altKey && e.key !== 'Escape') return
     // Escape still closes things; every other shortcut waits while a dialog is open or a topic is being edited.
     if (e.key !== 'Escape' && (inDialog(e.target) || useEditor.getState().editingId !== null)) return
     const cmd = commandFor(e)
