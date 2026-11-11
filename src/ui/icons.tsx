@@ -8,7 +8,7 @@ import {
   MessageSquare, Minimize, Minus, Moon, MousePointer2, Music, Network, Notebook, Paintbrush, Palette, PanelRight, Paperclip,
   Pencil, Phone, Pin, Plus, Quote, Redo2, RefreshCw, Rocket, RotateCcw, ScanText, Search, Settings, Shapes, Shield,
   Sigma, Smile, SquareDashed, Star, StickyNote, Strikethrough, Sun, Table, Tag, Target, ThumbsDown, ThumbsUp, Trash2, Trophy,
-  FileText, FlipHorizontal2, ChevronLeft, Maximize2, Minimize2, Highlighter, Square, Circle, RotateCw, EyeOff, Type, Underline, Undo2, Unlink, Unlock, User, Users, X, XCircle, Zap, ZoomIn, ZoomOut, SlidersHorizontal, Share2, Info as InfoIcon, Repeat, Ellipsis, PanelLeftClose, PanelBottomClose,
+  FileText, FlipHorizontal2, ChevronLeft, Maximize2, Minimize2, Highlighter, Square, Circle, RotateCw, EyeOff, Type, Underline, Undo2, Unlink, Unlock, User, Users, X, XCircle, Zap, ZoomIn, ZoomOut, SlidersHorizontal, Share2, Info as InfoIcon, Repeat, Ellipsis, PanelLeftClose, PanelBottomClose, FilePlus, Laptop, Cloud,
 } from 'lucide-react'
 import { CUSTOM_ICONS } from './customIcons'
 import type { Shape } from '@/core/model/types'
@@ -33,7 +33,7 @@ export const ICONS = {
   replace: RefreshCw, reset: RotateCcw, eraser: Eraser, panel: PanelRight, notebook: Notebook, type: Type, pin: Pin,
   info: InfoIcon, warning: AlertTriangle, cancel: XCircle, hash: Hash, lock: Lock, unlock: Unlock, refresh: RefreshCw,
   // Added for icons first (rule 8): lucide has no page layouts, fit modes or topic placements, so these are drawn in the same style.
-  repeat: Repeat, more: Ellipsis, panelLeftClose: PanelLeftClose, panelBottomClose: PanelBottomClose,
+  repeat: Repeat, more: Ellipsis, panelLeftClose: PanelLeftClose, panelBottomClose: PanelBottomClose, filePlus: FilePlus, laptop: Laptop, cloud: Cloud,
   ...CUSTOM_ICONS,
 } as const
 
