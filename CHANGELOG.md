@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Notes and tasks (steps 1 to 5, in progress, nothing pushed)
+- Step 1: one **popup shell** (`src/ui/ItemPopup.tsx`) for notes and tasks: centred on a computer or tablet, a full-screen sheet under 640 px; Tab stays inside, Escape or a press on the dim background closes it, the focus goes back to where it was, a popover opened inside it takes Escape first, and the map keys wait behind it.
+
 ### Open a PDF in the toolbar (PDF panel)
 - A new **Open a PDF** icon (a document with a plus) in the top bar, with the tooltip "Open a PDF". Click: a small popover (drawn above everything, never clipped; keyboard: arrows, Enter, Escape, focus returns; 44 px targets on touch) with two icons, a laptop **From this device** and a cloud **From Google Drive**, and a short Recent PDFs list (file names) under them. It is on the bar when only ONE PDF is open too.
 - The **"+" of the tab row** is the same icon and opens the same popover (one shared component). The two items in the "..." menu stay as a second way. Drive opens exactly as before (the separate PDF Picker, the Brave notice).
