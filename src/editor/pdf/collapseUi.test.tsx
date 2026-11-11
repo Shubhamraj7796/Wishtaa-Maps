@@ -89,15 +89,15 @@ describe('the Collapse PDF icon in the top bar', () => {
     expect(st().pdfPanel.collapsed).toBe(true)
   })
 
-  it('the two-pages book button steps aside below 520 px (it stays in the View menu) and is there from 520 px', async () => {
-    paneWidth = 500
+  it('the two-pages book button steps aside below 560 px (it stays in the View menu) and is there from 560 px', async () => {
+    paneWidth = 540
     const r = await open()
     expect(screen.queryByRole('button', { name: 'Two pages side by side' })).toBeNull()
     fireEvent.click(screen.getAllByRole('button', { name: 'View options' })[0] as HTMLElement)
     expect(screen.getByRole('menuitemradio', { name: 'Two-page view' })).toBeTruthy()
     r.unmount()
     cleanup()
-    paneWidth = 520
+    paneWidth = 560
     await open()
     expect(screen.getByRole('button', { name: 'Two pages side by side' })).toBeTruthy()
   })

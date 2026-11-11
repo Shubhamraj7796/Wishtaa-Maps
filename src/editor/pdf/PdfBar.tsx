@@ -12,13 +12,16 @@ import { liveViewOf, subscribeViews, viewsVersion } from './spreadState'
 import { nearestRow } from './spreads'
 import { useTouchFriendly } from '../pictures/touch'
 import { loadPdfUi } from './uiPrefs'
+import { OpenPdfButton } from './OpenPdf'
 import { ViewMenu } from './ViewMenu'
 
-/** Widths of the panel at which the less-used buttons of the top bar move into the "..." menu (every button is an icon, so they fit from here). */
-const MID_BAR = 560
-/** A touch screen needs bigger buttons, so it goes slim sooner. */
-const SLIM_BAR = 440
-const SLIM_TOUCH = 560
+/**
+ * Widths of the panel under which a button of the top bar moves into the "..." menu, in the order they leave as the panel gets narrower:
+ * Focus, Split, the page arrows, the two-pages book, Close, and LAST of all Open a PDF. Collapse, the file name, the page box, View, Capture,
+ * Markup, "..." and the size button never leave. A touch screen has bigger buttons, so Close and Open a PDF go a little sooner there. The
+ * file name keeps at least about 96 px at every width (measured in the browser tests).
+ */
+export const BAR_AT = { focus: 680, split: 640, arrows: 600, book: 560, close: 500, closeTouch: 560, open: 440, openTouch: 500, compact: 560 }
 
 /**
  * The one thin bar above the pages: close, the PDF's name (a drop-down of the open PDFs), the page ("3 of 12", type a number to jump),
@@ -33,9 +36,13 @@ export function PdfBar({ mode, panelW, source, list, readOnly, showHidden, setSh
   const twoOn = useEditor((s) => (source ? s.pdfPanel.views[source.id]?.two === true : false))
   const second = tabs.find((t) => t !== source?.id) ?? list.find((s) => s.id !== source?.id)?.id
   const close = () => setMenu(null)
-  const mid = panelW >= MID_BAR
   const touch = useTouchFriendly()
-  const slim = panelW < (touch ? SLIM_TOUCH : SLIM_BAR)
+  const showFocus = panelW >= BAR_AT.focus
+  const showSplit = panelW >= BAR_AT.split
+  const showBook = panelW >= BAR_AT.book
+  const showClose = panelW >= (touch ? BAR_AT.closeTouch : BAR_AT.close)
+  const showOpen = !readOnly && panelW >= (touch ? BAR_AT.openTouch : BAR_AT.open)
+  const compact = panelW < BAR_AT.compact
   const paged = useEditor((s) => (source ? s.pdfPanel.views[source.id]?.paged === true : false))
   const [autoOn, setAutoOn] = useState(() => loadPdfUi().autoCollapse)
   const doThenClose = (fn: () => void) => () => (fn(), close())
@@ -48,7 +55,7 @@ export function PdfBar({ mode, panelW, source, list, readOnly, showHidden, setSh
   return (
     <div data-pdf-bar className="relative z-30 flex h-11 shrink-0 items-center gap-0.5 border-b border-line px-1">
       <IconTile icon={mode === 'side' ? 'panelLeftClose' : 'panelBottomClose'} label="Collapse PDF" keys="Alt+Shift+F" data-collapse-pdf="" onClick={() => collapsePdf()} />
-      {!slim && (
+      {showClose && (
         <IconTile icon="close" label="Close the PDF panel" onClick={closePdfPanel} />
       )}
 
@@ -111,21 +118,22 @@ export function PdfBar({ mode, panelW, source, list, readOnly, showHidden, setSh
         )}
       </div>
 
-      {source && <PageControls source={source} compact={!mid} arrows={panelW >= 520 || paged} />}
-      {source && panelW >= 520 && (
+      {source && <PageControls source={source} compact={compact} arrows={panelW >= BAR_AT.arrows || paged} />}
+      {showOpen && <OpenPdfButton />}
+      {source && showBook && (
         <IconTile icon="pageTwo" label="Two pages side by side" data-two-toggle="" selected={twoOn} onClick={() => chooseLayout(source.id, { two: !twoOn })} />
       )}
       {source && <ViewMenu sourceId={source.id} />}
       {source && (
         <IconTile icon="camera" label="Capture area" selected={tool === 'capture'} disabled={readOnly} onClick={() => setPdfTool(tool === 'capture' ? 'select' : 'capture')} />
       )}
-      {source && mid && (
+      {source && showSplit && (
         <IconTile icon="split" label={other ? 'One PDF' : 'Split'} selected={!!other} disabled={!other && !second} onClick={() => (other ? unsplitPdf() : second && splitPdf(second, 'right'))} />
       )}
       {source && !readOnly && (
         <IconTile icon="edit" label="Markup" data-markup-toggle="" selected={markupBar} onClick={() => setPdfMarkupBar(!markupBar)} />
       )}
-      {source && mid && (
+      {source && showFocus && (
         <IconTile icon="focus" label="Focus mode" data-focus-button="" onClick={() => setPdfFocusMode(true)} />
       )}
 
@@ -140,7 +148,7 @@ export function PdfBar({ mode, panelW, source, list, readOnly, showHidden, setSh
                 <hr className="my-1 border-line" />
               </>
             )}
-            {!mid && source && (
+            {!showSplit && source && (
               <>
                 {other ? (
                   <MenuItem onClick={doThenClose(() => unsplitPdf())}>One PDF (merge the split view)</MenuItem>
@@ -154,8 +162,8 @@ export function PdfBar({ mode, panelW, source, list, readOnly, showHidden, setSh
                 Sync scrolling
               </MenuCheck>
             )}
-            {!mid && source && <MenuItem onClick={doThenClose(() => setPdfFocusMode(true))}>Focus mode (hide every control)</MenuItem>}
-            {mid && source && <MenuItem onClick={doThenClose(() => setPdfFocusMode(true))}>Focus mode</MenuItem>}
+            {!showFocus && source && <MenuItem onClick={doThenClose(() => setPdfFocusMode(true))}>Focus mode (hide every control)</MenuItem>}
+            {showFocus && source && <MenuItem onClick={doThenClose(() => setPdfFocusMode(true))}>Focus mode</MenuItem>}
             {source && (
               <MenuCheck on={thumbs} onClick={() => setPdfThumbs(!thumbs)}>
                 Page thumbnails
@@ -182,7 +190,7 @@ export function PdfBar({ mode, panelW, source, list, readOnly, showHidden, setSh
             )}
             {size !== 'normal' && <MenuItem onClick={doThenClose(() => setPdfOutlineColumn(!panel.outlineColumn))}>{panel.outlineColumn ? 'Hide the Outline column' : 'Show the Outline beside the PDFs'}</MenuItem>}
             <hr className="my-1 border-line" />
-            {slim && <MenuItem onClick={doThenClose(closePdfPanel)}>Close the PDF (it stays in the map)</MenuItem>}
+            {!showClose && <MenuItem onClick={doThenClose(closePdfPanel)}>Close the PDF (it stays in the map)</MenuItem>}
             <MenuItem onClick={doThenClose(() => setPdfSize(nextSize(size)))}>{full ? 'Restore the PDF to its normal size' : `Make the PDF bigger (${SIZE_LABEL[nextSize(size)]})`}</MenuItem>
             <MenuItem onClick={doThenClose(() => collapsePdf())}>Collapse PDF (the PDF stays open)</MenuItem>
           </Menu>

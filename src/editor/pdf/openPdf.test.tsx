@@ -143,3 +143,79 @@ describe('the "+" of the tab row opens the shared Open a PDF popover', () => {
     act(() => useEditor.setState({ readOnly: false }))
   })
 })
+
+describe('the Open a PDF icon in the top bar', () => {
+  const bar = () => document.querySelector('[data-pdf-bar]') as HTMLElement
+  const has = (name: string | RegExp) => !!within(bar()).queryByRole('button', { name })
+
+  it('is on the bar when only ONE PDF is open (the tab row is not there then)', async () => {
+    await open(['One.pdf'])
+    expect(document.querySelector('[data-pdf-tabs]')).toBeNull()
+    const b = within(bar()).getByRole('button', { name: 'Open a PDF' })
+    expect(b.textContent).toBe('')
+    expect(b.querySelector('svg')).toBeTruthy()
+    expect(b.getAttribute('title')).toBeNull()
+  })
+
+  it('is the same icon on the bar and on the "+" of the tab row', async () => {
+    await open(['One.pdf', 'Two.pdf'])
+    const barIcon = within(bar()).getByRole('button', { name: 'Open a PDF' }).querySelector('svg')?.getAttribute('class')
+    const tabIcon = within(strip()).getByRole('button', { name: 'Open a PDF' }).querySelector('svg')?.getAttribute('class')
+    expect(barIcon).toContain('file-plus')
+    expect(tabIcon).toBe(barIcon)
+  })
+
+  it('opens the same popover as the "+": the two icon choices, calling the same actions', async () => {
+    await open(['One.pdf'])
+    fireEvent.click(within(bar()).getByRole('button', { name: 'Open a PDF' }))
+    expect(popover()?.getAttribute('aria-label')).toBe('Open a PDF')
+    fireEvent.click(within(popover()!).getByRole('menuitem', { name: 'From this device' }))
+    expect(picked.device).toHaveBeenCalledTimes(1)
+    fireEvent.click(within(bar()).getByRole('button', { name: 'Open a PDF' }))
+    fireEvent.click(within(popover()!).getByRole('menuitem', { name: 'From Google Drive' }))
+    expect(picked.drive).toHaveBeenCalledTimes(1)
+  })
+
+  it('is not shown in Read mode', async () => {
+    await open(['One.pdf'])
+    act(() => useEditor.setState({ readOnly: true }))
+    expect(has('Open a PDF')).toBe(false)
+    act(() => useEditor.setState({ readOnly: false }))
+  })
+
+  it('leaves the bar LAST: Focus, Split, the arrows, the book, Close, and only then Open a PDF', async () => {
+    // width: [focus, split, arrows, book, close, open]
+    const table: [number, boolean[]][] = [
+      [700, [true, true, true, true, true, true]],
+      [660, [false, true, true, true, true, true]],
+      [620, [false, false, true, true, true, true]],
+      [580, [false, false, false, true, true, true]],
+      [540, [false, false, false, false, true, true]],
+      [480, [false, false, false, false, false, true]],
+      [430, [false, false, false, false, false, false]],
+    ]
+    for (const [w, want] of table) {
+      paneWidth = w
+      cleanup()
+      await closeAllPdfs()
+      act(() => useEditor.setState({ pdfPanel: closedPdfPanel() }))
+      await open([`W${w}.pdf`])
+      const got = [has('Focus mode'), has('Split'), has('Next page'), has('Two pages side by side'), has('Close the PDF panel'), has('Open a PDF')]
+      expect(got, `at ${w} px`).toEqual(want)
+      // Whatever left the bar is in "..." with its name; Open a PDF is always in "..." as a second way.
+      fireEvent.click(within(bar()).getByRole('button', { name: 'More PDF options' }))
+      expect(screen.getByRole('menuitem', { name: /Open a PDF from this device/ })).toBeTruthy()
+      expect(screen.getByRole('menuitem', { name: /Open a PDF from Google Drive/ })).toBeTruthy()
+      if (!want[0]) expect(screen.getByRole('menuitem', { name: /Focus mode/ })).toBeTruthy()
+      if (!want[1]) expect(screen.getByRole('menuitem', { name: /Split view/ })).toBeTruthy()
+      if (!want[4]) expect(screen.getByRole('menuitem', { name: /Close the PDF/ })).toBeTruthy()
+    }
+  })
+
+  it('collapse, the page box, View, Capture, Markup, "..." and the size button are on the bar at every width', async () => {
+    paneWidth = 430
+    await open(['One.pdf'])
+    for (const n of ['Collapse PDF', 'View options', 'Capture area', 'Markup', 'More PDF options', /Make the PDF bigger/]) expect(has(n)).toBe(true)
+    expect(within(bar()).getByLabelText('Page number')).toBeTruthy()
+  })
+})
