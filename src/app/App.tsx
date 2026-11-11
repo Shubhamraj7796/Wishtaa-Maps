@@ -1,3 +1,4 @@
+import { TooltipLayer } from "@/ui/Tooltip"
 import { Suspense } from 'react'
 import { lazyWithRetry } from './chunkRecovery'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
@@ -62,6 +63,7 @@ export function App() {
       <FilesProvider>
         <AppRoutes />
       </FilesProvider>
+      <TooltipLayer />
     </BrowserRouter>
   )
 }
