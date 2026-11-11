@@ -8,8 +8,9 @@ import {
   MessageSquare, Minimize, Minus, Moon, MousePointer2, Music, Network, Notebook, Paintbrush, Palette, PanelRight, Paperclip,
   Pencil, Phone, Pin, Plus, Quote, Redo2, RefreshCw, Rocket, RotateCcw, ScanText, Search, Settings, Shapes, Shield,
   Sigma, Smile, SquareDashed, Star, StickyNote, Strikethrough, Sun, Table, Tag, Target, ThumbsDown, ThumbsUp, Trash2, Trophy,
-  FileText, FlipHorizontal2, ChevronLeft, Maximize2, Minimize2, Highlighter, Square, Circle, RotateCw, EyeOff, Type, Underline, Undo2, Unlink, Unlock, User, Users, X, XCircle, Zap, ZoomIn, ZoomOut, SlidersHorizontal, Share2, Info as InfoIcon,
+  FileText, FlipHorizontal2, ChevronLeft, Maximize2, Minimize2, Highlighter, Square, Circle, RotateCw, EyeOff, Type, Underline, Undo2, Unlink, Unlock, User, Users, X, XCircle, Zap, ZoomIn, ZoomOut, SlidersHorizontal, Share2, Info as InfoIcon, Repeat,
 } from 'lucide-react'
+import { CUSTOM_ICONS } from './customIcons'
 import type { Shape } from '@/core/model/types'
 import { shapeGeometry } from '@/core/shapes'
 import type { LineStyle } from '@/core/model/types'
@@ -31,6 +32,9 @@ export const ICONS = {
   bulletList: List, orderedList: ListOrdered, quote: Quote, code: Code, ocr: ScanText, download: Download, preview: Eye,
   replace: RefreshCw, reset: RotateCcw, eraser: Eraser, panel: PanelRight, notebook: Notebook, type: Type, pin: Pin,
   info: InfoIcon, warning: AlertTriangle, cancel: XCircle, hash: Hash, lock: Lock, unlock: Unlock, refresh: RefreshCw,
+  // Added for icons first (rule 8): lucide has no page layouts, fit modes or topic placements, so these are drawn in the same style.
+  repeat: Repeat,
+  ...CUSTOM_ICONS,
 } as const
 
 export type IconName = keyof typeof ICONS
