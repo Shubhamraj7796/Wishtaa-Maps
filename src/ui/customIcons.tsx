@@ -138,7 +138,19 @@ export const NewTopic = make('NewTopic', (
   </>
 ))
 
+/** A checklist: three small boxes (the first one ticked) with a line of text beside each. Different on purpose from the "task" icon (a list of ticks). */
+export const Checklist = make('Checklist', (
+  <>
+    <rect x="3" y="3.5" width="5.5" height="5.5" rx="1.2" />
+    <path d="M4.3 6.3l1.3 1.3 2.2-2.6" />
+    <rect x="3" y="9.8" width="5.5" height="5.5" rx="1.2" />
+    <rect x="3" y="16.1" width="5.5" height="5.5" rx="1.2" />
+    <path d="M12 6.3h9M12 12.6h9M12 18.9h9" />
+  </>
+))
+
 export const CUSTOM_ICONS = {
+  checklist: Checklist,
   pageOne: PageOne,
   pageTwo: PageTwo,
   pageFirstAlone: PageFirstAlone,

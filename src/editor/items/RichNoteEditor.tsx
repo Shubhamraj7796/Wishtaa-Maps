@@ -1,6 +1,8 @@
 import { Fragment, useEffect, useLayoutEffect, useRef, useState, type MutableRefObject, type ReactNode } from 'react'
 import { EditorContent, useEditor as useTiptap, type Editor } from '@tiptap/react'
+import { AllSelection, Selection, TextSelection } from '@tiptap/pm/state'
 import StarterKit from '@tiptap/starter-kit'
+import { TaskItem, TaskList } from '@tiptap/extension-list'
 import Placeholder from '@tiptap/extension-placeholder'
 import { sanitizeNote } from '@/core/sanitize'
 import { Icon, type IconName } from '@/ui/icons'
@@ -8,9 +10,41 @@ import { IconButton, IconTile } from '@/ui/IconButton'
 import { SELECTED, UNSELECTED } from '@/ui/iconSize'
 import { Popover } from '@/ui/Popover'
 
+/**
+ * A checklist item: TipTap's task item (a box and the text; Enter, Tab, Shift+Tab and Backspace work as in any list) with two additions:
+ * Ctrl+Enter (Cmd+Enter on a Mac) ticks or unticks the item the cursor is in (Space types a space in the text, so it cannot be used); and
+ * the box has a name a screen reader can say ("text, done" / "text, not done"). Outside a checklist Ctrl+Enter keeps the editor's own
+ * meaning (a line break). In Read mode the editor is not editable, so a click on a box changes nothing.
+ */
+export const ChecklistItem = TaskItem.extend({
+  addKeyboardShortcuts() {
+    return {
+      ...this.parent?.(),
+      'Mod-Enter': ({ editor }) => {
+        const { $from } = editor.state.selection
+        for (let d = $from.depth; d > 0; d--) {
+          const node = $from.node(d)
+          if (node.type.name !== this.name) continue
+          const pos = $from.before(d)
+          return editor.commands.command(({ tr }) => {
+            tr.setNodeMarkup(pos, undefined, { ...node.attrs, checked: !node.attrs.checked })
+            return true
+          })
+        }
+        return false
+      },
+    }
+  },
+}).configure({
+  nested: true,
+  a11y: { checkboxLabel: (node, checked) => `${node.textContent.trim() || 'Empty item'}, ${checked ? 'done' : 'not done'}` },
+})
+
 export interface NoteEditorHandle {
   /** Writes what has been typed so far, now (before the popup closes). */
   flush: () => void
+  /** The editor itself (for tests and for things around it that need the cursor). */
+  editor: Editor | null
 }
 
 /** One toolbar button: an icon with the shared tooltip, chosen = highlighted. The text selection stays in the editor while it is used. */
@@ -31,6 +65,21 @@ function Tool({ icon, label, active, onClick, disabled, toggle = true }: { icon:
 
 const sep = <span aria-hidden="true" className="mx-1 h-5 w-px bg-line" />
 
+/**
+ * "Select all" (Ctrl+A) is a special selection that the list commands cannot turn back (a checklist made from it could not be undone with
+ * the same tool). It is first made an ordinary text selection over the same text.
+ */
+function ordinarySelection(editor: Editor) {
+  const { state } = editor
+  if (!(state.selection instanceof AllSelection)) return
+  // The empty line the editor keeps after a list is left out, or the tool would pull it into the list too.
+  let end = state.doc.content.size
+  const last = state.doc.lastChild
+  if (last && last.type.name === 'paragraph' && last.content.size === 0 && state.doc.childCount > 1) end -= last.nodeSize
+  const to = Selection.near(state.doc.resolve(end), -1).to
+  editor.view.dispatch(state.tr.setSelection(TextSelection.create(state.doc, Selection.atStart(state.doc).from, to)))
+}
+
 interface ToolDef {
   icon: IconName
   label: string
@@ -40,6 +89,8 @@ interface ToolDef {
   run: () => void
   /** A divider is drawn before the first tool of each group. */
   group: number
+  /** When the bar is too narrow the tools with the highest rank number go into More first. */
+  rank: number
 }
 
 /** About how wide one toolbar icon is (36 px box and the gap), and how much a divider and the padding take. */
@@ -56,7 +107,7 @@ export function visibleTools(width: number, count: number, groups: number): numb
   return Math.max(2, Math.min(count - 1, Math.floor((width - PAD_PX - TOOL_PX) / TOOL_PX)))
 }
 
-/** The formatting icons: bold, italic, underline, strikethrough, headings, lists, quote, code, link, undo and redo. Every one has a name (tooltip, aria-label). */
+/** The formatting icons: bold, italic, underline, strikethrough, headings, lists (bulleted, numbered, checklist), quote, code, link, undo and redo. Every one has a name (tooltip, aria-label). */
 export function NoteToolbar({ editor }: { editor: Editor | null }) {
   const bar = useRef<HTMLDivElement>(null)
   const [width, setWidth] = useState(0)
@@ -79,24 +130,30 @@ export function NoteToolbar({ editor }: { editor: Editor | null }) {
     else if (/^(https?:\/\/|mailto:)/i.test(url.trim())) editor.chain().focus().extendMarkRange('link').setLink({ href: url.trim() }).run()
   }
   const tools: ToolDef[] = [
-    { group: 0, icon: 'bold', label: 'Bold', active: editor?.isActive('bold'), run: () => c()?.toggleBold().run() },
-    { group: 0, icon: 'italic', label: 'Italic', active: editor?.isActive('italic'), run: () => c()?.toggleItalic().run() },
-    { group: 0, icon: 'underline', label: 'Underline', active: editor?.isActive('underline'), run: () => c()?.toggleUnderline().run() },
-    { group: 0, icon: 'strike', label: 'Strikethrough', active: editor?.isActive('strike'), run: () => c()?.toggleStrike().run() },
-    { group: 1, icon: 'h1', label: 'Heading 1', active: editor?.isActive('heading', { level: 1 }), run: () => c()?.toggleHeading({ level: 1 }).run() },
-    { group: 1, icon: 'h2', label: 'Heading 2', active: editor?.isActive('heading', { level: 2 }), run: () => c()?.toggleHeading({ level: 2 }).run() },
-    { group: 1, icon: 'bulletList', label: 'Bulleted list', active: editor?.isActive('bulletList'), run: () => c()?.toggleBulletList().run() },
-    { group: 1, icon: 'orderedList', label: 'Numbered list', active: editor?.isActive('orderedList'), run: () => c()?.toggleOrderedList().run() },
-    { group: 1, icon: 'quote', label: 'Quote', active: editor?.isActive('blockquote'), run: () => c()?.toggleBlockquote().run() },
-    { group: 1, icon: 'code', label: 'Code', active: editor?.isActive('code'), run: () => c()?.toggleCode().run() },
-    { group: 2, icon: 'link', label: 'Link', active: editor?.isActive('link'), run: setLink },
-    { group: 2, icon: 'unlink', label: 'Remove link', toggle: false, disabled: !editor?.isActive('link'), run: () => c()?.unsetLink().run() },
-    { group: 3, icon: 'undo', label: 'Undo typing', toggle: false, disabled: !editor?.can().undo(), run: () => c()?.undo().run() },
-    { group: 3, icon: 'redo', label: 'Redo typing', toggle: false, disabled: !editor?.can().redo(), run: () => c()?.redo().run() },
+    { group: 0, icon: 'bold', label: 'Bold', rank: 1, active: editor?.isActive('bold'), run: () => c()?.toggleBold().run() },
+    { group: 0, icon: 'italic', label: 'Italic', rank: 2, active: editor?.isActive('italic'), run: () => c()?.toggleItalic().run() },
+    { group: 0, icon: 'underline', label: 'Underline', rank: 8, active: editor?.isActive('underline'), run: () => c()?.toggleUnderline().run() },
+    { group: 0, icon: 'strike', label: 'Strikethrough', rank: 13, active: editor?.isActive('strike'), run: () => c()?.toggleStrike().run() },
+    { group: 1, icon: 'h1', label: 'Heading 1', rank: 7, active: editor?.isActive('heading', { level: 1 }), run: () => c()?.toggleHeading({ level: 1 }).run() },
+    { group: 1, icon: 'h2', label: 'Heading 2', rank: 11, active: editor?.isActive('heading', { level: 2 }), run: () => c()?.toggleHeading({ level: 2 }).run() },
+    { group: 1, icon: 'bulletList', label: 'Bulleted list', rank: 3, active: editor?.isActive('bulletList'), run: () => c()?.toggleBulletList().run() },
+    { group: 1, icon: 'orderedList', label: 'Numbered list', rank: 4, active: editor?.isActive('orderedList'), run: () => c()?.toggleOrderedList().run() },
+    { group: 1, icon: 'checklist', label: 'Checklist', rank: 5, active: editor?.isActive('taskList'), run: () => {
+      if (editor) ordinarySelection(editor)
+      c()?.toggleTaskList().run()
+    } },
+    { group: 1, icon: 'quote', label: 'Quote', rank: 12, active: editor?.isActive('blockquote'), run: () => c()?.toggleBlockquote().run() },
+    { group: 1, icon: 'code', label: 'Code', rank: 14, active: editor?.isActive('code'), run: () => c()?.toggleCode().run() },
+    { group: 2, icon: 'link', label: 'Link', rank: 6, active: editor?.isActive('link'), run: setLink },
+    { group: 2, icon: 'unlink', label: 'Remove link', rank: 15, toggle: false, disabled: !editor?.isActive('link'), run: () => c()?.unsetLink().run() },
+    { group: 3, icon: 'undo', label: 'Undo typing', rank: 9, toggle: false, disabled: !editor?.can().undo(), run: () => c()?.undo().run() },
+    { group: 3, icon: 'redo', label: 'Redo typing', rank: 10, toggle: false, disabled: !editor?.can().redo(), run: () => c()?.redo().run() },
   ]
   const n = visibleTools(width, tools.length, 4)
-  const shown = tools.slice(0, n)
-  const hidden = tools.slice(n)
+  // The tools that stay on the bar are the n most useful ones (by rank), still in their natural order; the others go into More.
+  const keep = new Set([...tools].sort((a, b) => a.rank - b.rank).slice(0, n).map((t) => t.label))
+  const shown = tools.filter((t) => keep.has(t.label))
+  const hidden = tools.filter((t) => !keep.has(t.label))
   return (
     <div ref={bar} className="flex flex-nowrap items-center gap-0.5 overflow-hidden border-b border-line px-2 py-1" role="toolbar" aria-label="Note formatting" data-note-toolbar data-tools-hidden={hidden.length}>
       {shown.map((t, i) => (
@@ -151,6 +208,8 @@ export function RichNoteEditor({ html, onSave, label, placeholder = 'Write a not
   const editor = useTiptap({
     extensions: [
       StarterKit.configure({ link: { openOnClick: false, autolink: true, protocols: ['http', 'https', 'mailto'], HTMLAttributes: { rel: 'noopener noreferrer nofollow', target: '_blank' } } }),
+      TaskList,
+      ChecklistItem,
       Placeholder.configure({ placeholder }),
     ],
     content: html,
@@ -158,6 +217,7 @@ export function RichNoteEditor({ html, onSave, label, placeholder = 'Write a not
     autofocus: autoFocus ? 'end' : false,
     editorProps: { attributes: { 'aria-label': label, class: 'note-editor min-h-40 px-3 py-2 text-sm outline-none' } },
     onUpdate: ({ editor: ed }) => {
+      if (!ed.isEditable) return // Read mode never saves
       clearTimeout(timer.current)
       timer.current = setTimeout(() => write(ed), 500)
     },
@@ -175,7 +235,7 @@ export function RichNoteEditor({ html, onSave, label, placeholder = 'Write a not
 
   useEffect(() => {
     if (!editor) return
-    editor.setEditable(!readOnly)
+    editor.setEditable(!readOnly, false)
   }, [editor, readOnly])
 
   // The stored text changed from outside (undo, another device): load it, unless typing is waiting to be saved.
@@ -190,7 +250,7 @@ export function RichNoteEditor({ html, onSave, label, placeholder = 'Write a not
 
   useEffect(() => {
     if (!handle) return
-    handle.current = { flush: () => editor && !readOnly && write(editor) }
+    handle.current = { flush: () => editor && !readOnly && write(editor), editor }
     return () => {
       handle.current = null
     }

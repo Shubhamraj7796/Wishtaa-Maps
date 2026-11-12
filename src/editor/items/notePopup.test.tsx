@@ -55,7 +55,7 @@ describe('the note popup', () => {
     expect((screen.getByLabelText('Note title') as HTMLInputElement).value).toBe('Storage')
     const bar = screen.getByRole('toolbar', { name: 'Note formatting' })
     const names = [...bar.querySelectorAll('button')].map((b) => b.getAttribute('aria-label'))
-    expect(names).toEqual(['Bold', 'Italic', 'Underline', 'Strikethrough', 'Heading 1', 'Heading 2', 'Bulleted list', 'Numbered list', 'Quote', 'Code', 'Link', 'Remove link', 'Undo typing', 'Redo typing'])
+    expect(names).toEqual(['Bold', 'Italic', 'Underline', 'Strikethrough', 'Heading 1', 'Heading 2', 'Bulleted list', 'Numbered list', 'Checklist', 'Quote', 'Code', 'Link', 'Remove link', 'Undo typing', 'Redo typing'])
     expect([...bar.querySelectorAll('button')].every((b) => !b.hasAttribute('title'))).toBe(true)
     expect(screen.getByLabelText('Note text')).toBeTruthy()
     expect(d.textContent).toContain('Topic: Dose')
