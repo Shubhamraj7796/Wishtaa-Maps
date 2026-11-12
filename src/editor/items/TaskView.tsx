@@ -1,4 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useState } from 'react'
+import { noteEntry } from '@/core/model/notes'
+import { noteText } from '@/core/sanitize'
 import { allTasks, PRIORITIES, STATUS_LABEL, TASK_STATUSES, topicPath, type TaskEntry } from '@/core/model/tasks'
 import type { TopicMap } from '@/core/model/tree'
 import { arrangeTasks, filterTasks, filtersActive, formatDue, formatTime, hhmm, isOverdue, ymd, type Timing, type TaskFilters } from '@/core/tasks/agenda'
@@ -9,7 +11,7 @@ import { useEditor } from '../store'
 import { ArrangeMenu } from './ArrangeMenu'
 import { addTaskAndOpen, TaskTick } from './TaskList'
 import { STATUS_ICON } from './TaskPopup'
-import { openTask } from './state'
+import { openNote, openTask } from './state'
 import { resetFilters, setFilters, toggleFilterPanel, useTaskView } from './taskViewState'
 import { TopicPickerButton } from './TopicPicker'
 
@@ -116,12 +118,12 @@ function FilterPanel({ f }: { f: TaskFilters }) {
   )
 }
 
-function Row({ e, now, topics, readOnly }: { e: TaskEntry; now: { today: string; time: string }; topics: TopicMap; readOnly: boolean }) {
+function Row({ e, now, topics, readOnly, onOpen }: { e: TaskEntry; now: { today: string; time: string }; topics: TopicMap; readOnly: boolean; onOpen: (e: TaskEntry) => void }) {
   const overdue = isOverdue(e, now.today, now.time)
   return (
     <li data-task-item={e.id} className="flex items-center gap-1 border-b border-line/60 last:border-0">
       <TaskTick entry={e} readOnly={readOnly} />
-      <button type="button" data-task-row={e.id} onClick={() => openTask(e.id)} className="flex min-w-0 flex-1 items-center gap-3 rounded-ui px-2 py-2 text-left hover:bg-bg focus-visible:bg-bg [@media(pointer:coarse)]:min-h-11">
+      <button type="button" data-task-row={e.id} onClick={() => onOpen(e)} className="flex min-w-0 flex-1 items-center gap-3 rounded-ui px-2 py-2 text-left hover:bg-bg focus-visible:bg-bg [@media(pointer:coarse)]:min-h-11">
         <span className="min-w-0 flex-1">
           <span className={`block truncate text-sm ${e.status === 'done' ? 'text-muted line-through' : 'font-medium'}`}>{e.title || 'Untitled task'}</span>
           {e.topicId && (
@@ -153,6 +155,7 @@ function Row({ e, now, topics, readOnly }: { e: TaskEntry; now: { today: string;
 export function TaskView() {
   const topics = useEditor((s) => s.topics)
   const tasks = useEditor((s) => s.tasks)
+  const notes = useEditor((s) => s.notes)
   const readOnly = useEditor((s) => s.readOnly)
   const selected = useEditor((s) => s.selected)
   const f = useTaskView((s) => s.filters)
@@ -164,6 +167,12 @@ export function TaskView() {
   const shown = useMemo(() => filterTasks(all, topics, f), [all, topics, f])
   const groups = useMemo(() => arrangeTasks(shown, topics, arrange, now.today, now.time), [shown, topics, arrange, now.today, now.time])
   const active = filtersActive(f)
+  // A task that belongs to a note opens that note (its details are on the note); any other task opens its own popup.
+  const open = (e: TaskEntry) => {
+    const n = e.noteId ? noteEntry(topics, notes, e.noteId) : null
+    if (n && (!n.legacy || noteText(n.html))) openNote(n.id)
+    else openTask(e.id)
+  }
   return (
     <section aria-label="Tasks" data-task-view className="absolute inset-0 flex flex-col bg-bg" style={{ paddingRight: panelW }}>
       <div className="flex shrink-0 flex-wrap items-center gap-1 border-b border-line bg-surface px-3 py-1.5">
@@ -191,7 +200,7 @@ export function TaskView() {
               )}
               <ul className="overflow-hidden rounded-ui border border-line bg-surface">
                 {g.items.map((e) => (
-                  <Row key={e.id} e={e} now={now} topics={topics} readOnly={readOnly} />
+                  <Row key={e.id} e={e} now={now} topics={topics} readOnly={readOnly} onOpen={open} />
                 ))}
               </ul>
             </section>

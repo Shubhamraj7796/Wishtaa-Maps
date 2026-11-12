@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { timeAgo } from '@/app/format'
 import { setNote } from '@/core/model/content'
-import { deleteNote, noteEntry, patchNote } from '@/core/model/notes'
+import { deleteNote, noteEntry, noteLabel, patchNote } from '@/core/model/notes'
+import { tasksOfNote } from '@/core/model/tasks'
 import { noteText } from '@/core/sanitize'
 import { IconButton } from '@/ui/IconButton'
 import { ItemPopup, type PopupSize } from '@/ui/ItemPopup'
 import { mapDoc } from '../mapdoc'
 import { showNotice } from '../notice'
 import { useEditor } from '../store'
+import { NoteTaskChip, NoteTaskPanel } from './NoteTask'
 import { RichNoteEditor, type NoteEditorHandle } from './RichNoteEditor'
 import { closePopup } from './state'
 
@@ -43,6 +45,10 @@ export function NotePopup({ id }: { id: string }) {
   const [title, setTitle] = useState(entry?.title ?? '')
   const titleRef = useRef(title)
   titleRef.current = title
+  const tasks = useEditor((s) => s.tasks)
+  const [taskPanel, setTaskPanel] = useState(false)
+  const linked = useMemo(() => tasksOfNote(tasks, id), [tasks, id])
+  const task = linked[0] ?? null
   const gone = !entry
   const [size, setSizeState] = useState<PopupSize>(loadNoteSize)
   const next = NEXT[size]
@@ -86,7 +92,8 @@ export function NotePopup({ id }: { id: string }) {
     handle.current?.flush()
     const now = noteEntry(useEditor.getState().topics, useEditor.getState().notes, entry.id)
     // A new note that was left completely empty is not kept.
-    if (now && !readOnly && !now.legacy && !now.title.trim() && !noteText(now.html)) deleteNote(mapDoc, now.id)
+    // (A note that has a task is kept: the task is attached to it.)
+    if (now && !readOnly && !now.legacy && !now.title.trim() && !noteText(now.html) && !tasksOfNote(useEditor.getState().tasks, now.id).length) deleteNote(mapDoc, now.id)
     closePopup()
   }
   const remove = () => {
@@ -94,7 +101,7 @@ export function NotePopup({ id }: { id: string }) {
     handle.current?.flush()
     deleteNote(mapDoc, entry.id)
     closePopup()
-    showNotice('Note deleted.', 8000, { label: 'Undo', run: () => mapDoc.undo.undo() })
+    showNotice(task ? 'Note deleted. Its task is kept.' : 'Note deleted.', 8000, { label: 'Undo', run: () => mapDoc.undo.undo() })
   }
 
   return (
@@ -132,7 +139,42 @@ export function NotePopup({ id }: { id: string }) {
         </>
       }
     >
-      <RichNoteEditor html={entry.html} onSave={save} label="Note text" readOnly={readOnly} autoFocus={!readOnly} handle={handle} />
+      <RichNoteEditor
+        html={entry.html}
+        onSave={save}
+        label="Note text"
+        readOnly={readOnly}
+        autoFocus={!readOnly}
+        handle={handle}
+        belowToolbar={task ? <NoteTaskChip task={task} extra={linked.length - 1} readOnly={readOnly} onOpen={() => setTaskPanel((o) => !o)} /> : undefined}
+        floating={
+          <>
+            {!readOnly && (
+              <IconButton
+                icon="task"
+                label={task ? 'Edit task details' : 'Add task details'}
+                data-note-task-button
+                aria-expanded={taskPanel}
+                selected={taskPanel}
+                onClick={() => setTaskPanel((o) => !o)}
+                className="absolute bottom-3 left-3 z-10 h-11 w-11 rounded-full border-line bg-surface shadow-md"
+              />
+            )}
+            {taskPanel && (!readOnly || task) && (
+              <NoteTaskPanel
+                key={task?.id ?? 'new'}
+                task={task}
+                noteId={entry.id}
+                topicId={entry.topicId}
+                defaultTitle={noteLabel(entry) === 'Note' ? '' : noteLabel(entry)}
+                readOnly={readOnly}
+                onClose={() => setTaskPanel(false)}
+                onCreated={() => setTaskPanel(false)}
+              />
+            )}
+          </>
+        }
+      />
       <div className="shrink-0 border-t border-line px-3 py-1.5 text-xs text-muted">
         {entry.createdAt !== null && entry.updatedAt !== null ? `Created ${timeAgo(entry.createdAt)} · Edited ${timeAgo(entry.updatedAt)}` : 'The first note of this topic'}
       </div>

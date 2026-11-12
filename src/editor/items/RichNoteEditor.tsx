@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useLayoutEffect, useRef, useState, type MutableRefObject } from 'react'
+import { Fragment, useEffect, useLayoutEffect, useRef, useState, type MutableRefObject, type ReactNode } from 'react'
 import { EditorContent, useEditor as useTiptap, type Editor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
@@ -142,7 +142,7 @@ export function NoteToolbar({ editor }: { editor: Editor | null }) {
  * when the text did not change. The editor follows `html` when it changes from outside (undo, another device) without losing typing.
  * With `readOnly` there is no toolbar and nothing is saved.
  */
-export function RichNoteEditor({ html, onSave, label, placeholder = 'Write a note…', readOnly = false, autoFocus = false, handle }: { html: string; onSave: (html: string) => void; label: string; placeholder?: string; readOnly?: boolean; autoFocus?: boolean; handle?: MutableRefObject<NoteEditorHandle | null> }) {
+export function RichNoteEditor({ html, onSave, label, placeholder = 'Write a note…', readOnly = false, autoFocus = false, handle, belowToolbar, floating }: { html: string; onSave: (html: string) => void; label: string; placeholder?: string; readOnly?: boolean; autoFocus?: boolean; handle?: MutableRefObject<NoteEditorHandle | null>; belowToolbar?: ReactNode; floating?: ReactNode }) {
   const saved = useRef(html)
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const save = useRef(onSave)
@@ -207,8 +207,13 @@ export function RichNoteEditor({ html, onSave, label, placeholder = 'Write a not
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       {!readOnly && <NoteToolbar editor={editor} />}
-      <div className="min-h-0 flex-1 overflow-y-auto" data-note-body>
-        <EditorContent editor={editor} />
+      {belowToolbar}
+      {/* `floating` (a button over the lower-left corner of the writing area) is outside the scrolling part, so it stays put; the text keeps room under it. */}
+      <div className="relative flex min-h-0 flex-1 flex-col">
+        <div className={`min-h-0 flex-1 overflow-y-auto ${floating ? 'pb-20' : ''}`} data-note-body>
+          <EditorContent editor={editor} />
+        </div>
+        {floating}
       </div>
     </div>
   )

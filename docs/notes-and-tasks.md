@@ -56,3 +56,9 @@ Several notes per topic, tasks of their own, and a Task view. Built in five smal
 - `ItemPopup` takes `size`: `normal` (640 px), `wide` (up to 1040 px, 86 vh high), `full` (the whole window). Under 640 px (`sm`) every size is the full-screen sheet.
 - `NotePopup`: one `IconButton` cycles the size (icon and name show the next step: Wider / Full screen / Narrower), stored in localStorage `wishtaa.noteSize` (read with `loadNoteSize`, a bad value is ignored); hidden on a phone.
 - `NoteToolbar` (`RichNoteEditor.tsx`): one row, never wraps. `visibleTools(width, count, groups)` says how many tools fit; the rest are listed in the **More formatting** popover (same icons with their names). When the width is unknown (tests) all tools show.
+
+## 2.4 / 2.5 A task on the note
+- `NotePopup` finds the note's task with `tasksOfNote(tasks, noteId)` (the oldest is shown; more show as "+n"). `RichNoteEditor` has two slots: `belowToolbar` (the chip) and `floating` (the icon and the panel, outside the scrolling part; the text has `pb-20`).
+- `NoteTask.tsx`: `NoteTaskChip` ("Task · date, time · status", reads the task so it follows the Task view) and `NoteTaskPanel` (title, date, time, status, priority). Without a task it keeps a draft and "Add the task" creates it with `noteId` and the note's topic; with a task every change is saved at once (title after 500 ms). The panel has `data-popover` so the popup's Escape waits for it; a press outside it closes it.
+- Delete rule: deleting a note never touches its tasks; an empty new note that has a task is kept on close.
+- Task view: `TaskView` opens `openNote(noteId)` when the task has a note that exists (a topic's first note counts only when it has text), otherwise the task popup.

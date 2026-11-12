@@ -380,3 +380,79 @@ test.describe('the size of the note popup', () => {
     expect(errors).toEqual([])
   })
 })
+
+test.describe('a task on a note', () => {
+  for (const [name, size] of [
+    ['desktop', { width: 1366, height: 768 }],
+    ['phone', { width: 390, height: 780 }],
+  ] as const) {
+    test(`floating icon, panel, chip, and the Task view opens the note (${name})`, async ({ page }) => {
+      const errors: string[] = []
+      page.on('pageerror', (e) => errors.push(e.message))
+      await page.setViewportSize(size)
+      await openBlankMap(page)
+      await addNoteViaInsert(page)
+      const dialog = page.getByRole('dialog', { name: /^Note/ })
+      await page.getByLabel('Note title').fill('Stock order')
+      await page.getByLabel('Note text').click()
+      for (let i = 1; i <= 30; i++) await page.keyboard.type(`Line ${i}`), await page.keyboard.press('Enter')
+      await page.keyboard.type('The very last line')
+
+      // The icon floats at the lower left of the writing area and never hides the last line.
+      const icon = dialog.getByRole('button', { name: 'Add task details' })
+      await expect(icon).toBeVisible()
+      await page.locator('[data-note-body]').evaluate((el) => (el.scrollTop = el.scrollHeight))
+      const lastLine = await page.locator('.note-editor p').last().boundingBox()
+      const ib = await icon.boundingBox()
+      const body = await page.locator('[data-note-body]').boundingBox()
+      expect((lastLine?.y ?? 0) + (lastLine?.height ?? 0)).toBeLessThanOrEqual((ib?.y ?? 0) + 1)
+      expect(ib?.x ?? 99999).toBeLessThan((body?.x ?? 0) + 60)
+      await icon.hover()
+      await expect(page.getByRole('tooltip').or(page.locator('[data-tooltip]')).first()).toBeVisible()
+
+      await icon.click()
+      const panel = page.locator('[data-note-task-panel]')
+      await expect(panel).toBeVisible()
+      await expect(panel.getByLabel('Task title')).toHaveValue('Stock order')
+      await panel.getByLabel('Due date').fill(ymdOf(1))
+      await panel.getByLabel('Due time').fill('17:00')
+      await panel.getByRole('radio', { name: /^Priority 1/ }).click()
+      const pb = await panel.boundingBox()
+      expect((pb?.x ?? -1) >= 0 && (pb?.x ?? 0) + (pb?.width ?? 0) <= size.width).toBe(true)
+      await page.screenshot({ path: join(SHOTS, `note-task-panel-${name}.png`) })
+      await panel.getByRole('button', { name: /Add the task/ }).click()
+      await expect(panel).toBeHidden()
+      const chip = page.locator('[data-note-task-chip]')
+      await expect(chip).toContainText(/Task · .*5:00.* · To do/)
+      await page.screenshot({ path: join(SHOTS, `note-task-chip-${name}.png`) })
+
+      // The chip edits the same task: a change shows in the chip at once.
+      await chip.click()
+      await panel.getByRole('radio', { name: 'Doing' }).click()
+      await expect(chip).toContainText('Doing')
+      await page.keyboard.press('Escape')
+      await expect(panel).toBeHidden()
+      await expect(dialog).toBeVisible() // Escape closed the panel first
+      await page.keyboard.press('Escape')
+      await expect(dialog).toBeHidden()
+      await page.waitForTimeout(700)
+
+      // The Task view shows it with its time; a click opens the note; completing it there updates the chip.
+      await page.getByRole('button', { name: 'Task view' }).click()
+      const row = page.locator('[data-task-item]').first()
+      await expect(row).toContainText('Stock order')
+      await expect(row.locator('[data-task-time]')).toContainText(/5:00|17:00/)
+      await row.locator('[data-task-row]').click()
+      await expect(page.getByRole('dialog', { name: 'Note: Stock order' })).toBeVisible()
+      await page.keyboard.press('Escape')
+      await page.getByRole('checkbox', { name: 'Show Done tasks' }).waitFor({ state: 'detached', timeout: 500 }).catch(() => undefined)
+      await row.getByRole('checkbox').click()
+      await page.getByRole('button', { name: 'Filters' }).click()
+      await page.getByRole('checkbox', { name: 'Show Done tasks' }).click()
+      await page.locator('[data-task-item] [data-task-row]').first().click()
+      await expect(page.locator('[data-note-task-chip]')).toContainText('Done')
+      expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0)
+      expect(errors).toEqual([])
+    })
+  }
+})
