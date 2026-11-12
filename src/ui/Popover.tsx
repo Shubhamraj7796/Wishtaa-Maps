@@ -28,7 +28,7 @@ export function Popover({ anchor, onClose, label, children, className = '' }: { 
   }, [placed])
 
   useEffect(() => {
-    const items = () => [...(box.current?.querySelectorAll<HTMLElement>('[role="menuitem"]:not([disabled])') ?? [])]
+    const items = () => [...(box.current?.querySelectorAll<HTMLElement>('[role="menuitem"]:not([disabled]), [role="menuitemradio"]:not([disabled]), [role="menuitemcheckbox"]:not([disabled])') ?? [])]
     const down = (e: PointerEvent) => {
       const t = e.target as Node
       if (box.current?.contains(t) || anchor.contains(t)) return

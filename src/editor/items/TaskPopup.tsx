@@ -111,6 +111,12 @@ export function TaskPopup({ id }: { id: string }) {
         <div className="flex flex-wrap items-center gap-2">
           <input type="date" aria-label="Due date" value={entry.due ?? ''} disabled={readOnly} onChange={(e) => patch({ due: e.target.value || null })} className={field} />
           {entry.due && !readOnly && <IconButton icon="close" label="Clear the due date" onClick={() => patch({ due: null })} />}
+          {!entry.legacy && (
+            <>
+              <input type="time" aria-label="Due time" value={entry.time ?? ''} disabled={readOnly || !entry.due} onChange={(e) => patch({ time: e.target.value || null })} className={`${field} disabled:opacity-50`} />
+              {entry.time && !readOnly && <IconButton icon="close" label="Clear the due time (all day)" onClick={() => patch({ time: null })} />}
+            </>
+          )}
         </div>
 
         <div className="flex flex-wrap items-center gap-1">

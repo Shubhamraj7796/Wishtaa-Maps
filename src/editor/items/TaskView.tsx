@@ -1,25 +1,29 @@
 import { useEffect, useLayoutEffect, useMemo, useState } from 'react'
 import { allTasks, PRIORITIES, STATUS_LABEL, TASK_STATUSES, topicPath, type TaskEntry } from '@/core/model/tasks'
 import type { TopicMap } from '@/core/model/tree'
-import { agendaGroups, filterTasks, filtersActive, formatDue, ymd, type TaskFilters } from '@/core/tasks/agenda'
+import { arrangeTasks, filterTasks, filtersActive, formatDue, formatTime, hhmm, isOverdue, ymd, type Timing, type TaskFilters } from '@/core/tasks/agenda'
 import { Icon } from '@/ui/icons'
 import { IconButton, IconTile, TipButton } from '@/ui/IconButton'
 import { ICON_BOX, SELECTED, UNSELECTED } from '@/ui/iconSize'
 import { useEditor } from '../store'
+import { ArrangeMenu } from './ArrangeMenu'
 import { addTaskAndOpen, TaskTick } from './TaskList'
 import { STATUS_ICON } from './TaskPopup'
 import { openTask } from './state'
 import { resetFilters, setFilters, toggleFilterPanel, useTaskView } from './taskViewState'
 import { TopicPickerButton } from './TopicPicker'
 
-/** The date of today, kept fresh (a view left open overnight moves on by itself). */
-function useToday(): string {
-  const [today, setToday] = useState(() => ymd(new Date()))
+/** The date of today and the time of day, kept fresh (a view left open overnight moves on by itself, and a task goes overdue on the minute). */
+function useNow(): { today: string; time: string } {
+  const [now, setNow] = useState(() => ({ today: ymd(new Date()), time: hhmm(new Date()) }))
   useEffect(() => {
-    const id = window.setInterval(() => setToday((t) => (ymd(new Date()) === t ? t : ymd(new Date()))), 60_000)
+    const id = window.setInterval(() => {
+      const d = new Date()
+      setNow((n) => (n.today === ymd(d) && n.time === hhmm(d) ? n : { today: ymd(d), time: hhmm(d) }))
+    }, 15_000)
     return () => window.clearInterval(id)
   }, [])
-  return today
+  return now
 }
 
 /**
@@ -48,6 +52,11 @@ function useSidePanelWidth(): number {
 }
 
 const chipBox = `grid select-none place-items-center rounded-ui text-sm font-semibold transition-colors ${ICON_BOX}`
+const TIMINGS: { id: Timing; icon: 'calendar' | 'clock' | 'sun'; label: string }[] = [
+  { id: 'any', icon: 'calendar', label: 'Any time of day' },
+  { id: 'timed', icon: 'clock', label: 'Only tasks with a time' },
+  { id: 'allday', icon: 'sun', label: 'Only all-day tasks' },
+]
 const toggle = <T,>(list: T[], v: T) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v])
 
 function FilterPanel({ f }: { f: TaskFilters }) {
@@ -95,14 +104,20 @@ function FilterPanel({ f }: { f: TaskFilters }) {
           <input type="date" aria-label="Due from" value={f.from} onChange={(e) => setFilters({ from: e.target.value })} className="rounded-ui border border-line bg-surface px-2 py-1.5 text-sm" />
           <input type="date" aria-label="Due until" value={f.to} onChange={(e) => setFilters({ to: e.target.value })} className="rounded-ui border border-line bg-surface px-2 py-1.5 text-sm" />
         </div>
+        <span className="mb-1 mt-2 block text-xs text-muted">Time of day</span>
+        <div className="flex items-center gap-1" role="radiogroup" aria-label="Time of day">
+          {TIMINGS.map((t) => (
+            <IconTile key={t.id} role="radio" icon={t.icon} label={t.label} selected={f.timing === t.id} onClick={() => setFilters({ timing: t.id })} data-filter-timing={t.id} />
+          ))}
+        </div>
         <p className="mt-2 text-xs text-muted">Project: this map</p>
       </div>
     </div>
   )
 }
 
-function Row({ e, today, topics, readOnly }: { e: TaskEntry; today: string; topics: TopicMap; readOnly: boolean }) {
-  const overdue = !!e.due && e.due < today && e.status !== 'done'
+function Row({ e, now, topics, readOnly }: { e: TaskEntry; now: { today: string; time: string }; topics: TopicMap; readOnly: boolean }) {
+  const overdue = isOverdue(e, now.today, now.time)
   return (
     <li data-task-item={e.id} className="flex items-center gap-1 border-b border-line/60 last:border-0">
       <TaskTick entry={e} readOnly={readOnly} />
@@ -117,7 +132,14 @@ function Row({ e, today, topics, readOnly }: { e: TaskEntry; today: string; topi
         </span>
         {e.status === 'doing' && <Icon name="clock" size={14} className="shrink-0 text-muted" />}
         {e.priority && <span className="shrink-0 rounded bg-bg px-1.5 py-0.5 text-[11px] font-semibold text-muted">P{e.priority}</span>}
-        {e.due && <span className={`shrink-0 text-xs ${overdue ? 'font-semibold text-bad' : 'text-muted'}`}>{formatDue(e.due)}</span>}
+        {e.due && (
+          <span data-task-when className={`shrink-0 text-right text-xs ${overdue ? 'font-semibold text-bad' : 'text-muted'}`}>
+            {formatDue(e.due)}
+            <span data-task-time className="block text-[11px] font-normal">
+              {e.time ? formatTime(e.time) : 'All day'}
+            </span>
+          </span>
+        )}
       </button>
     </li>
   )
@@ -134,12 +156,13 @@ export function TaskView() {
   const readOnly = useEditor((s) => s.readOnly)
   const selected = useEditor((s) => s.selected)
   const f = useTaskView((s) => s.filters)
+  const arrange = useTaskView((s) => s.arrange)
   const panel = useTaskView((s) => s.panel)
-  const today = useToday()
+  const now = useNow()
   const panelW = useSidePanelWidth()
   const all = useMemo(() => allTasks(topics, tasks), [topics, tasks])
   const shown = useMemo(() => filterTasks(all, topics, f), [all, topics, f])
-  const groups = useMemo(() => agendaGroups(shown, today), [shown, today])
+  const groups = useMemo(() => arrangeTasks(shown, topics, arrange, now.today, now.time), [shown, topics, arrange, now.today, now.time])
   const active = filtersActive(f)
   return (
     <section aria-label="Tasks" data-task-view className="absolute inset-0 flex flex-col bg-bg" style={{ paddingRight: panelW }}>
@@ -151,6 +174,7 @@ export function TaskView() {
           <Icon name="search" size={16} className="shrink-0 text-muted" />
           <input aria-label="Search tasks" value={f.text} onChange={(e) => setFilters({ text: e.target.value })} placeholder="Search tasks" className="min-w-0 flex-1 bg-transparent py-1.5 text-sm outline-none" />
         </div>
+        <ArrangeMenu arrange={arrange} />
         <IconButton icon="filter" label="Filters" aria-expanded={panel} selected={panel || active} onClick={toggleFilterPanel} />
         {active && <IconButton icon="reset" label="Clear the filters" onClick={resetFilters} />}
         {!readOnly && <IconButton icon="plus" label="Add a task" onClick={() => addTaskAndOpen(selected[selected.length - 1] ?? null)} />}
@@ -160,12 +184,14 @@ export function TaskView() {
         <div className="mx-auto max-w-3xl">
           {groups.map((g) => (
             <section key={g.id} data-agenda-group={g.id} aria-label={g.label} className="mb-4">
-              <h2 className={`mb-1 flex items-center gap-2 px-1 text-xs font-semibold uppercase tracking-wide ${g.id === 'overdue' ? 'text-bad' : 'text-muted'}`}>
-                {g.label} <span className="font-normal">{g.items.length}</span>
-              </h2>
+              {arrange.groupBy !== 'none' && (
+                <h2 className={`mb-1 flex items-center gap-2 px-1 text-xs font-semibold tracking-wide ${arrange.groupBy === 'date' ? 'uppercase' : ''} ${g.alert ? 'text-bad' : 'text-muted'}`}>
+                  <span className="min-w-0 truncate">{g.label}</span> <span className="font-normal">{g.items.length}</span>
+                </h2>
+              )}
               <ul className="overflow-hidden rounded-ui border border-line bg-surface">
                 {g.items.map((e) => (
-                  <Row key={e.id} e={e} today={today} topics={topics} readOnly={readOnly} />
+                  <Row key={e.id} e={e} now={now} topics={topics} readOnly={readOnly} />
                 ))}
               </ul>
             </section>

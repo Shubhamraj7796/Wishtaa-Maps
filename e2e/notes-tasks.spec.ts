@@ -257,3 +257,61 @@ test.describe('the Task view', () => {
     await page.screenshot({ path: join(SHOTS, 'task-popup-phone.png') })
   })
 })
+
+async function addTimedTask(page: Page, title: string, due: string, time: string | null) {
+  await page.getByRole('button', { name: 'Add a task' }).click()
+  const dialog = page.getByRole('dialog', { name: /^Task/ })
+  await page.getByLabel('Task title').fill(title)
+  await dialog.getByLabel('Due date', { exact: true }).fill(due)
+  if (time) await dialog.getByLabel('Due time').fill(time)
+  await page.keyboard.press('Escape')
+  await expect(dialog).toBeHidden()
+}
+
+test.describe('the Task view by time, and Arrange', () => {
+  for (const [name, size] of [
+    ['desktop', { width: 1366, height: 768 }],
+    ['tablet', { width: 1024, height: 768 }],
+    ['phone', { width: 390, height: 780 }],
+  ] as const) {
+    test(`times on the rows and the Arrange popover at ${name} size`, async ({ page }) => {
+      const errors: string[] = []
+      page.on('pageerror', (e) => errors.push(e.message))
+      await page.setViewportSize(size)
+      await openBlankMap(page)
+      await page.getByRole('button', { name: 'Task view' }).click()
+      await addTimedTask(page, 'Evening call', ymdOf(2), '17:00')
+      await addTimedTask(page, 'Morning call', ymdOf(2), '09:00')
+      await addTimedTask(page, 'Whole day', ymdOf(2), null)
+      const titles = () => page.locator('[data-task-item] [data-task-row] > span:first-child > span:first-child').allTextContents()
+      expect(await titles()).toEqual(['Whole day', 'Morning call', 'Evening call'])
+      await expect(page.locator('[data-task-item]').first().locator('[data-task-time]')).toHaveText('All day')
+      await expect(page.locator('[data-task-item]').nth(1).locator('[data-task-time]')).toContainText(/9:00|09:00/)
+      if (name === 'desktop') await page.screenshot({ path: join(SHOTS, 'task-view-times-desktop.png') })
+
+      // Arrange: group by priority, sort by name, turn round.
+      await page.getByRole('button', { name: 'Arrange' }).click()
+      const menu = page.getByRole('menu', { name: 'Arrange the tasks' })
+      await expect(menu).toBeVisible()
+      const box = await menu.boundingBox()
+      expect((box?.x ?? -1) >= 0 && (box?.x ?? 0) + (box?.width ?? 0) <= size.width).toBe(true)
+      await page.screenshot({ path: join(SHOTS, `arrange-popover-${name}.png`) })
+      await menu.getByRole('group', { name: 'Group by' }).getByRole('menuitemradio', { name: 'None (one list)' }).click()
+      await menu.getByRole('group', { name: 'Sort by' }).getByRole('menuitemradio', { name: 'Name (A to Z)' }).click()
+      expect(await titles()).toEqual(['Evening call', 'Morning call', 'Whole day'])
+      await menu.getByRole('menuitem', { name: /Ascending/ }).click()
+      expect(await titles()).toEqual(['Whole day', 'Morning call', 'Evening call'])
+      await page.keyboard.press('Escape')
+      await expect(menu).toBeHidden()
+
+      // Remembered on this device after a reload.
+      await page.reload()
+      await page.locator('[data-topic]').first().waitFor()
+      await page.getByRole('button', { name: 'Task view' }).click()
+      expect(await titles()).toEqual(['Whole day', 'Morning call', 'Evening call'])
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
+      expect(overflow).toBeLessThanOrEqual(0)
+      expect(errors).toEqual([])
+    })
+  }
+})

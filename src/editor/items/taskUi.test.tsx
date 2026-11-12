@@ -176,3 +176,28 @@ describe('the task popup', () => {
     await act(async () => void (await enterEditMode()))
   })
 })
+
+describe('the time in the task popup', () => {
+  it('has a Due time field that needs a date, saves HH:MM, clears to all day, and a topic that is a task has none', async () => {
+    const id = topic()
+    const k = addTask(mapDoc, { topicId: id, title: 'Call' })
+    await settle()
+    render(<ItemsHost />)
+    act(() => openTask(k))
+    const time = (await screen.findByLabelText('Due time')) as HTMLInputElement
+    expect(time.disabled).toBe(true)
+    fireEvent.change(screen.getByLabelText('Due date'), { target: { value: '2026-11-14' } })
+    expect((screen.getByLabelText('Due time') as HTMLInputElement).disabled).toBe(false)
+    fireEvent.change(screen.getByLabelText('Due time'), { target: { value: '17:30' } })
+    expect(st().tasks[k]).toMatchObject({ due: '2026-11-14', time: '17:30' })
+    fireEvent.click(screen.getByRole('button', { name: 'Clear the due time (all day)' }))
+    expect(st().tasks[k]?.time).toBeUndefined()
+    fireEvent.change(screen.getByLabelText('Due time'), { target: { value: '08:00' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Clear the due date' }))
+    expect(st().tasks[k]?.time).toBeUndefined()
+    act(() => patchTask(mapDoc, id, { done: false }))
+    act(() => openTask(legacyTaskId(id)))
+    await screen.findByText('This task is the topic itself.')
+    expect(screen.queryByLabelText('Due time')).toBeNull()
+  })
+})

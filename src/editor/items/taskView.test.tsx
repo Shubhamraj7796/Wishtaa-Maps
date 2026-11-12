@@ -14,7 +14,7 @@ import { closeFile, mapDoc, openFile } from '../session'
 import { useEditor } from '../store'
 import { ItemsHost } from './ItemsHost'
 import { useItems } from './state'
-import { resetFilters, useTaskView } from './taskViewState'
+import { resetArrange, resetFilters, useTaskView } from './taskViewState'
 import { TaskView } from './TaskView'
 
 let repo: RepositoryCore
@@ -31,6 +31,7 @@ beforeEach(async () => {
   await settle()
   useItems.setState({ list: null, popup: null })
   resetFilters()
+  resetArrange()
   useTaskView.setState({ panel: false })
 })
 afterEach(async () => {
@@ -154,5 +155,87 @@ describe('the Task view (Agenda)', () => {
     const buttons = [...document.querySelectorAll('[data-task-view] button')]
     expect(buttons.every((b) => (b.getAttribute('aria-label') ?? b.textContent ?? '').trim() !== '')).toBe(true)
     expect(buttons.every((b) => !b.hasAttribute('title'))).toBe(true)
+  })
+})
+
+describe('times and Arrange in the Task view', () => {
+  it('each row shows its time, or All day', async () => {
+    const dose = addChild(mapDoc, st().rootId, 'Dose')
+    const a = addTask(mapDoc, { topicId: dose, title: 'Timed one', due: addDays(today, 3), time: '17:00' })
+    const b = addTask(mapDoc, { topicId: dose, title: 'Day one', due: addDays(today, 3) })
+    await settle()
+    mount()
+    expect(document.querySelector(`[data-task-item="${a}"] [data-task-time]`)?.textContent).toMatch(/5:00/)
+    expect(document.querySelector(`[data-task-item="${b}"] [data-task-time]`)?.textContent).toBe('All day')
+    // All-day first, then by time.
+    const order = [...document.querySelectorAll('[data-task-item]')].map((x) => x.getAttribute('data-task-item'))
+    expect(order).toEqual([b, a])
+  })
+
+  it('the Time of day filter narrows to timed or all-day tasks', async () => {
+    const a = addTask(mapDoc, { title: 'Timed one', due: addDays(today, 3), time: '09:00' })
+    addTask(mapDoc, { title: 'Day one', due: addDays(today, 3) })
+    await settle()
+    mount()
+    fireEvent.click(screen.getByRole('button', { name: 'Filters' }))
+    fireEvent.click(screen.getByRole('radio', { name: 'Only tasks with a time' }))
+    expect([...document.querySelectorAll('[data-task-item]')].map((x) => x.getAttribute('data-task-item'))).toEqual([a])
+    fireEvent.click(screen.getByRole('radio', { name: 'Only all-day tasks' }))
+    expect(document.querySelectorAll('[data-task-item]')).toHaveLength(1)
+    expect(screen.getByText('Day one')).toBeTruthy()
+  })
+
+  it('Arrange: opens as a menu, groups by priority, sorts by name, turns round, and is remembered', async () => {
+    seed()
+    await settle()
+    mount()
+    expect(document.querySelector('[data-arrange-menu]')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Arrange' }))
+    expect(document.querySelector('[data-arrange-menu]')).toBeTruthy()
+    fireEvent.click(within(screen.getByRole('group', { name: 'Group by', hidden: true })).getByRole('menuitemradio', { name: 'Priority', hidden: true }))
+    const heads = [...document.querySelectorAll('[data-agenda-group] h2')].map((h) => h.textContent)
+    expect(heads.some((h) => /Priority 1/.test(h ?? ''))).toBe(true)
+    expect(heads.some((h) => /No priority/.test(h ?? ''))).toBe(true)
+    expect(JSON.parse(localStorage.getItem('wishtaa.taskArrange') ?? '{}').groupBy).toBe('priority')
+    // None: one flat list with no headings; Name A to Z; then descending.
+    fireEvent.click(screen.getByRole('menuitemradio', { name: 'None (one list)' }))
+    expect(document.querySelectorAll('[data-agenda-group] h2')).toHaveLength(0)
+    fireEvent.click(screen.getByRole('menuitemradio', { name: 'Name (A to Z)' }))
+    const names = () => [...document.querySelectorAll('[data-task-item] [data-task-row] > span:first-child > span:first-child')].map((x) => x.textContent)
+    const asc = names()
+    expect(asc).toEqual([...asc].sort((a, b) => (a ?? '').localeCompare(b ?? '', undefined, { sensitivity: 'base' })))
+    fireEvent.click(screen.getByRole('menuitem', { name: /Ascending/ }))
+    expect(names()).toEqual([...asc].reverse())
+    expect(useTaskView.getState().arrange).toEqual({ groupBy: 'none', sortBy: 'name', desc: true })
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Back to the starting arrangement' }))
+    expect(useTaskView.getState().arrange).toEqual({ groupBy: 'date', sortBy: 'datetime', desc: false })
+  })
+
+  it('Arrange combines with the filters, groups by topic path, and its controls are named with no native title', async () => {
+    seed()
+    await settle()
+    mount()
+    fireEvent.click(screen.getByRole('button', { name: 'Arrange' }))
+    fireEvent.click(screen.getByRole('menuitemradio', { name: 'Topic / branch' }))
+    const heads = [...document.querySelectorAll('[data-agenda-group] h2')].map((h) => h.textContent ?? '')
+    expect(heads.some((h) => h.includes('Central Topic › Dose › Storage'))).toBe(true)
+    expect(heads[heads.length - 1]).toMatch(/No topic/)
+    fireEvent.change(screen.getByLabelText('Search tasks'), { target: { value: 'today' } })
+    expect(document.querySelectorAll('[data-task-item]')).toHaveLength(1)
+    const menu = document.querySelector('[data-arrange-menu]') as HTMLElement
+    const controls = [...menu.querySelectorAll('button')]
+    expect(controls.length).toBeGreaterThan(8)
+    expect(controls.every((b) => (b.getAttribute('aria-label') ?? b.textContent ?? '').trim() !== '' && !b.hasAttribute('title'))).toBe(true)
+  })
+
+  it('Arrange closes with Escape and the choice is still there when the view is opened again', async () => {
+    mount()
+    fireEvent.click(screen.getByRole('button', { name: 'Arrange' }))
+    fireEvent.click(within(screen.getByRole('group', { name: 'Group by', hidden: true })).getByRole('menuitemradio', { name: 'Status', hidden: true }))
+    fireEvent.keyDown(window, { key: 'Escape' })
+    expect(document.querySelector('[data-arrange-menu]')).toBeNull()
+    cleanup()
+    mount()
+    expect(useTaskView.getState().arrange.groupBy).toBe('status')
   })
 })

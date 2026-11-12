@@ -44,3 +44,10 @@ Several notes per topic, tasks of their own, and a Task view. Built in five smal
 - `TaskItem.noteId`: the note a task belongs to (`topic:<topicId>` for a topic's first note). The link lives on the task only. `tasksOfNote()` lists a note's tasks, oldest first; the note chip shows the first (one task per note for now) and the data already allows more.
 - Deleting a note never deletes its task: the task keeps its title, date and topic, and its `noteId` simply points at nothing (treated as no link). The Undo notice restores the note.
 - Merge: both fields merge per field like every other task field (tests in `tasks.test.ts`).
+
+## 2.2 The Task view by time, and Arrange
+- **Due time** (`TaskPopup`): a time input next to the date, disabled until there is a date; clearing the date clears the time; a topic that is a task has none. A row shows `Nov 14` and under it the time or `All day`.
+- **Overdue by the clock** (`groupOf(task, today, nowTime)`): done is never overdue; a task with a time is overdue when its time is earlier than now (so 5 pm is not overdue at 5:00 pm, overdue at 5:01 pm) and then moves from Today to Overdue (red); a task without a time is overdue from the next day. `useNow` in `TaskView.tsx` refreshes every 15 seconds.
+- **Filter Time of day**: any / only tasks with a time / only all-day tasks (three icon tiles in the filter panel).
+- **Arrange** (`ArrangeMenu.tsx`, state in `taskViewState.ts`, localStorage key `wishtaa.taskArrange`, per device): Group by Date, Priority, Status, Topic / branch (the topic path as the heading, A to Z), None; Sort by Date and time, Date only, Name, Priority, Status, Created, with an ascending / descending icon. The groups keep a fixed order (priority 1 to 5, To do / Doing / Done, topics A to Z, date groups as before); the direction only turns the tasks inside a group. Missing values (no date, no priority) are always last; tie-breaks: for the date sorts the priority, then always the name. A reset icon appears when the arrangement is not the starting one.
+- Popover: `Popover` now also moves between `menuitemradio` and `menuitemcheckbox` items with the arrow keys.
