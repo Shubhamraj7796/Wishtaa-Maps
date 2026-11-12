@@ -24,6 +24,7 @@ import { DetailsPanelLazy } from "./lazyPanels";
 import { MarkPanel } from "./MarkPanel";
 import { ObjectStyle } from "./ObjectStyle";
 import { PictureFormat } from "./PictureFormat";
+import { BRAND_FAB } from "@/ui/iconSize";
 
 const ICON: Record<PanelTab, IconName> = {
   canvas: "layout",
@@ -314,7 +315,7 @@ export function SettingsPanel() {
               type="button"
               data-testid="panel-touch-button"
               onClick={() => A.openPanel()}
-              className="absolute bottom-16 right-10 z-20 hidden rounded-full border border-line bg-surface px-4 py-2 text-sm font-medium shadow-lg [@media(pointer:coarse)]:block"
+              className={`absolute bottom-16 right-10 z-20 hidden min-h-11 rounded-full border px-4 py-2 text-sm font-medium ${BRAND_FAB} [@media(pointer:coarse)]:block`}
             >
               {SECTION_NAME[TAB_FOR_KIND[kind]].split(" ")[0]}
             </button>

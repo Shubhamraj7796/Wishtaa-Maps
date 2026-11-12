@@ -5,6 +5,7 @@ import { deleteNote, noteEntry, noteLabel, patchNote } from '@/core/model/notes'
 import { tasksOfNote } from '@/core/model/tasks'
 import { noteText } from '@/core/sanitize'
 import { IconButton } from '@/ui/IconButton'
+import { BRAND_FAB_ICON } from '@/ui/iconSize'
 import { ItemPopup, type PopupSize } from '@/ui/ItemPopup'
 import { mapDoc } from '../mapdoc'
 import { showNotice } from '../notice'
@@ -157,7 +158,7 @@ export function NotePopup({ id }: { id: string }) {
                 aria-expanded={taskPanel}
                 selected={taskPanel}
                 onClick={() => setTaskPanel((o) => !o)}
-                className="absolute bottom-3 left-3 z-10 h-11 w-11 rounded-full border-line bg-surface shadow-md"
+                className={`absolute bottom-3 left-3 z-10 h-11 w-11 rounded-full ${BRAND_FAB_ICON}`}
               />
             )}
             {taskPanel && (!readOnly || task) && (

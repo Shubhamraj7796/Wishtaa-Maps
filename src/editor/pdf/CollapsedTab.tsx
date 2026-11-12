@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { Icon } from '@/ui/icons'
+import { BRAND_FAB } from '@/ui/iconSize'
 import { flashTip, Tooltip } from '@/ui/Tooltip'
 import { restorePdf, takeFocusTab, takeTipTab } from './actions'
 
@@ -16,7 +17,7 @@ export function CollapsedTab({ mode, name, tabs }: { mode: 'side' | 'sheet'; nam
   }, [])
   const label = `Open PDF: ${name}${tabs > 1 ? ` (${tabs} PDFs open)` : ''}`
   const badge = tabs > 1 && (
-    <span data-tab-badge aria-hidden="true" className="absolute grid min-w-4 place-items-center rounded-full bg-brand px-1 text-[10px] font-semibold leading-4 text-brand-ink" style={mode === 'side' ? { top: 30, right: 2 } : { top: -3, right: -3 }}>
+    <span data-tab-badge aria-hidden="true" className={`absolute grid min-w-4 place-items-center rounded-full px-1 text-[10px] font-semibold leading-4 ${mode === 'side' ? 'bg-brand text-brand-ink' : 'bg-surface text-ink ring-2 ring-brand'}`} style={mode === 'side' ? { top: 30, right: 2 } : { top: -3, right: -3 }}>
       {tabs}
     </span>
   )
@@ -24,7 +25,7 @@ export function CollapsedTab({ mode, name, tabs }: { mode: 'side' | 'sheet'; nam
     return (
       <aside aria-label="PDF source (collapsed)" data-pdf-panel={mode} data-pdf-size="collapsed" className="absolute bottom-3 right-3 z-30" style={{ marginBottom: 'env(safe-area-inset-bottom)' }}>
         <Tooltip label="Open PDF">
-          <button ref={button} type="button" data-collapsed-tab aria-label={label} onClick={() => restorePdf(true)} className="relative grid h-12 w-12 select-none place-items-center rounded-full border border-line bg-surface text-ink shadow-lg hover:bg-bg [@media(pointer:coarse)]:h-12 [@media(pointer:coarse)]:w-12">
+          <button ref={button} type="button" data-collapsed-tab aria-label={label} onClick={() => restorePdf(true)} className={`relative grid h-12 w-12 select-none place-items-center rounded-full border ${BRAND_FAB} [@media(pointer:coarse)]:h-12 [@media(pointer:coarse)]:w-12`}>
             <Icon name="pdf" size={22} />
             {badge}
           </button>
