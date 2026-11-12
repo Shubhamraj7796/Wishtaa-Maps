@@ -6,10 +6,11 @@ import { parseOutline, toOutline } from '../io/outline'
 import { searchTopics } from '../search'
 import { addChild } from './commands'
 import { patchTask } from './content'
-import { createMapDoc, ensureRoot, snapshotTasks, snapshotTopics } from './doc'
+import { createMapDoc, ensureRoot, snapshotNotes, snapshotTasks, snapshotTopics } from './doc'
 import { itemCountsOf } from './itemCounts'
 import { itemLines } from './itemLines'
-import { addTask, allTasks, deleteTaskEntry, legacyTaskId, patchTaskEntry, taskEntry, taskLine, tasksOfTopic, toggleTaskEntry, topicPath } from './tasks'
+import { addNote, deleteNote, patchNote } from './notes'
+import { addTask, allTasks, deleteTaskEntry, legacyTaskId, patchTaskEntry, taskEntry, taskLine, tasksOfNote, tasksOfTopic, toggleTaskEntry, topicPath, validTime } from './tasks'
 
 const bytes = (d: ReturnType<typeof createMapDoc>) => Y.encodeStateAsUpdate(d.ydoc)
 const load = (b: Uint8Array) => {
@@ -161,5 +162,105 @@ describe('tasks in search, the file index and the outline', () => {
     expect(text).toBe('Central\n\tDose\n\t\t[Task] [x] Dose\n\t\t[Task] [~] Call supplier (due 2026-11-20, doing, priority 2)')
     expect(parseOutline(text)[0]?.children[0]?.children).toEqual([])
     expect(taskLine({ title: 'A', status: 'todo', details: 'x  y' })).toBe('[Task] [ ] A: x y')
+  })
+})
+
+describe('a time of day and a link to a note', () => {
+  it('accepts only HH:MM, only with a date, and old tasks stay all day', () => {
+    expect(['00:00', '09:05', '23:59'].every(validTime)).toBe(true)
+    expect(['24:00', '9:05', '12:60', '', 'noon', null].some(validTime)).toBe(false)
+    const { doc, kid } = fresh()
+    const old = addTask(doc, { topicId: kid, title: 'Old', due: '2026-11-14' }, 1)
+    expect(taskEntry(snapshotTopics(doc), snapshotTasks(doc), old)?.time).toBeUndefined()
+    const id = addTask(doc, { topicId: kid, title: 'Call', due: '2026-11-14', time: '17:00' }, 1)
+    expect(snapshotTasks(doc)[id]?.time).toBe('17:00')
+    patchTaskEntry(doc, id, { time: '25:00' }, 2)
+    expect(snapshotTasks(doc)[id]?.time).toBeUndefined()
+    patchTaskEntry(doc, id, { time: '08:30' }, 3)
+    expect(snapshotTasks(doc)[id]?.time).toBe('08:30')
+    // Clearing the date clears the time; a time with no date is not stored.
+    patchTaskEntry(doc, id, { due: null }, 4)
+    expect(snapshotTasks(doc)[id]?.time).toBeUndefined()
+    const nodate = addTask(doc, { title: 'x', time: '10:00' })
+    expect(snapshotTasks(doc)[nodate]?.time).toBeUndefined()
+  })
+
+  it('a task is linked to a note by noteId only; the note itself gets nothing', () => {
+    const { doc, kid } = fresh()
+    const n = addNote(doc, kid, { title: 'Meeting' }, 1) as string
+    const before = JSON.stringify(snapshotNotes(doc))
+    const t = addTask(doc, { topicId: kid, title: 'Follow up', noteId: n }, 2)
+    expect(JSON.stringify(snapshotNotes(doc))).toBe(before)
+    expect(tasksOfNote(snapshotTasks(doc), n).map((x) => x.id)).toEqual([t])
+    patchTaskEntry(doc, t, { noteId: null }, 3)
+    expect(tasksOfNote(snapshotTasks(doc), n)).toEqual([])
+  })
+
+  it('deleting a note keeps its task; the link is then dangling and harmless', () => {
+    const { doc, kid } = fresh()
+    const n = addNote(doc, kid, { title: 'Meeting' }, 1) as string
+    const t = addTask(doc, { topicId: kid, title: 'Follow up', due: '2026-11-14', noteId: n }, 2)
+    deleteNote(doc, n)
+    expect(snapshotNotes(doc)[n]).toBeUndefined()
+    expect(snapshotTasks(doc)[t]).toMatchObject({ title: 'Follow up', noteId: n })
+  })
+
+  it('two devices: one edits the note text while the other changes the task time, both are kept', () => {
+    const { doc, kid } = fresh()
+    const n = addNote(doc, kid, { title: 'Meeting', html: '<p>a</p>' }, 1) as string
+    const t = addTask(doc, { topicId: kid, title: 'Call', due: '2026-11-14', time: '17:00', noteId: n }, 1)
+    const base = bytes(doc)
+    const phone = load(base)
+    const laptop = load(base)
+    patchNote(phone, n, { html: '<p>agenda changed</p>' }, 10)
+    patchTaskEntry(laptop, t, { time: '18:30' }, 11)
+    const r = mergeMaps(base, bytes(laptop), bytes(phone), { localAt: 20, remoteAt: 10 })
+    const m = load(r.content)
+    expect(snapshotNotes(m)[n]?.html).toBe('<p>agenda changed</p>')
+    expect(snapshotTasks(m)[t]).toMatchObject({ time: '18:30', noteId: n, due: '2026-11-14' })
+    expect(r.conflicts).toEqual([])
+  })
+
+  it('two devices change the time of the same task: the newer wins and the other is reported', () => {
+    const { doc, kid } = fresh()
+    const t = addTask(doc, { topicId: kid, title: 'Call', due: '2026-11-14', time: '17:00' }, 1)
+    const base = bytes(doc)
+    const phone = load(base)
+    const laptop = load(base)
+    patchTaskEntry(phone, t, { time: '19:00' }, 10)
+    patchTaskEntry(laptop, t, { time: '20:00' }, 11)
+    const r = mergeMaps(base, bytes(laptop), bytes(phone), { localAt: 20, remoteAt: 10 })
+    expect(snapshotTasks(load(r.content))[t]?.time).toBe('20:00')
+    expect(r.conflicts.find((x) => x.map === 'tasks' && x.field === 'time')?.lostValue).toBe('19:00')
+  })
+
+  it('one device deletes the note while the other edits its task: the task survives with the edit', () => {
+    const { doc, kid } = fresh()
+    const n = addNote(doc, kid, { title: 'Meeting' }, 1) as string
+    const t = addTask(doc, { topicId: kid, title: 'Call', noteId: n }, 1)
+    const base = bytes(doc)
+    const phone = load(base)
+    const laptop = load(base)
+    deleteNote(phone, n)
+    patchTaskEntry(laptop, t, { title: 'Call back' }, 5)
+    const m = load(mergeMaps(base, bytes(laptop), bytes(phone), { localAt: 9, remoteAt: 8 }).content)
+    expect(snapshotNotes(m)[n]).toBeUndefined()
+    expect(snapshotTasks(m)[t]?.title).toBe('Call back')
+  })
+
+  it('two devices each add a task to the same note: both are kept, oldest first', () => {
+    const { doc, kid } = fresh()
+    const n = addNote(doc, kid, { title: 'Meeting' }, 1) as string
+    const base = bytes(doc)
+    const phone = load(base)
+    const laptop = load(base)
+    const a = addTask(phone, { title: 'phone', noteId: n }, 100)
+    const b = addTask(laptop, { title: 'laptop', noteId: n }, 200)
+    const m = load(mergeMaps(base, bytes(laptop), bytes(phone), { localAt: 9, remoteAt: 8 }).content)
+    expect(tasksOfNote(snapshotTasks(m), n).map((x) => x.id)).toEqual([a, b])
+  })
+
+  it('the outline line carries the time', () => {
+    expect(taskLine({ title: 'Call', due: '2026-11-14', time: '17:00', status: 'todo', details: '' })).toBe('[Task] [ ] Call (due 2026-11-14 17:00)')
   })
 })

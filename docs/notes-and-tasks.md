@@ -36,3 +36,11 @@ Several notes per topic, tasks of their own, and a Task view. Built in five smal
 - **Add a task** (plus icon) starts a task on the selected topic and opens it. Read mode: no Add, a tick says reading mode.
 - Tests: `agenda.test.ts`, `taskView.test.tsx`, `e2e/notes-tasks.spec.ts` (real Chrome: groups, tick, filters, popup from a row, map keys ignored, phone-size window without sideways scroll).
 - **Not built (later steps, waiting for a new "go"):** Month calendar, Board by status, all maps ("maps opened on this device").
+
+# Part 2: wider notes, a task on the note, the Task view by time
+
+## 2.1 Data
+- `TaskItem.time` ("HH:MM", local clock time; stored with the date, so it does not move when the device time zone changes; only valid with a date, clearing the date clears it; a missing time means all day). A topic that is a task (the older flag) has no time.
+- `TaskItem.noteId`: the note a task belongs to (`topic:<topicId>` for a topic's first note). The link lives on the task only. `tasksOfNote()` lists a note's tasks, oldest first; the note chip shows the first (one task per note for now) and the data already allows more.
+- Deleting a note never deletes its task: the task keeps its title, date and topic, and its `noteId` simply points at nothing (treated as no link). The Undo notice restores the note.
+- Merge: both fields merge per field like every other task field (tests in `tasks.test.ts`).

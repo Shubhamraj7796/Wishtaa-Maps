@@ -20,8 +20,12 @@ export interface TaskItem {
   details: string
   /** Due date, "YYYY-MM-DD" (local). */
   due?: string
+  /** Optional clock time of the due date, "HH:MM" (24 hours, local: it never shifts with the time zone). Only with a date. Missing = all day. */
+  time?: string
   status: TaskStatus
   priority?: number
+  /** The note this task belongs to (a note id; `topic:<topicId>` is a topic's first note). The link is kept here only, never on the note. */
+  noteId?: string
   createdAt: number
   updatedAt: number
   order: number
@@ -34,8 +38,10 @@ export interface TaskEntry {
   title: string
   details: string
   due?: string
+  time?: string
   status: TaskStatus
   priority?: number
+  noteId?: string
   /** The topic is the task: its title is the topic's text, and it is stored in `topic.task` (older versions of the app read it too). */
   legacy: boolean
   createdAt: number | null
@@ -50,6 +56,8 @@ export const topicOfLegacyTask = (id: string) => id.slice('topic:'.length)
 const tx = (doc: MapDoc, fn: () => void) => doc.ydoc.transact(fn, LOCAL)
 const cleanTitle = (t: string) => t.replace(/\s+/g, ' ').trim().slice(0, MAX_TASK_TITLE)
 const DATE = /^\d{4}-\d{2}-\d{2}$/
+const TIME = /^([01]\d|2[0-3]):[0-5]\d$/
+export const validTime = (t: unknown): t is string => typeof t === 'string' && TIME.test(t)
 export const validDate = (d: unknown): d is string => typeof d === 'string' && DATE.test(d) && !Number.isNaN(new Date(`${d}T00:00:00`).getTime())
 
 /** done is the flag older versions read; the status adds "doing". A done flag always means Done. */
@@ -75,7 +83,7 @@ export function allTasks(topics: TopicMap, tasks: Record<string, TaskItem>): Tas
     })
   }
   for (const k of Object.values(tasks)) {
-    out.push({ id: k.id, topicId: k.topicId && topics[k.topicId] ? k.topicId : null, title: k.title, details: k.details, ...(k.due ? { due: k.due } : {}), status: k.status, ...(k.priority ? { priority: k.priority } : {}), legacy: false, createdAt: k.createdAt, updatedAt: k.updatedAt, order: k.order })
+    out.push({ id: k.id, topicId: k.topicId && topics[k.topicId] ? k.topicId : null, title: k.title, details: k.details, ...(k.due ? { due: k.due } : {}), ...(k.due && validTime(k.time) ? { time: k.time } : {}), status: k.status, ...(k.priority ? { priority: k.priority } : {}), ...(k.noteId ? { noteId: k.noteId } : {}), legacy: false, createdAt: k.createdAt, updatedAt: k.updatedAt, order: k.order })
   }
   return out
 }
@@ -83,6 +91,13 @@ export function allTasks(topics: TopicMap, tasks: Record<string, TaskItem>): Tas
 /** One task by its id (a topic that is a task is found by `topic:<id>`). */
 export function taskEntry(topics: TopicMap, tasks: Record<string, TaskItem>, id: string): TaskEntry | null {
   return allTasks(topics, tasks).find((e) => e.id === id) ?? null
+}
+
+/** The tasks that belong to one note (normally one; two devices adding at once can make two). Oldest first. */
+export function tasksOfNote(tasks: Record<string, TaskItem>, noteId: string): TaskItem[] {
+  return Object.values(tasks)
+    .filter((k) => k.noteId === noteId)
+    .sort((a, b) => a.createdAt - b.createdAt || a.order - b.order || a.id.localeCompare(b.id))
 }
 
 /** The tasks that sit on one topic (its own flag first, then the others). */
@@ -106,7 +121,7 @@ export function topicPath(topics: TopicMap, id: string): string {
 }
 
 /** Adds a task of its own and returns its id. One undo step. */
-export function addTask(doc: MapDoc, init: { topicId?: string | null; title?: string; due?: string; priority?: number; status?: TaskStatus; details?: string } = {}, now = Date.now()): string {
+export function addTask(doc: MapDoc, init: { topicId?: string | null; title?: string; due?: string; time?: string; noteId?: string; priority?: number; status?: TaskStatus; details?: string } = {}, now = Date.now()): string {
   let order = 0
   doc.tasks.forEach((k) => (order = Math.max(order, k.order + 1)))
   const id = newId()
@@ -120,6 +135,8 @@ export function addTask(doc: MapDoc, init: { topicId?: string | null; title?: st
     updatedAt: now,
     order,
     ...(validDate(init.due) ? { due: init.due } : {}),
+    ...(validDate(init.due) && validTime(init.time) ? { time: init.time } : {}),
+    ...(init.noteId ? { noteId: init.noteId } : {}),
     ...(init.priority && PRIORITIES.includes(init.priority as 1) ? { priority: init.priority } : {}),
   }
   tx(doc, () => doc.tasks.set(id, item))
@@ -131,6 +148,10 @@ export interface TaskPatch {
   details?: string
   /** null or '' clears the date. */
   due?: string | null
+  /** "HH:MM", or null / '' for all day. Needs a date; clearing the date clears it too. A topic that is a task has no time. */
+  time?: string | null
+  /** The note it belongs to (null: none). */
+  noteId?: string | null
   status?: TaskStatus
   /** null clears it. */
   priority?: number | null
@@ -164,6 +185,15 @@ export function patchTaskEntry(doc: MapDoc, id: string, patch: TaskPatch, now = 
     if (patch.due && validDate(patch.due)) next.due = patch.due
     else delete next.due
   }
+  if (patch.time !== undefined) {
+    if (validTime(patch.time)) next.time = patch.time
+    else delete next.time
+  }
+  if (!next.due) delete next.time
+  if (patch.noteId !== undefined) {
+    if (patch.noteId) next.noteId = patch.noteId
+    else delete next.noteId
+  }
   if (patch.priority !== undefined) {
     if (patch.priority && PRIORITIES.includes(patch.priority as 1)) next.priority = patch.priority
     else delete next.priority
@@ -187,9 +217,9 @@ export function deleteTaskEntry(doc: MapDoc, id: string) {
 }
 
 /** A task as one outline line: "[Task] ☐ Title (due 2026-11-20, doing, priority 2)". */
-export function taskLine(e: Pick<TaskEntry, 'title' | 'due' | 'status' | 'priority' | 'details'>): string {
+export function taskLine(e: Pick<TaskEntry, 'title' | 'due' | 'status' | 'priority' | 'details'> & { time?: string }): string {
   const box = e.status === 'done' ? '[x]' : e.status === 'doing' ? '[~]' : '[ ]'
-  const bits = [e.due ? `due ${e.due}` : '', e.status === 'doing' ? 'doing' : '', e.priority ? `priority ${e.priority}` : ''].filter(Boolean)
+  const bits = [e.due ? `due ${e.due}${e.time ? ` ${e.time}` : ''}` : '', e.status === 'doing' ? 'doing' : '', e.priority ? `priority ${e.priority}` : ''].filter(Boolean)
   const details = e.details.replace(/\s+/g, ' ').trim()
   return `[Task] ${box} ${e.title || 'Task'}${bits.length ? ` (${bits.join(', ')})` : ''}${details ? `: ${details}` : ''}`
 }
