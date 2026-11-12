@@ -73,7 +73,8 @@ test('the touch-only pill of the settings panel is brand green on a touch screen
     await page.waitForURL('**/map/**')
     await page.locator('[data-topic]').first().waitFor()
     if (scheme === 'dark') await page.getByRole('button', { name: 'Switch to dark mode' }).click()
-    await page.getByRole('button', { name: 'Close the settings panel' }).click() // the phone sheet starts open; closing it leaves the floating pill
+    const closeSheet = page.getByRole('button', { name: 'Close the settings panel' })
+    if (await closeSheet.isVisible()) await closeSheet.click() // the phone sheet may start open; closing it leaves the floating pill
     const pill = page.getByTestId('panel-touch-button')
     await expect(pill).toBeVisible({ timeout: 5000 })
     {
