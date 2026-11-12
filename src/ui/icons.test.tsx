@@ -9,8 +9,8 @@ afterEach(() => cleanup())
 describe('the icon set (rule 8: one set, one size)', () => {
   const names = Object.keys(CUSTOM_ICONS) as IconName[]
 
-  it('has the 14 custom icons and the repeat icon in the one registry', () => {
-    expect(names).toHaveLength(14)
+  it('has the 15 custom icons (the checklist is the 15th) and the repeat icon in the one registry', () => {
+    expect(names).toHaveLength(15)
     for (const n of [...names, 'repeat' as IconName]) expect(ICONS[n]).toBeTruthy()
   })
 

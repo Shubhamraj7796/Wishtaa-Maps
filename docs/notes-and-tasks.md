@@ -66,3 +66,15 @@ Several notes per topic, tasks of their own, and a Task view. Built in five smal
 ## 2.6 Outline copy opt-in, and the two-device script
 - `cmdCopy(withItems = false)`: the plain Copy leaves notes and tasks out; the `copyItems` command ("Copy with notes and tasks (as text)") passes `true`. Parsing an outline back still skips the `[Note]` / `[Task]` lines.
 - `docs/two-device-test.md` is the script for testing the merge on two real devices.
+
+# Checklist in the note editor
+
+- **Tool.** TipTap `TaskList` and `TaskItem` (`@tiptap/extension-list`, explicit dependency), with `ChecklistItem` in `items/RichNoteEditor.tsx` (Ctrl/Cmd+Enter ticks the item under the cursor, only inside a checklist; the box has the name "text, done / not done"). The toolbar tool "Checklist" uses its own icon (`checklist` in `ui/customIcons.tsx`: boxes with lines), different from the `task` icon ("Add task details"). Select all (Ctrl+A) is made an ordinary selection first so the tool can turn a whole note back.
+- **Narrow toolbar.** Tools have a `rank`; when the bar is too narrow the least useful go into the More menu first (code, strikethrough, quote, heading 2 ... ). Checklist is rank 5 of 15 (after bold, italic, bullets, numbers), so it leaves the bar only on a bar under about 230 px.
+- **Stored form (no migration).** Inside the note's `html`: `<ul data-type="taskList"><li data-checked="true|false" data-type="taskItem"><p>text</p></li></ul>`. The cleaner keeps those attributes and drops the box input, label and wrappers (a test locks it in). Older notes are unchanged.
+- **Text forms.** `noteText()` writes `[ ] text` / `[x] text` (search, file index, notes list, "Copy with notes and tasks"). There is no .emmx export in the app (import only), so nothing to change there.
+- **Read mode.** The editor is not editable (a click on a box is undone by the extension, Ctrl+Enter does nothing) and `onUpdate` ignores a read-only editor, so nothing is saved. The Read side panel (first note of a topic) draws the checklist from the stored text with CSS only (`.note-read`).
+- **Progress.** `checklistProgress(html)` gives done / total; `NoteRows` shows "3/6".
+- **Older app versions** show the items as a bulleted list (text intact, no boxes). If an old version edits and saves such a note, it becomes plain bullets (the ticks are lost, the text is not).
+- **Merge.** The note is one `html` string, so a tick on one device and typing on another is one field changed twice: the newer wins and the other is reported (tests in `notes.test.ts`). A finer merge needs item ids and a per-item tick map; not built. Linking a checklist item to a real task later would also need item ids.
+- **Not the Tasks feature:** no date or status, not in the Task view, not counted as a task.

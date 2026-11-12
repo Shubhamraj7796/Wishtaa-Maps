@@ -183,3 +183,51 @@ test('checklist in Read mode: the boxes show but cannot be ticked, nothing is sa
   expect(errors).toEqual([])
   await ctx.close()
 })
+
+for (const [name, size, touch, dark] of [
+  ['desktop', { width: 1366, height: 768 }, false, false],
+  ['phone', { width: 390, height: 780 }, true, false],
+  ['dark-desktop', { width: 1366, height: 768 }, false, true],
+  ['dark-phone', { width: 390, height: 780 }, true, true],
+] as const) {
+  test(`checklist: the progress count in the notes list, the toolbar and its More menu (${name})`, async ({ browser }) => {
+    const { page, ctx } = await newPage(browser, { ...size, touch, dark })
+    const errors: string[] = []
+    page.on('pageerror', (e) => errors.push(e.message))
+    const dialog = await openNewNote(page)
+    await page.getByLabel('Note title').fill('Cold stock')
+    await page.getByLabel('Note text').click()
+    await page.getByRole('button', { name: 'Checklist' }).click()
+    for (let i = 1; i <= 6; i++) {
+      await page.keyboard.type(`Task ${i}`)
+      if (i < 6) await page.keyboard.press('Enter')
+    }
+    for (const n of [0, 1, 2]) await items(page).nth(n).locator('> label > input').click()
+    await expect(page.locator('.note-editor li[data-checked="true"]')).toHaveCount(3)
+
+    // The toolbar with the new icon; on a narrow popup the rest of the tools are in the More menu.
+    await page.screenshot({ path: join(SHOTS, `toolbar-${name}.png`), clip: { x: 0, y: 0, width: size.width, height: size.width < 500 ? 120 : 330 } })
+    const more = dialog.getByRole('button', { name: 'More formatting' })
+    if (await more.count()) {
+      await more.click()
+      await expect(page.getByRole('menu', { name: 'More formatting' })).toBeVisible()
+      await page.screenshot({ path: join(SHOTS, `toolbar-more-${name}.png`), clip: { x: 0, y: 0, width: size.width, height: size.width < 500 ? 420 : 480 } })
+      await page.keyboard.press('Escape')
+    }
+    await expect(dialog.getByRole('button', { name: 'Checklist' })).toBeVisible()
+
+    // The notes list shows "3/6" for the note.
+    await page.keyboard.press('Escape')
+    await page.waitForTimeout(900)
+    const sheet = page.getByRole('button', { name: 'Close the settings panel' })
+    if (await sheet.isVisible()) await sheet.click()
+    await page.locator('[data-notes-chip]').first().click()
+    const row = page.getByRole('menu', { name: 'Notes of this topic' }).locator('[data-note-row]').first()
+    await expect(row.locator('[data-checklist-progress]')).toHaveText('3/6')
+    await expect(row.locator('[data-checklist-progress]')).toHaveAttribute('aria-label', '3 of 6 done')
+    await expect(row).toContainText('[x] Task 1')
+    await page.screenshot({ path: join(SHOTS, `notes-list-progress-${name}.png`) })
+    expect(errors).toEqual([])
+    await ctx.close()
+  })
+}

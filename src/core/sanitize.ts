@@ -16,6 +16,17 @@ export function sanitizeNote(html: string): string {
 /** The opening tag of a checklist item (TipTap's task item): `<li data-checked="true" data-type="taskItem">`, in either attribute order. */
 const TASK_ITEM = /<li\b[^>]*\bdata-type="taskItem"[^>]*>/gi
 
+/** How many checklist items a note has and how many are ticked (`total` is 0 for a note without a checklist). */
+export function checklistProgress(html: string | undefined | null): { done: number; total: number } {
+  let done = 0
+  let total = 0
+  for (const tag of html?.match(TASK_ITEM) ?? []) {
+    total += 1
+    if (/data-checked="true"/i.test(tag)) done += 1
+  }
+  return { done, total }
+}
+
 /**
  * Plain text of a note (for search, the notes list, and the outline copy). A checklist item reads as "[ ] text" or "[x] text", so the
  * state is not lost in text; a note with no checklist reads exactly as before.

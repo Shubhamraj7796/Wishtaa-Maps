@@ -12,6 +12,7 @@ import { enterEditMode, enterReadMode } from '../readmode'
 import { getScene } from '../scene'
 import { closeFile, mapDoc, openFile } from '../session'
 import { useEditor } from '../store'
+import NotesPanel from '../ui/NotesPanel'
 import { OutlineView } from '../ui/OutlineView'
 import { ItemsHost } from './ItemsHost'
 import { useItems } from './state'
@@ -131,5 +132,25 @@ describe('the map gives room for the notes icon', () => {
     const after = getScene().boxes.get(id)?.w ?? 0
     expect(after).toBeGreaterThanOrEqual(before)
     expect(st().itemCounts[id]?.notes).toBe(2)
+  })
+})
+
+describe('the progress count of a checklist in the notes list', () => {
+  it('shows "3/6" with the words "3 of 6 done" for a note with a checklist, and nothing for a note without one', async () => {
+    const id = addChild(mapDoc, useEditor.getState().rootId, 'Dose')
+    const item = (checked: boolean, text: string) => `<li data-checked="${checked}" data-type="taskItem"><p>${text}</p></li>`
+    const html = `<ul data-type="taskList">${[true, true, true, false, false, false].map((c, i) => item(c, `item ${i + 1}`)).join('')}</ul>`
+    addNote(mapDoc, id, { title: 'Todo', html })
+    addNote(mapDoc, id, { title: 'Plain', html: '<p>no list</p>' })
+    act(() => useEditor.setState({ selected: [id] }))
+    await settle()
+    render(<NotesPanel />)
+    const chips = document.querySelectorAll('[data-checklist-progress]')
+    expect(chips).toHaveLength(1)
+    expect(chips[0]?.textContent).toBe('3/6')
+    expect(chips[0]?.getAttribute('aria-label')).toBe('3 of 6 done')
+    expect(chips[0]?.hasAttribute('title')).toBe(false)
+    // The list text shows the boxes as [ ] and [x].
+    expect(document.body.textContent).toContain('[x] item 1')
   })
 })

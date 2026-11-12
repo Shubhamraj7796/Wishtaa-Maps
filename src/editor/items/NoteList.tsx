@@ -1,9 +1,10 @@
 import { useMemo } from 'react'
 import { timeAgo } from '@/app/format'
 import { addNote, noteLabel, notesOf } from '@/core/model/notes'
-import { noteText } from '@/core/sanitize'
+import { checklistProgress, noteText } from '@/core/sanitize'
 import { Icon } from '@/ui/icons'
 import { IconButton } from '@/ui/IconButton'
+import { Tooltip } from '@/ui/Tooltip'
 import { Popover } from '@/ui/Popover'
 import { mapDoc } from '../mapdoc'
 import { useEditor } from '../store'
@@ -35,6 +36,7 @@ export function NoteRows({ topicId, menu = false }: { topicId: string; menu?: bo
       <ul aria-label="Notes of this topic" className="max-h-[50vh] overflow-y-auto">
         {entries.map((e) => {
           const text = noteText(e.html)
+          const progress = checklistProgress(e.html)
           return (
             <li key={e.id}>
               <button type="button" role={role} data-note-row={e.id} onClick={() => openNote(e.id)} className="flex w-full items-start gap-2 rounded-ui px-2 py-2 text-left hover:bg-bg focus-visible:bg-bg [@media(pointer:coarse)]:min-h-11">
@@ -44,6 +46,13 @@ export function NoteRows({ topicId, menu = false }: { topicId: string; menu?: bo
                   {text && <span className="line-clamp-2 block text-xs text-muted">{text.slice(0, 140)}</span>}
                   {e.updatedAt !== null && <span className="block text-[11px] text-muted">Edited {timeAgo(e.updatedAt)}</span>}
                 </span>
+                {progress.total > 0 && (
+                  <Tooltip label={`${progress.done} of ${progress.total} done`}>
+                    <span role="img" aria-label={`${progress.done} of ${progress.total} done`} data-checklist-progress className={`mt-0.5 shrink-0 rounded-full px-1.5 py-0.5 text-[11px] font-semibold bg-brand/15 text-ink ${progress.done === progress.total ? 'ring-1 ring-brand' : ''}`}>
+                      {progress.done}/{progress.total}
+                    </span>
+                  </Tooltip>
+                )}
               </button>
             </li>
           )
