@@ -4,12 +4,30 @@ import { setNote } from '@/core/model/content'
 import { deleteNote, noteEntry, patchNote } from '@/core/model/notes'
 import { noteText } from '@/core/sanitize'
 import { IconButton } from '@/ui/IconButton'
-import { ItemPopup } from '@/ui/ItemPopup'
+import { ItemPopup, type PopupSize } from '@/ui/ItemPopup'
 import { mapDoc } from '../mapdoc'
 import { showNotice } from '../notice'
 import { useEditor } from '../store'
 import { RichNoteEditor, type NoteEditorHandle } from './RichNoteEditor'
 import { closePopup } from './state'
+
+const SIZE_KEY = 'wishtaa.noteSize'
+const SIZES: PopupSize[] = ['normal', 'wide', 'full']
+/** The size the note popup was last left at on this device. */
+export function loadNoteSize(): PopupSize {
+  try {
+    const v = localStorage.getItem(SIZE_KEY)
+    return SIZES.includes(v as PopupSize) ? (v as PopupSize) : 'normal'
+  } catch {
+    return 'normal'
+  }
+}
+/** The size button steps Normal, Wide, Full screen, Normal; its name says what the next press does. */
+const NEXT: Record<PopupSize, { to: PopupSize; label: string; icon: 'expand' | 'fullscreen' | 'shrink' }> = {
+  normal: { to: 'wide', label: 'Wider', icon: 'expand' },
+  wide: { to: 'full', label: 'Full screen', icon: 'fullscreen' },
+  full: { to: 'normal', label: 'Narrower', icon: 'shrink' },
+}
 
 /**
  * A note in its popup: a title (the first note of a topic has none), the rich-text editor with its icon toolbar, and when it was
@@ -26,6 +44,16 @@ export function NotePopup({ id }: { id: string }) {
   const titleRef = useRef(title)
   titleRef.current = title
   const gone = !entry
+  const [size, setSizeState] = useState<PopupSize>(loadNoteSize)
+  const next = NEXT[size]
+  const setSize = (v: PopupSize) => {
+    setSizeState(v)
+    try {
+      localStorage.setItem(SIZE_KEY, v)
+    } catch {
+      // Storage blocked: the size still works until the popup is closed.
+    }
+  }
 
   // The note was removed (undo, another device): say so and close.
   useEffect(() => {
@@ -73,6 +101,7 @@ export function NotePopup({ id }: { id: string }) {
     <ItemPopup
       label={entry.legacy ? 'Note' : `Note: ${entry.title || 'untitled'}`}
       onClose={close}
+      size={size}
       header={
         <div className="min-w-0">
           {entry.legacy ? (
@@ -95,7 +124,13 @@ export function NotePopup({ id }: { id: string }) {
           <div className="truncate px-1 text-xs text-muted">Topic: {topicText}</div>
         </div>
       }
-      actions={!readOnly ? <IconButton icon="trash" label="Delete this note" onClick={remove} className="text-bad [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11" /> : undefined}
+      actions={
+        <>
+          {/* On a phone the popup is always a full sheet, so the size button is not shown there. */}
+          <IconButton icon={next.icon} label={next.label} data-note-size-button={size} onClick={() => setSize(next.to)} className="max-sm:hidden [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11" />
+          {!readOnly && <IconButton icon="trash" label="Delete this note" onClick={remove} className="text-bad [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11" />}
+        </>
+      }
     >
       <RichNoteEditor html={entry.html} onSave={save} label="Note text" readOnly={readOnly} autoFocus={!readOnly} handle={handle} />
       <div className="shrink-0 border-t border-line px-3 py-1.5 text-xs text-muted">

@@ -51,3 +51,8 @@ Several notes per topic, tasks of their own, and a Task view. Built in five smal
 - **Filter Time of day**: any / only tasks with a time / only all-day tasks (three icon tiles in the filter panel).
 - **Arrange** (`ArrangeMenu.tsx`, state in `taskViewState.ts`, localStorage key `wishtaa.taskArrange`, per device): Group by Date, Priority, Status, Topic / branch (the topic path as the heading, A to Z), None; Sort by Date and time, Date only, Name, Priority, Status, Created, with an ascending / descending icon. The groups keep a fixed order (priority 1 to 5, To do / Doing / Done, topics A to Z, date groups as before); the direction only turns the tasks inside a group. Missing values (no date, no priority) are always last; tie-breaks: for the date sorts the priority, then always the name. A reset icon appears when the arrangement is not the starting one.
 - Popover: `Popover` now also moves between `menuitemradio` and `menuitemcheckbox` items with the arrow keys.
+
+## 2.3 Wider note popup
+- `ItemPopup` takes `size`: `normal` (640 px), `wide` (up to 1040 px, 86 vh high), `full` (the whole window). Under 640 px (`sm`) every size is the full-screen sheet.
+- `NotePopup`: one `IconButton` cycles the size (icon and name show the next step: Wider / Full screen / Narrower), stored in localStorage `wishtaa.noteSize` (read with `loadNoteSize`, a bad value is ignored); hidden on a phone.
+- `NoteToolbar` (`RichNoteEditor.tsx`): one row, never wraps. `visibleTools(width, count, groups)` says how many tools fit; the rest are listed in the **More formatting** popover (same icons with their names). When the width is unknown (tests) all tools show.

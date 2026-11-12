@@ -12,7 +12,9 @@ import { enterEditMode, enterReadMode } from '../readmode'
 import { closeFile, mapDoc, openFile } from '../session'
 import { useEditor } from '../store'
 import NotesPanel from '../ui/NotesPanel'
+import { loadNoteSize } from './NotePopup'
 import { ItemsHost } from './ItemsHost'
+import { visibleTools } from './RichNoteEditor'
 import { legacyNoteId } from '@/core/model/notes'
 import { openNote, useItems } from './state'
 
@@ -169,5 +171,50 @@ describe('the Notes tab of the side panel', () => {
     expect(rows).toHaveLength(2)
     fireEvent.click(rows[1] as HTMLElement)
     expect(useItems.getState().popup).toEqual({ kind: 'note', id: n })
+  })
+})
+
+describe('the size of the note popup', () => {
+  it('one icon steps Normal, Wide, Full screen and back, names the next step, and is remembered on this device', async () => {
+    const id = topic()
+    const n = addNote(mapDoc, id, { title: 'Storage', html: '<p>cold</p>' }) as string
+    await settle()
+    render(<ItemsHost />)
+    act(() => openNote(n))
+    const d = await screen.findByRole('dialog', { name: 'Note: Storage' })
+    expect(d.getAttribute('data-popup-size')).toBe('normal')
+    fireEvent.click(screen.getByRole('button', { name: 'Wider' }))
+    expect(d.getAttribute('data-popup-size')).toBe('wide')
+    fireEvent.click(screen.getByRole('button', { name: 'Full screen' }))
+    expect(d.getAttribute('data-popup-size')).toBe('full')
+    expect(d.className).toContain('sm:inset-0')
+    expect(localStorage.getItem('wishtaa.noteSize')).toBe('full')
+    // Opened again later: it comes back at the size it was left at.
+    cleanup()
+    render(<ItemsHost />)
+    act(() => openNote(n))
+    const again = await screen.findByRole('dialog', { name: 'Note: Storage' })
+    expect(again.getAttribute('data-popup-size')).toBe('full')
+    fireEvent.click(screen.getByRole('button', { name: 'Narrower' }))
+    expect(again.getAttribute('data-popup-size')).toBe('normal')
+    expect(screen.getByRole('button', { name: 'Wider' }).hasAttribute('title')).toBe(false)
+    // On a phone the size button is hidden (the popup is always a full sheet).
+    expect(screen.getByRole('button', { name: 'Wider' }).className).toContain('max-sm:hidden')
+  })
+
+  it('a stored value that is not a size is ignored', () => {
+    localStorage.setItem('wishtaa.noteSize', 'huge')
+    expect(loadNoteSize()).toBe('normal')
+  })
+
+  it('the toolbar shows every tool when they fit and moves the rest into More when they do not (never wrapping)', () => {
+    expect(visibleTools(0, 14, 4)).toBe(14) // width unknown
+    expect(visibleTools(900, 14, 4)).toBe(14)
+    expect(visibleTools(374, 14, 4)).toBeLessThan(14)
+    expect(visibleTools(374, 14, 4)).toBeGreaterThanOrEqual(2)
+    expect(visibleTools(100, 14, 4)).toBe(2)
+    // The narrower the bar, the fewer icons are shown, and at least one is always left for the More menu.
+    expect(visibleTools(300, 14, 4)).toBeLessThanOrEqual(visibleTools(374, 14, 4))
+    expect(visibleTools(500, 14, 4)).toBeLessThanOrEqual(13)
   })
 })

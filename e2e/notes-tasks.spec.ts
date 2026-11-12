@@ -315,3 +315,68 @@ test.describe('the Task view by time, and Arrange', () => {
     })
   }
 })
+
+test.describe('the size of the note popup', () => {
+  test('Wider, Full screen and Narrower on a computer and a tablet; the size is remembered; on a phone it stays a sheet with a toolbar that does not wrap', async ({ page }) => {
+    const errors: string[] = []
+    page.on('pageerror', (e) => errors.push(e.message))
+    await page.setViewportSize({ width: 1366, height: 768 })
+    await openBlankMap(page)
+    await addNoteViaInsert(page)
+    const dialog = page.getByRole('dialog', { name: /^Note/ })
+    await page.getByLabel('Note text').click()
+    await page.keyboard.type('A longer note for the wide popup')
+    const width = async () => Math.round((await dialog.boundingBox())?.width ?? 0)
+    const normal = await width()
+    expect(normal).toBeLessThanOrEqual(640)
+    // Every tool fits in one row at normal size on a computer.
+    await expect(page.locator('[data-note-toolbar]')).toHaveAttribute('data-tools-hidden', '0')
+    await page.getByRole('button', { name: 'Wider' }).click()
+    const wide = await width()
+    expect(wide).toBeGreaterThan(normal + 200)
+    await page.screenshot({ path: join(SHOTS, 'note-popup-wide-desktop.png') })
+    await page.getByRole('button', { name: 'Full screen' }).click()
+    expect(await width()).toBe(1366)
+    expect(Math.round((await dialog.boundingBox())?.height ?? 0)).toBe(768)
+    await page.screenshot({ path: join(SHOTS, 'note-popup-full-desktop.png') })
+
+    // Remembered: close, open again, it is still full screen.
+    await page.keyboard.press('Escape')
+    await page.waitForTimeout(700)
+    await page.locator('[data-notes-chip]').first().click()
+    await page.getByRole('menu', { name: 'Notes of this topic' }).locator('[data-note-row]').first().click()
+    expect(await width()).toBe(1366)
+    await page.getByRole('button', { name: 'Narrower' }).click()
+    expect(await width()).toBe(normal)
+    await page.keyboard.press('Escape')
+
+    // A phone-size window: always a full sheet, no size button, the toolbar shows a More icon instead of wrapping.
+    await page.setViewportSize({ width: 390, height: 780 })
+    await page.getByRole('button', { name: 'Close the settings panel' }).click() // the Insert menu left it open
+    await page.locator('[data-notes-chip]').first().click()
+    await page.getByRole('menu', { name: 'Notes of this topic' }).locator('[data-note-row]').first().click()
+    expect(await width()).toBe(390)
+    await expect(page.getByRole('button', { name: 'Wider' })).toBeHidden()
+    const bar = page.locator('[data-note-toolbar]')
+    await expect(page.getByRole('button', { name: 'More formatting' })).toBeVisible()
+    const h = await bar.evaluate((el) => ({ box: el.getBoundingClientRect().height, scroll: el.scrollWidth - el.clientWidth }))
+    expect(h.box).toBeLessThan(50) // one row
+    expect(h.scroll).toBeLessThanOrEqual(0)
+    await page.getByRole('button', { name: 'More formatting' }).click()
+    await page.screenshot({ path: join(SHOTS, 'note-toolbar-more-phone.png') })
+    await page.getByRole('menuitem', { name: 'Redo typing' }).or(page.getByRole('menuitem', { name: 'Quote' })).first().click()
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0)
+
+    // A tablet: wide is wider than normal and still inside the window.
+    await page.keyboard.press('Escape')
+    await page.setViewportSize({ width: 1024, height: 768 })
+    await page.locator('[data-notes-chip]').first().click()
+    await page.getByRole('menu', { name: 'Notes of this topic' }).locator('[data-note-row]').first().click()
+    await page.getByRole('button', { name: 'Wider' }).click()
+    const tw = await width()
+    expect(tw).toBeGreaterThan(640)
+    expect(tw).toBeLessThanOrEqual(1024)
+    await expect(page.locator('[data-note-toolbar]')).toHaveAttribute('data-tools-hidden', '0')
+    expect(errors).toEqual([])
+  })
+})

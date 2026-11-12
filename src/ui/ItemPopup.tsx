@@ -12,7 +12,16 @@ const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), selec
  *
  * `header` is the title area (a title field, for example). Mark the control that should have the focus first with `data-autofocus`.
  */
-export function ItemPopup({ label, header, actions, children, onClose, wide = false }: { label: string; header?: ReactNode; actions?: ReactNode; children: ReactNode; onClose: () => void; wide?: boolean }) {
+export type PopupSize = 'normal' | 'wide' | 'full'
+/** The window classes for each size. Under 640 px every size is the full-screen sheet; from 640 px: normal and wide are centred, full fills the window. */
+const SIZE_CLASS: Record<PopupSize, string> = {
+  normal: 'sm:inset-auto sm:left-1/2 sm:top-1/2 sm:max-h-[86vh] sm:min-h-[320px] sm:w-[min(640px,94vw)] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-ui sm:border sm:border-line',
+  wide: 'sm:inset-auto sm:left-1/2 sm:top-1/2 sm:h-[86vh] sm:max-h-[86vh] sm:w-[min(1040px,96vw)] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-ui sm:border sm:border-line',
+  full: 'sm:inset-0',
+}
+
+export function ItemPopup({ label, header, actions, children, onClose, size = 'normal', wide = false }: { label: string; header?: ReactNode; actions?: ReactNode; children: ReactNode; onClose: () => void; size?: PopupSize; wide?: boolean }) {
+  const kind: PopupSize = wide && size === 'normal' ? 'wide' : size
   const panel = useRef<HTMLDivElement>(null)
   const close = useRef(onClose)
   close.current = onClose
@@ -73,7 +82,8 @@ export function ItemPopup({ label, header, actions, children, onClose, wide = fa
         aria-modal="true"
         aria-label={label}
         data-item-popup
-        className={`absolute inset-0 flex flex-col overflow-hidden bg-surface text-ink shadow-2xl sm:inset-auto sm:left-1/2 sm:top-1/2 sm:max-h-[86vh] sm:min-h-[320px] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-ui sm:border sm:border-line ${wide ? 'sm:w-[min(820px,94vw)]' : 'sm:w-[min(640px,94vw)]'}`}
+        data-popup-size={kind}
+        className={`absolute inset-0 flex flex-col overflow-hidden bg-surface text-ink shadow-2xl ${SIZE_CLASS[kind]}`}
       >
         <div className="flex shrink-0 items-center gap-1 border-b border-line px-3 py-2">
           <div className="min-w-0 flex-1">{header}</div>
