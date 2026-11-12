@@ -295,12 +295,16 @@ function branchImageIds(bs: Branch[]): string[] {
 }
 addImageReferenceSource(() => (clip ? branchImageIds(clip.branches) : []))
 
-export function cmdCopy(): string | null {
+/**
+ * Copies the selected branch (the topics, as outline text on the clipboard and as branches for pasting back). The notes and tasks of the
+ * topics are left out, as they always were; "Copy with notes and tasks" (`withItems`) adds them as [Note] and [Task] lines.
+ */
+export function cmdCopy(withItems = false): string | null {
   const { selected, topics, rootId, notes, tasks } = get()
   const ids = selected.length ? selected : [rootId]
   const branches = serializeBranches(topics, ids)
   if (!branches.length) return null
-  const text = toOutline(topics, ids, (id) => itemLines(topics, notes, id, tasks))
+  const text = toOutline(topics, ids, withItems ? (id) => itemLines(topics, notes, id, tasks) : undefined)
   clip = { branches, text }
   navigator.clipboard?.writeText(text).catch(() => {})
   return text

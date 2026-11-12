@@ -287,7 +287,7 @@ test.describe('the Task view by time, and Arrange', () => {
       expect(await titles()).toEqual(['Whole day', 'Morning call', 'Evening call'])
       await expect(page.locator('[data-task-item]').first().locator('[data-task-time]')).toHaveText('All day')
       await expect(page.locator('[data-task-item]').nth(1).locator('[data-task-time]')).toContainText(/9:00|09:00/)
-      if (name === 'desktop') await page.screenshot({ path: join(SHOTS, 'task-view-times-desktop.png') })
+      await page.screenshot({ path: join(SHOTS, `task-view-times-${name}.png`) })
 
       // Arrange: group by priority, sort by name, turn round.
       await page.getByRole('button', { name: 'Arrange' }).click()

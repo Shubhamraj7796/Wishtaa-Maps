@@ -166,6 +166,7 @@ export function RichNoteEditor({ html, onSave, label, placeholder = 'Write a not
   function write(ed: Editor) {
     clearTimeout(timer.current)
     timer.current = undefined
+    if (ed.isDestroyed) return // a late timer after the editor went away
     const next = ed.isEmpty ? '' : sanitizeNote(ed.getHTML())
     if (next === saved.current) return
     saved.current = next

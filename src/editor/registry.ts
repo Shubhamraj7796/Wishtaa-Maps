@@ -60,6 +60,7 @@ export const COMMANDS: Cmd[] = [
   { id: 'undo', label: 'Undo', group: 'Edit', keys: ['Ctrl+Z'], run: A.cmdUndo },
   { id: 'redo', label: 'Redo', group: 'Edit', keys: ['Ctrl+Y', 'Ctrl+Shift+Z'], run: A.cmdRedo },
   { id: 'copy', label: 'Copy', group: 'Edit', keys: ['Ctrl+C'], run: () => void A.cmdCopy() },
+  { id: 'copyItems', label: 'Copy with notes and tasks (as text)', group: 'Edit', run: () => void A.cmdCopy(true) },
   { id: 'cut', label: 'Cut', group: 'Edit', keys: ['Ctrl+X'], run: A.cmdCut },
   { id: 'paste', label: 'Paste', group: 'Edit', hint: 'Ctrl+V', run: () => {}, palette: false },
   { id: 'pasteImage', label: 'Paste an image into the selected topic', group: 'Edit', hint: 'Ctrl+V', run: () => {}, palette: false },

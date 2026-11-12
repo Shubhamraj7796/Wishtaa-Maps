@@ -62,3 +62,7 @@ Several notes per topic, tasks of their own, and a Task view. Built in five smal
 - `NoteTask.tsx`: `NoteTaskChip` ("Task · date, time · status", reads the task so it follows the Task view) and `NoteTaskPanel` (title, date, time, status, priority). Without a task it keeps a draft and "Add the task" creates it with `noteId` and the note's topic; with a task every change is saved at once (title after 500 ms). The panel has `data-popover` so the popup's Escape waits for it; a press outside it closes it.
 - Delete rule: deleting a note never touches its tasks; an empty new note that has a task is kept on close.
 - Task view: `TaskView` opens `openNote(noteId)` when the task has a note that exists (a topic's first note counts only when it has text), otherwise the task popup.
+
+## 2.6 Outline copy opt-in, and the two-device script
+- `cmdCopy(withItems = false)`: the plain Copy leaves notes and tasks out; the `copyItems` command ("Copy with notes and tasks (as text)") passes `true`. Parsing an outline back still skips the `[Note]` / `[Task]` lines.
+- `docs/two-device-test.md` is the script for testing the merge on two real devices.
