@@ -7,6 +7,7 @@ import { mapDoc } from '../mapdoc'
 import { showNotice } from '../notice'
 import { useEditor } from '../store'
 import { STATUS_ICON } from './TaskPopup'
+import { openTaskEntry } from './openItem'
 import { closeList, openTask, useItems } from './state'
 
 /** The tasks that sit on one topic (the topic's own flag first when `legacy` is true). */
@@ -51,7 +52,7 @@ export function TaskRows({ topicId, menu = false, legacy = true }: { topicId: st
         {entries.map((e) => (
           <li key={e.id} className="flex items-center gap-1">
             <TaskTick entry={e} readOnly={readOnly} />
-            <button type="button" role={role} data-task-row={e.id} onClick={() => openTask(e.id)} className="flex min-w-0 flex-1 items-center gap-2 rounded-ui px-2 py-2 text-left hover:bg-bg focus-visible:bg-bg [@media(pointer:coarse)]:min-h-11">
+            <button type="button" role={role} data-task-row={e.id} onClick={() => openTaskEntry(e)} className="flex min-w-0 flex-1 items-center gap-2 rounded-ui px-2 py-2 text-left hover:bg-bg focus-visible:bg-bg [@media(pointer:coarse)]:min-h-11">
               <span className={`min-w-0 flex-1 truncate text-sm ${e.status === 'done' ? 'text-muted line-through' : ''}`}>{e.title || 'Untitled task'}</span>
               {e.due && <span className="shrink-0 text-xs text-muted">{formatDue(e.due)}</span>}
             </button>

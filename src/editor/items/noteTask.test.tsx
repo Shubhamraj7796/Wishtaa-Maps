@@ -13,7 +13,7 @@ import { enterEditMode, enterReadMode } from '../readmode'
 import { closeFile, mapDoc, openFile } from '../session'
 import { useEditor } from '../store'
 import { ItemsHost } from './ItemsHost'
-import { openNote, useItems } from './state'
+import { openNote, toggleList, useItems } from './state'
 import { resetArrange, resetFilters, useTaskView } from './taskViewState'
 import { TaskView } from './TaskView'
 
@@ -216,5 +216,28 @@ describe('the Task view opens the note a task belongs to', () => {
     fireEvent.click(document.querySelector(`[data-task-row="${k}"]`) as HTMLElement)
     expect(useItems.getState().popup).toEqual({ kind: 'task', id: k })
     expect(legacyTaskId(id)).toBe(`topic:${id}`)
+  })
+})
+
+describe('a task that belongs to a note opens that note from the topic task list too', () => {
+  it('the topic task list popover and the details list open the note; a task with no note opens the task popup', async () => {
+    const id = topic()
+    const n = addNote(mapDoc, id, { title: 'Meeting', html: '<p>x</p>' }) as string
+    const linked = addTask(mapDoc, { topicId: id, title: 'Linked', noteId: n })
+    const plain = addTask(mapDoc, { topicId: id, title: 'Plain' })
+    await settle()
+    const anchor = document.createElement('button')
+    document.body.appendChild(anchor)
+    render(<ItemsHost />)
+    act(() => toggleList('tasks', id, anchor))
+    const menu = await screen.findByRole('menu', { name: 'Tasks of this topic' })
+    fireEvent.click(menu.querySelector(`[data-task-row="${linked}"]`) as HTMLElement)
+    expect(useItems.getState().popup).toEqual({ kind: 'note', id: n })
+    act(() => useItems.setState({ popup: null }))
+    act(() => toggleList('tasks', id, anchor))
+    const menu2 = await screen.findByRole('menu', { name: 'Tasks of this topic' })
+    fireEvent.click(menu2.querySelector(`[data-task-row="${plain}"]`) as HTMLElement)
+    expect(useItems.getState().popup).toEqual({ kind: 'task', id: plain })
+    anchor.remove()
   })
 })

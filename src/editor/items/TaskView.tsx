@@ -1,6 +1,4 @@
 import { useEffect, useLayoutEffect, useMemo, useState } from 'react'
-import { noteEntry } from '@/core/model/notes'
-import { noteText } from '@/core/sanitize'
 import { allTasks, PRIORITIES, STATUS_LABEL, TASK_STATUSES, topicPath, type TaskEntry } from '@/core/model/tasks'
 import type { TopicMap } from '@/core/model/tree'
 import { arrangeTasks, filterTasks, filtersActive, formatDue, formatTime, hhmm, isOverdue, ymd, type Timing, type TaskFilters } from '@/core/tasks/agenda'
@@ -11,7 +9,7 @@ import { useEditor } from '../store'
 import { ArrangeMenu } from './ArrangeMenu'
 import { addTaskAndOpen, TaskTick } from './TaskList'
 import { STATUS_ICON } from './TaskPopup'
-import { openNote, openTask } from './state'
+import { openTaskEntry } from './openItem'
 import { resetFilters, setFilters, toggleFilterPanel, useTaskView } from './taskViewState'
 import { TopicPickerButton } from './TopicPicker'
 
@@ -155,7 +153,6 @@ function Row({ e, now, topics, readOnly, onOpen }: { e: TaskEntry; now: { today:
 export function TaskView() {
   const topics = useEditor((s) => s.topics)
   const tasks = useEditor((s) => s.tasks)
-  const notes = useEditor((s) => s.notes)
   const readOnly = useEditor((s) => s.readOnly)
   const selected = useEditor((s) => s.selected)
   const f = useTaskView((s) => s.filters)
@@ -167,12 +164,7 @@ export function TaskView() {
   const shown = useMemo(() => filterTasks(all, topics, f), [all, topics, f])
   const groups = useMemo(() => arrangeTasks(shown, topics, arrange, now.today, now.time), [shown, topics, arrange, now.today, now.time])
   const active = filtersActive(f)
-  // A task that belongs to a note opens that note (its details are on the note); any other task opens its own popup.
-  const open = (e: TaskEntry) => {
-    const n = e.noteId ? noteEntry(topics, notes, e.noteId) : null
-    if (n && (!n.legacy || noteText(n.html))) openNote(n.id)
-    else openTask(e.id)
-  }
+  const open = openTaskEntry
   return (
     <section aria-label="Tasks" data-task-view className="absolute inset-0 flex flex-col bg-bg" style={{ paddingRight: panelW }}>
       <div className="flex shrink-0 flex-wrap items-center gap-1 border-b border-line bg-surface px-3 py-1.5">
