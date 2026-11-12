@@ -9,7 +9,7 @@ import { setNote } from './content'
 import { createMapDoc, ensureRoot, snapshotNotes, snapshotTopics } from './doc'
 import { itemCountsOf } from './itemCounts'
 import { itemLines } from './itemLines'
-import { addNote, deleteNote, legacyNoteId, noteCounts, notesOf, patchNote } from './notes'
+import { addNote, deleteNote, legacyNoteId, noteCounts, noteLabel, notesOf, patchNote } from './notes'
 
 const bytes = (d: ReturnType<typeof createMapDoc>) => Y.encodeStateAsUpdate(d.ydoc)
 const load = (b: Uint8Array) => {
@@ -166,5 +166,59 @@ describe('notes in search, the file index and the outline', () => {
     expect(back[0]?.children[0]?.text).toBe('Dose')
     expect(back[0]?.children[0]?.children).toEqual([])
     expect(toOutline(topics, [root])).toBe('Central\n\tDose')
+  })
+})
+
+describe('a note with a checklist', () => {
+  const LIST = '<ul data-type="taskList"><li data-checked="false" data-type="taskItem"><p>Order stock</p></li><li data-checked="true" data-type="taskItem"><p>Call supplier</p></li></ul>'
+
+  it('is found by search and the file index by the words of an item, and the notes list text shows the boxes', () => {
+    const { doc, kid } = fresh()
+    addNote(doc, kid, { title: 'Todo', html: LIST })
+    const topics = snapshotTopics(doc)
+    const notes = snapshotNotes(doc)
+    expect(searchTopics(topics, 'supplier', notes)).toEqual([kid])
+    expect(buildFileIndex('f', topics, notes).topics.find((t) => t.id === kid)?.note).toContain('[x] Call supplier')
+    expect(notesOf(topics, notes, kid)[0] && noteLabel(notesOf(topics, notes, kid)[0]!)).toBe('Todo')
+  })
+
+  it('the outline copy with notes writes the items as [ ] and [x], and reading it back makes no topics of them', () => {
+    const { doc, root, kid } = fresh()
+    setText(doc, kid, 'Dose')
+    addNote(doc, kid, { title: 'Todo', html: LIST })
+    const topics = snapshotTopics(doc)
+    const text = toOutline(topics, [root], (id) => itemLines(topics, snapshotNotes(doc), id))
+    expect(text).toBe('Central\n\tDose\n\t\t[Note] Todo: [ ] Order stock [x] Call supplier')
+    const back = parseOutline(text)
+    expect(back[0]?.children[0]?.children).toEqual([])
+  })
+
+  it('merge: a tick on one device and typing on another is one field changed twice: the newer wins and the other is reported', () => {
+    const { doc, kid } = fresh()
+    const n = addNote(doc, kid, { title: 'Todo', html: LIST }, 1) as string
+    const base = bytes(doc)
+    const phone = load(base)
+    const laptop = load(base)
+    patchNote(phone, n, { html: LIST.replace('data-checked="false"', 'data-checked="true"') }, 10) // ticked on the phone
+    patchNote(laptop, n, { html: LIST.replace('Order stock', 'Order the cold stock') }, 11) // typed on the laptop
+    const r = mergeMaps(base, bytes(laptop), bytes(phone), { localAt: 20, remoteAt: 10 })
+    const merged = snapshotNotes(load(r.content))[n]?.html
+    expect(merged).toContain('Order the cold stock')
+    expect(merged).not.toContain('data-checked="true"><p>Order') // the newer text edit won
+    const c = r.conflicts.find((x) => x.map === 'notes' && x.field === 'html')
+    expect(c).toBeTruthy()
+    expect(c?.lostValue).toContain('data-checked="true"')
+  })
+
+  it('merge: a tick on one device and nothing on the other merges cleanly', () => {
+    const { doc, kid } = fresh()
+    const n = addNote(doc, kid, { title: 'Todo', html: LIST }, 1) as string
+    const base = bytes(doc)
+    const phone = load(base)
+    const laptop = load(base)
+    patchNote(phone, n, { html: LIST.replace('data-checked="false"', 'data-checked="true"') }, 10)
+    const r = mergeMaps(base, bytes(laptop), bytes(phone), { localAt: 20, remoteAt: 10 })
+    expect(snapshotNotes(load(r.content))[n]?.html).toBe(LIST.replace('data-checked="false"', 'data-checked="true"'))
+    expect(r.conflicts).toEqual([])
   })
 })

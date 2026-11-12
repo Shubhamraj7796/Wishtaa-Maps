@@ -13,10 +13,21 @@ export function sanitizeNote(html: string): string {
   return clean.replace(/<a\s/g, '<a target="_blank" rel="noopener noreferrer nofollow" ')
 }
 
-/** Plain text of a note (for search and "has a note" checks). */
+/** The opening tag of a checklist item (TipTap's task item): `<li data-checked="true" data-type="taskItem">`, in either attribute order. */
+const TASK_ITEM = /<li\b[^>]*\bdata-type="taskItem"[^>]*>/gi
+
+/**
+ * Plain text of a note (for search, the notes list, and the outline copy). A checklist item reads as "[ ] text" or "[x] text", so the
+ * state is not lost in text; a note with no checklist reads exactly as before.
+ */
 export function noteText(html: string | undefined | null): string {
   if (!html) return ''
-  return html
+  let items = false
+  const text = html
+    .replace(TASK_ITEM, (tag) => {
+      items = true
+      return /data-checked="true"/i.test(tag) ? '[x] ' : '[ ] '
+    })
     .replace(/<\/(p|li|h[1-3]|blockquote|pre)>/gi, ' ')
     .replace(/<br\s*\/?>/gi, ' ')
     .replace(/<[^>]*>/g, '')
@@ -28,4 +39,6 @@ export function noteText(html: string | undefined | null): string {
     .replace(/&#39;/g, "'")
     .replace(/\s+/g, ' ')
     .trim()
+  // A checklist whose items have no words in them is an empty note, not a note that says "[ ]".
+  return items && text.replace(/\[[ x]\]/g, '').trim() === '' ? '' : text
 }

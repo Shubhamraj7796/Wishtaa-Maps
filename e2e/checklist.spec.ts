@@ -149,3 +149,37 @@ test('checklist: Enter on an empty item leaves the list, Backspace on an empty i
   expect(await items(page).count()).toBeLessThan(before)
   await ctx.close()
 })
+
+test('checklist in Read mode: the boxes show but cannot be ticked, nothing is saved, and Edit mode can tick again', async ({ browser }) => {
+  const { page, ctx } = await newPage(browser, { width: 1366, height: 768 })
+  const errors: string[] = []
+  page.on('pageerror', (e) => errors.push(e.message))
+  await openNewNote(page)
+  await typeChecklist(page)
+  await page.keyboard.press('Escape')
+  await page.waitForTimeout(900)
+
+  await page.getByRole('button', { name: 'Read', exact: true }).click()
+  await expect(page.getByTestId('read-badge')).toBeVisible()
+  await page.locator('[data-notes-chip]').first().click()
+  await page.getByRole('menu', { name: 'Notes of this topic' }).locator('[data-note-row]').first().click()
+  await expect(items(page)).toHaveCount(3)
+  expect(await page.getByRole('button', { name: 'Checklist' }).count()).toBe(0) // no toolbar in Read mode
+  const first = items(page).nth(0)
+  await first.locator('> label > input').click({ force: true })
+  await expect(first).toHaveAttribute('data-checked', 'false')
+  await page.keyboard.press('Control+Enter')
+  await expect(page.locator('.note-editor li[data-checked="true"]')).toHaveCount(0)
+  await page.waitForTimeout(900)
+  await page.keyboard.press('Escape')
+
+  // Nothing was written: back in Edit mode the same note is still all unticked, and a tick works again.
+  await page.getByRole('button', { name: 'Edit', exact: true }).click()
+  await page.locator('[data-notes-chip]').first().click()
+  await page.getByRole('menu', { name: 'Notes of this topic' }).locator('[data-note-row]').first().click()
+  await expect(page.locator('.note-editor li[data-checked="true"]')).toHaveCount(0)
+  await items(page).nth(0).locator('> label > input').click()
+  await expect(items(page).nth(0)).toHaveAttribute('data-checked', 'true')
+  expect(errors).toEqual([])
+  await ctx.close()
+})

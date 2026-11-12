@@ -36,6 +36,15 @@
   .note-editor ul[data-type='taskList'] > li > label > input { width: 1.35em; height: 1.35em; }
 }
 
+/* The same checklist as stored text (the Read mode side panel): a box drawn by CSS (a stored note never contains a live input), brand green;
+   a ticked item is struck through and grey. The content string after the slash is what a screen reader says. */
+.note-read ul[data-type='taskList'] { list-style: none; margin-left: 0; padding-left: 0; }
+.note-read ul[data-type='taskList'] ul[data-type='taskList'] { padding-left: 1.5em; }
+.note-read ul[data-type='taskList'] > li { position: relative; margin-left: 0; padding-left: 1.7em; }
+.note-read ul[data-type='taskList'] > li::before { content: ''; content: '' / 'Not done'; position: absolute; left: 0; top: 0.3em; box-sizing: border-box; width: 1.1em; height: 1.1em; border: 2px solid rgb(var(--c-brand)); border-radius: 3px; display: grid; place-items: center; font-size: 0.8em; line-height: 1; }
+.note-read ul[data-type='taskList'] > li[data-checked='true']::before { content: '\2713'; content: '\2713' / 'Done'; background: rgb(var(--c-brand)); color: rgb(var(--c-brand-ink)); font-weight: 700; }
+.note-read ul[data-type='taskList'] > li[data-checked='true'] > p { text-decoration: line-through; color: rgb(var(--c-muted)); }
+
 /* A change in where the main topics sit (branch direction, a topic added): the topics glide, the lines fade in. */
 [data-reflow='1'] [data-topic] { transition: left 0.3s ease, top 0.3s ease; }
 [data-reflow='1'] > svg:first-child { animation: wm-reflow-fade 0.3s ease; }

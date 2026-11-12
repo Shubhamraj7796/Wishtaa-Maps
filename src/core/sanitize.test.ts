@@ -38,3 +38,34 @@ describe('noteText', () => {
     expect(noteText('<div class="x">plain</div>')).not.toContain('div')
   })
 })
+
+describe('checklists in notes', () => {
+  // What the editor stores (TipTap's task list, with the box and the wrappers left out).
+  const LIST = '<ul data-type="taskList"><li data-checked="false" data-type="taskItem"><p>Order stock</p></li><li data-checked="true" data-type="taskItem"><p>Call supplier</p></li></ul>'
+
+  it('is kept by the cleaner with its ticks; a live input, script or handler is not', () => {
+    expect(sanitizeNote(LIST)).toBe(LIST)
+    const out = sanitizeNote('<ul data-type="taskList"><li data-type="taskItem" data-checked="true"><label><input type="checkbox" checked onclick="x()"><span></span></label><div><p onclick="y()">Item</p></div><script>alert(1)</script></li></ul>')
+    expect(out).not.toMatch(/input|script|onclick|<label|<div/)
+    expect(out).toContain('data-checked="true"')
+    expect(out).toContain('<p>Item</p>')
+  })
+
+  it('reads as text with [ ] and [x], in either attribute order, nested too', () => {
+    expect(noteText(LIST)).toBe('[ ] Order stock [x] Call supplier')
+    expect(noteText('<ul data-type="taskList"><li data-type="taskItem" data-checked="true"><p>a</p></li></ul>')).toBe('[x] a')
+    expect(noteText('<ul data-type="taskList"><li data-checked="false" data-type="taskItem"><p>parent</p><ul data-type="taskList"><li data-checked="true" data-type="taskItem"><p>child</p></li></ul></li></ul>')).toBe('[ ] parent [x] child')
+  })
+
+  it('a checklist with no words in it is an empty note, and notes without a checklist read exactly as before', () => {
+    expect(noteText('<ul data-type="taskList"><li data-checked="false" data-type="taskItem"><p></p></li></ul>')).toBe('')
+    expect(noteText('<p>[x] typed by hand</p>')).toBe('[x] typed by hand')
+    expect(noteText('<p>[x]</p>')).toBe('[x]')
+    expect(noteText('<h2>Title</h2><p>Some <strong>bold</strong> text</p><ul><li>one</li><li>two</li></ul>')).toBe('Title Some bold text one two')
+  })
+
+  it('an older note is untouched by the cleaner (no checklist markup, no change)', () => {
+    const old = '<h2>Title</h2><p>Some <strong>bold</strong> and <em>italic</em> text <a target="_blank" rel="noopener noreferrer nofollow" href="https://example.com">link</a></p><ol><li>one</li></ol><blockquote>q</blockquote>'
+    expect(sanitizeNote(old)).toBe(old)
+  })
+})

@@ -89,7 +89,7 @@ function TopicDetails({ id }: { id: string }) {
       {hasNote ? (
         <section aria-label="Notes">
           <h4 className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted">Notes</h4>
-          <div className="prose-sm max-w-none break-words [&_a]:text-brand [&_a]:underline [&_li]:ml-4 [&_ol]:list-decimal [&_p]:my-1 [&_ul]:list-disc" dangerouslySetInnerHTML={{ __html: note }} />
+          <div className="note-read prose-sm max-w-none break-words [&_a]:text-brand [&_a]:underline [&_li]:ml-4 [&_ol]:list-decimal [&_p]:my-1 [&_ul]:list-disc" dangerouslySetInnerHTML={{ __html: note }} />
         </section>
       ) : (
         !topic.inlineNote?.trim() && !topic.task && tags.length === 0 && !topic.link && <p className="text-muted">This topic has no notes, tags or link.</p>
