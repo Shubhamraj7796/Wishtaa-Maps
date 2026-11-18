@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Referral programme and free access (steps 1 and 2, local commits, nothing pushed, nothing migrated)
+- Step 1: `src/core/plan.ts`: the settings (6 months standard, 1 per referral, cap 24, delay 7 days, 3 topics), calendar-month arithmetic with the month-end rule, the cap, `hasPro()` (unlocks nothing that exists today) and the referral code check, with tests.
+- Step 2: the migration FILE `supabase/migrations/0004_referrals.sql` (settings, plans, codes, referrals, append-only log, `admin_users`, owner-only RLS, functions), the RLS test `supabase/tests/referrals_rls_test.sql`, and undo files in `supabase/undo/`. Not run on Supabase; run and checked only on an in-memory PostgreSQL. See docs/referrals.md.
+
 ### Notes and tasks (steps 1 to 5, built and committed locally, nothing pushed)
 - Step 1: one **popup shell** (`src/ui/ItemPopup.tsx`) for notes and tasks: centred on a computer or tablet, a full-screen sheet under 640 px; Tab stays inside, Escape or a press on the dim background closes it, the focus goes back to where it was, a popover opened inside it takes Escape first, and the map keys wait behind it.
 - Step 2: **several notes per topic.** The topic's first note stays where it is (`topic.note`, nothing migrated); extra notes live in a new shared map `notes` that is merged per note (two devices writing different notes keep both). On a topic only a small **notes icon with a count** shows (map and Outline); a click opens a popover list (title or start of the text, preview, edited time, an Add icon). Search finds topics by any of their notes, the file index and the Files Notes list include them, and copying an outline writes them as `[Note] ...` lines that are not read back as topics.
