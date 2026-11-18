@@ -145,6 +145,10 @@ export function NotePopup({ id, minimized = false }: { id: string; minimized?: b
       inset={inset}
       bottomInset={trayShown ? TRAY_STRIP : 0}
       minimized={minimized}
+      onMinimize={() => {
+        settleTyping()
+        minimizeNote(id)
+      }}
       header={
         <div className="min-w-0">
           {entry.legacy ? (
@@ -179,7 +183,7 @@ export function NotePopup({ id, minimized = false }: { id: string; minimized?: b
           )}
           {/* No room for the side panel beside the popup (a phone): the list of this topic's notes opens from here, on top. */}
           {inset === 0 && <IconButton icon="notes" label="Notes of this topic" aria-haspopup="menu" data-notes-list-button onClick={(e) => toggleList('notes', entry.topicId, e.currentTarget)} className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11" />}
-          <IconButton icon="minus" label="Minimize" data-note-minimize onClick={() => { settleTyping(); minimizeNote(id) }} className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11" />
+          <IconButton icon="minus" label="Minimize" keys="F8" data-note-minimize onClick={() => { settleTyping(); minimizeNote(id) }} className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11" />
           {/* On a phone the popup is always a full sheet, so the size button is not shown there. */}
           <IconButton icon={next.icon} label={next.label} data-note-size-button={size} onClick={() => setSize(next.to)} className="max-sm:hidden [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11" />
           {!readOnly && <IconButton icon="trash" label="Delete this note" onClick={remove} className="text-bad [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11" />}

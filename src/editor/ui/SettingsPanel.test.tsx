@@ -223,12 +223,15 @@ describe('each selection shows its own section', () => {
     expect(screen.getByRole('group', { name: 'Arrow heads' })).toBeTruthy()
   })
 
-  it('the tabs have text labels and tooltips', () => {
+  it('the tabs have text labels and an accessible name, and use the shared tooltip (never a native title)', () => {
     render(<SettingsPanel />)
     openPanel()
     const tabs = within(screen.getByRole('tablist', { name: 'Settings sections' })).getAllByRole('tab')
     expect(tabs.map((x) => x.textContent)).toEqual(expect.arrayContaining(['Canvas', 'Style', 'Marks', 'Clipart', 'Details', 'Notes']))
-    for (const x of tabs) expect(x.title.length, x.textContent ?? '').toBeGreaterThan(3)
+    for (const x of tabs) {
+      expect((x.getAttribute('aria-label') ?? '').length, x.textContent ?? '').toBeGreaterThan(3)
+      expect(x.hasAttribute('title'), x.textContent ?? '').toBe(false)
+    }
   })
 })
 

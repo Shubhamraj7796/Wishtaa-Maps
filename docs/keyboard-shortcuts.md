@@ -73,7 +73,8 @@ Delete (or Backspace) deletes the chosen markup, Escape lets it go (or restores 
 | Alt+Shift+S | Summary |
 | F9 | Marks (priority, progress, emoji, flags…) |
 | Alt+Shift+U | Clipart |
-| Alt+Shift+E | Notes (rich text) |
+| F8 | Open notes: opens the side panel on the Notes tab (again: closes it). With a note open it minimizes the note; with minimized notes in the tray it brings the last one back. Ignored in Read mode and while typing in a text box (inside a note popup it minimizes the note). Not Ctrl+N: that is the browser's new window |
+| Alt+Shift+E | Open notes (the same as F8) |
 | Alt+Shift+N | Short note |
 | Alt+Shift+G | Tags |
 | Alt+Shift+K | Task |

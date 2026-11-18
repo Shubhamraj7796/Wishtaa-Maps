@@ -14,6 +14,7 @@ export function NotesChip({ id, className = '', size = 14, stop = false }: { id:
   return (
     <TipButton
       tip={label}
+      keys="F8"
       type="button"
       data-action
       data-notes-chip={id}

@@ -25,11 +25,13 @@ const SIZE_CLASS: Record<PopupSize, string> = {
   full: 'sm:inset-0',
 }
 
-export function ItemPopup({ label, header, actions, children, onClose, size = 'normal', wide = false, inset = 0, bottomInset = 0, minimized = false }: { label: string; header?: ReactNode; actions?: ReactNode; children: ReactNode; onClose: () => void; size?: PopupSize; wide?: boolean; inset?: number; bottomInset?: number; minimized?: boolean }) {
+export function ItemPopup({ label, header, actions, children, onClose, size = 'normal', wide = false, inset = 0, bottomInset = 0, minimized = false, onMinimize }: { label: string; header?: ReactNode; actions?: ReactNode; children: ReactNode; onClose: () => void; size?: PopupSize; wide?: boolean; inset?: number; bottomInset?: number; minimized?: boolean; onMinimize?: () => void }) {
   const kind: PopupSize = wide && size === 'normal' ? 'wide' : size
   const panel = useRef<HTMLDivElement>(null)
   const close = useRef(onClose)
   close.current = onClose
+  const minimize = useRef(onMinimize)
+  minimize.current = onMinimize
   const isMin = useRef(minimized)
   isMin.current = minimized
   const opener = useRef<HTMLElement | null>(typeof document === 'undefined' ? null : (document.activeElement as HTMLElement | null))
@@ -58,6 +60,13 @@ export function ItemPopup({ label, header, actions, children, onClose, size = 'n
     const key = (e: KeyboardEvent) => {
       const el = panel.current
       if (!el || isMin.current) return
+      // F8 minimizes a popup that can be minimized (the global shortcuts wait while a dialog is open, so the popup takes this one itself).
+      if (e.key === 'F8' && minimize.current && !e.ctrlKey && !e.altKey && !e.metaKey && !e.shiftKey) {
+        e.preventDefault()
+        e.stopImmediatePropagation()
+        minimize.current()
+        return
+      }
       if (e.key === 'Escape') {
         if (document.querySelector('[data-popover]')) return // a popover inside the popup closes first
         e.preventDefault()

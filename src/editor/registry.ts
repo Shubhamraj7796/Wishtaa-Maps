@@ -135,7 +135,8 @@ export const COMMANDS: Cmd[] = [
   { id: 'summary', label: 'Summary', group: 'Insert', keys: ['Alt+Shift+S'], run: C.addSummaryToSelected },
   { id: 'mark', label: 'Marks (priority, progress, emoji, flags…)', group: 'Insert', keys: ['F9'], run: () => C.openTab('mark') },
   { id: 'clipart', label: 'Clipart', group: 'Insert', keys: ['Alt+Shift+U'], run: () => C.openTab('clipart') },
-  { id: 'notes', label: 'Notes (rich text)', group: 'Insert', keys: ['Alt+Shift+E'], run: () => C.openTab('notes') },
+  // F8 (F4 is the format panel, F9 the marks); Alt+Shift+E keeps working. Ctrl+N is the browser's new window and is never bound.
+  { id: 'notes', label: 'Open notes', group: 'Insert', keys: ['F8', 'Alt+Shift+E'], run: () => A.toggleNotes() },
   { id: 'inlineNote', label: 'Short note', group: 'Insert', keys: ['Alt+Shift+N'], run: () => C.openTab('details', 'inline') },
   { id: 'tag', label: 'Tags', group: 'Insert', keys: ['Alt+Shift+G'], run: () => C.openTab('details', 'tags') },
   { id: 'task', label: 'Task', group: 'Insert', keys: ['Alt+Shift+K'], run: () => C.openTab('details', 'task') },

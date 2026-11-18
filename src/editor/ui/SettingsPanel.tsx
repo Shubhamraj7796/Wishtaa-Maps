@@ -25,6 +25,7 @@ import { MarkPanel } from "./MarkPanel";
 import { ObjectStyle } from "./ObjectStyle";
 import { PictureFormat } from "./PictureFormat";
 import { BRAND_FAB } from "@/ui/iconSize";
+import { Tooltip } from "@/ui/Tooltip";
 
 const ICON: Record<PanelTab, IconName> = {
   canvas: "layout",
@@ -365,13 +366,12 @@ export function SettingsPanel() {
               aria-label="Settings sections"
             >
               {tabs.map((t) => (
+                <Tooltip key={t} label={TAB_TIP[t]} keys={t === "notes" ? "F8" : undefined}>
                 <button
-                  key={t}
                   type="button"
                   role="tab"
                   aria-selected={shownTab === t}
                   aria-label={SECTION_NAME[t]}
-                  title={TAB_TIP[t]}
                   onClick={() => pick(t)}
                   className={`flex min-w-0 flex-1 flex-col items-center gap-0.5 px-0.5 py-1.5 text-[10px] leading-tight ${shownTab === t ? "border-b-2 border-brand text-ink" : "text-muted hover:text-ink"}`}
                 >
@@ -384,6 +384,7 @@ export function SettingsPanel() {
                         : SECTION_NAME[t]}
                   </span>
                 </button>
+                </Tooltip>
               ))}
             </div>
             <div className="flex shrink-0 flex-col items-center justify-center gap-0.5 border-l border-line px-1">

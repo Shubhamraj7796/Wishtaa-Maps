@@ -336,7 +336,10 @@ test.describe('the size of the note popup', () => {
     expect(wide).toBeGreaterThan(normal + 200)
     await page.screenshot({ path: join(SHOTS, 'note-popup-wide-desktop.png') })
     await page.getByRole('button', { name: 'Full screen' }).click()
-    expect(await width()).toBe(1366)
+    // Full screen is the whole window except the side panel, which stays visible beside the popup.
+    const panelW = Math.round((await page.locator('#settings-panel').boundingBox())?.width ?? 0)
+    expect(panelW).toBeGreaterThan(200)
+    expect(await width()).toBe(1366 - panelW)
     expect(Math.round((await dialog.boundingBox())?.height ?? 0)).toBe(768)
     await page.screenshot({ path: join(SHOTS, 'note-popup-full-desktop.png') })
 
@@ -345,7 +348,7 @@ test.describe('the size of the note popup', () => {
     await page.waitForTimeout(700)
     await page.locator('[data-notes-chip]').first().click()
     await page.getByRole('menu', { name: 'Notes of this topic' }).locator('[data-note-row]').first().click()
-    expect(await width()).toBe(1366)
+    expect(await width()).toBe(1366 - panelW)
     await page.getByRole('button', { name: 'Narrower' }).click()
     expect(await width()).toBe(normal)
     await page.keyboard.press('Escape')

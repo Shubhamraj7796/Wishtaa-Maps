@@ -36,6 +36,7 @@ import { getScene, getTheme } from './scene'
 import { mapDoc } from './mapdoc'
 import { showNotice } from './notice'
 import { mayEdit } from './readmode'
+import { minimizeNote, restoreNote, useItems } from './items/state'
 import { MAX_ZOOM, MIN_ZOOM, OUTLINE_ZOOM_KEY, clampOutlineZoom } from './navigation'
 import { useEditor, type PanelTab, type Viewport } from './store'
 
@@ -687,6 +688,22 @@ export function togglePanel(tab?: PanelTab) {
   const { panelOpen, panelTab } = get()
   if (tab) set({ panelOpen: !panelOpen || panelTab !== tab, panelTab: tab, panelTabManual: true, panelOpener: 'handle' })
   else set({ panelOpen: !panelOpen, panelOpener: 'handle' })
+}
+
+/**
+ * "Open notes" (F8, Alt+Shift+E, the command palette): with a note open it minimizes it; with notes waiting in the tray it brings the
+ * last one back; otherwise it opens the side panel on its Notes tab, or closes the panel when that tab is already showing. Not in Read
+ * mode (the Notes tab is not there).
+ */
+export function toggleNotes() {
+  if (get().readOnly) return
+  const { popup, minimized } = useItems.getState()
+  if (popup?.kind === 'note') return minimizeNote(popup.id)
+  const last = minimized[minimized.length - 1]
+  if (last) return restoreNote(last)
+  const { panelOpen, panelTab } = get()
+  if (panelOpen && panelTab === 'notes') closePanel()
+  else openPanel('notes')
 }
 
 /** Opens the settings panel on a section and keeps it there until it is closed (opened by hand). */
