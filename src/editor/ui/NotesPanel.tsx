@@ -1,10 +1,10 @@
 import { Icon } from '@/ui/icons'
-import { NoteRows } from '../items/NoteList'
+import { NotesTab } from '../items/NoteList'
 import { useEditor } from '../store'
 
 /**
- * The Notes tab of the side panel: the notes of the selected topic as a list (a click opens a note in its popup, the plus icon adds a
- * new one). Writing happens in the popup, so there is one editor for a note wherever it is opened from.
+ * The Notes tab of the side panel: the notes of the selected topic as a list (a click opens a note in its popup; the "Add a note" bar under the
+ * list adds a new one). Writing happens in the popup, so there is one editor for a note wherever it is opened from.
  */
 export default function NotesPanel() {
   const selected = useEditor((s) => s.selected)
@@ -24,9 +24,7 @@ export default function NotesPanel() {
         <Icon name="notes" size={16} />
         <span className="min-w-0 flex-1 truncate font-medium">{title || 'Untitled topic'}</span>
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto p-2">
-        <NoteRows topicId={id} />
-      </div>
+      <NotesTab topicId={id} />
     </div>
   )
 }

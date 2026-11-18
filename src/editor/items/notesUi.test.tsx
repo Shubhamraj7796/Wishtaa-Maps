@@ -154,3 +154,61 @@ describe('the progress count of a checklist in the notes list', () => {
     expect(document.body.textContent).toContain('[x] item 1')
   })
 })
+
+describe('the "Add a note" bar of the Notes tab', () => {
+  async function tab() {
+    const id = addChild(mapDoc, useEditor.getState().rootId, 'Dose')
+    act(() => useEditor.setState({ selected: [id] }))
+    await settle()
+    render(
+      <>
+        <NotesPanel />
+        <ItemsHost />
+      </>
+    )
+    return id
+  }
+
+  it('is a full-width button with a plus icon and the words, outside the scrolling list so it stays in view, at least 44 px on touch', async () => {
+    await tab()
+    const bar = document.querySelector('[data-add-note-bar]') as HTMLElement
+    expect(bar.tagName).toBe('BUTTON')
+    expect(bar.getAttribute('type')).toBe('button') // so Enter and Space press it
+    expect(bar.getAttribute('aria-label')).toBe('Add a note')
+    expect(bar.textContent).toContain('Add a note')
+    expect(bar.querySelector('svg')).toBeTruthy()
+    expect(bar.className).toContain('w-full')
+    expect(bar.className).toContain('min-h-11')
+    expect(bar.hasAttribute('title')).toBe(false)
+    expect(bar.closest('.overflow-y-auto')).toBeNull() // not inside the list that scrolls
+    expect(document.querySelector('[aria-label="Notes of this topic"]')?.closest('.overflow-y-auto')).toBeTruthy()
+    // The small round plus is gone from the tab.
+    expect(screen.queryAllByRole('button', { name: 'Add a note' })).toHaveLength(1)
+  })
+
+  it('adds a note and opens it, exactly as the icon did', async () => {
+    const id = await tab()
+    fireEvent.click(screen.getByRole('button', { name: 'Add a note' }))
+    const added = Object.values(st().notes).filter((n) => n.topicId === id)
+    expect(added).toHaveLength(1)
+    expect(useItems.getState().popup).toEqual({ kind: 'note', id: added[0]?.id })
+    expect(await screen.findByRole('dialog', { name: /^Note/ })).toBeTruthy()
+  })
+
+  it('is not there in Read mode, and the small popover list keeps its plus icon', async () => {
+    const id = await tab()
+    cleanup()
+    render(<ItemsHost />)
+    act(() => useItems.setState({ list: { kind: 'notes', topicId: id, anchor: document.body } }))
+    const menu = await screen.findByRole('menu', { name: 'Notes of this topic' })
+    expect(within(menu).getByRole('menuitem', { name: 'Add a note' })).toBeTruthy()
+    expect(document.querySelector('[data-add-note-bar]')).toBeNull()
+    act(() => useItems.setState({ list: null }))
+    cleanup()
+    await act(async () => void (await enterReadMode('user')))
+    await settle()
+    render(<NotesPanel />)
+    expect(document.querySelector('[data-add-note-bar]')).toBeNull()
+    await act(async () => void (await enterEditMode()))
+  })
+})
