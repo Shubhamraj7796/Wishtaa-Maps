@@ -1,10 +1,11 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { RESEND_SECONDS } from '@/core/auth/cooldown'
 import { passwordOk, validEmail, normalizeEmail } from '@/core/auth/passwords'
-import { auth, useAuth } from '../account'
+import { auth, hasRememberedReferral, useAuth } from '../account'
 import { driveConfig } from '../drive'
 import { Mail, KeyRound, Loader2 } from '../icons'
 import { Modal, buttonPrimary, buttonSecondary } from '../Modal'
+import { WORDING } from '../referral/wording'
 import { markGoogleReturn } from './googleReturn'
 import { Alert, Field, GoogleMark, inputClass, Logo, PasswordInput, PasswordRules, useCountdown, useStep } from './parts'
 import { useCaptcha } from './Turnstile'
@@ -28,6 +29,7 @@ const TITLES: Record<SignInView, string> = {
 export function SignInDialog({ initial = 'email', reason, onClose }: { initial?: SignInView; reason?: string; onClose: () => void }) {
   const state = useAuth()
   const [view, setView] = useState<SignInView>(initial)
+  const [friendLink] = useState(hasRememberedReferral)
   const [email, setEmail] = useState(() => auth.state.expiredEmail ?? '')
   const [password, setPassword] = useState('')
   const [code, setCode] = useState('')
@@ -155,6 +157,7 @@ export function SignInDialog({ initial = 'email', reason, onClose }: { initial?:
         <p className="text-xs text-muted">Signing in adds sync and Google Drive linking. You can always keep using Wishtaa Maps without an account; your files stay where they are.</p>
       </div>
       {reason && <div className="mb-3"><Alert tone="info">{reason}</Alert></div>}
+      {friendLink && view !== 'check-email' && <p className="mb-3 text-xs text-muted" data-invited-by-friend>{WORDING.invitedByFriend}</p>}
 
       {view === 'email' && (
         <form onSubmit={(e) => void sendCode(e)} className="space-y-3" noValidate>

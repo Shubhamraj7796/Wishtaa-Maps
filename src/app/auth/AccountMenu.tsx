@@ -4,7 +4,8 @@ import type { AuthUser } from '@/core/auth/types'
 import { auth, useAuth } from '../account'
 import { useAuthUi } from '../authUi'
 import { useFiles } from '../FilesContext'
-import { LogOut, User, UserRound } from '../icons'
+import { Gift, LogOut, User, UserRound } from '../icons'
+import { WORDING } from '../referral/wording'
 
 const initials = (u: AuthUser) => (u.name || u.email || '?').trim().split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('') || '?'
 
@@ -96,6 +97,7 @@ export function AccountMenu() {
           <button type="button" role="menuitem" className={item} onClick={choose(() => f.setDialog({ kind: 'preferences' }))}>Preferences</button>
           <button type="button" role="menuitem" className={item} onClick={choose(() => f.setDialog({ kind: 'storage' }))}>Storage settings</button>
           <button type="button" role="menuitem" className={item} onClick={choose(() => navigate('/account'))}><User size={15} aria-hidden="true" /> Account</button>
+          <button type="button" role="menuitem" className={item} onClick={choose(() => openAuth({ kind: 'refer' }))}><Gift size={15} aria-hidden="true" /> {WORDING.title}</button>
           <div className="my-1 h-px bg-line" role="separator" />
           <button
             type="button"

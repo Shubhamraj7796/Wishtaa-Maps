@@ -7,6 +7,7 @@ import { Modal, buttonPrimary, buttonSecondary } from '../Modal'
 import { useDriveActions } from '../useDrive'
 import { DriveAllowDialog, DriveChooseDialog, DriveProblemDialog, PickerProblemDialog } from './DriveDialogs'
 import { Alert } from './parts'
+import { ReferFriendDialog } from '../referral/ReferFriend'
 import { SignInDialog } from './SignInDialog'
 
 /** "Your sign-in expired" bar. Nothing is lost: files and unsent changes stay in this browser. */
@@ -99,6 +100,7 @@ export function AuthHost() {
   const close = useAuthUi((a) => a.close)
   if (!dialog) return null
   if (dialog.kind === 'signin') return <SignInDialog initial={dialog.view} reason={dialog.reason} onClose={close} />
+  if (dialog.kind === 'refer') return <ReferFriendDialog onClose={close} />
   if (dialog.kind === 'guest-files') return <GuestFilesDialog count={dialog.count} onClose={close} />
   if (dialog.kind === 'drive-allow') return <DriveAllowDialog email={dialog.email} onClose={close} />
   if (dialog.kind === 'drive-choose') return <DriveChooseDialog onClose={close} />

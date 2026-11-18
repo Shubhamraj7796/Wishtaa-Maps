@@ -8,6 +8,8 @@ import { AccountDrive } from '../auth/AccountDrive'
 import { Alert, Field, GoogleMark, inputClass, PasswordInput, PasswordRules, useStep } from '../auth/parts'
 import { useFiles } from '../FilesContext'
 import { buttonDanger, buttonPrimary, buttonSecondary } from '../Modal'
+import { ReferralPanel } from '../referral/ReferFriend'
+import { WORDING } from '../referral/wording'
 import { Page, PageHeader } from '../ui'
 
 function Section({ title, children, id }: { title: string; children: ReactNode; id?: string }) {
@@ -233,6 +235,7 @@ export default function Account() {
         <ProfileSection />
         <MethodsSection />
         <AccountDrive />
+        <Section title={WORDING.title} id="refer"><ReferralPanel /></Section>
         <PrivacySection />
         <SecuritySection />
         <DeleteSection />

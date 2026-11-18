@@ -5,7 +5,7 @@ import { AuthController, type AccountHooks, type AuthState } from '@/core/auth/c
 import { claimStoredReferral } from '@/core/referral/claim'
 import { FirstMapReporter } from '@/core/referral/firstMap'
 import { onMapSaved } from '@/editor/saveEvents'
-import { refFromSearch, rememberRef, searchWithoutRef } from '@/core/referral/capture'
+import { readRef, refFromSearch, rememberRef, searchWithoutRef } from '@/core/referral/capture'
 import { PREFS_VERSION, pickPrefs, samePrefs, sanitizePrefs } from '@/core/auth/prefs'
 import type { AccountDb, AuthUser } from '@/core/auth/types'
 import type { FileRecord } from '@/core/files/types'
@@ -159,6 +159,9 @@ export function startAuth() {
   const s = auth.state
   if (s.status === 'signed-in' || s.status === 'loading' || returningFromAuth()) void auth.init()
 }
+
+/** True when this browser arrived through a friend's link that has not been used yet (for the one quiet line in the sign-in box). */
+export const hasRememberedReferral = () => readRef(local()) !== null
 
 /** A link with ?ref=CODE: remembers the code in this browser (30 days) and takes it out of the address bar. Needs no account and sends nothing. */
 export function captureReferralLink() {

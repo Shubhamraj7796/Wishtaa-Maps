@@ -14,6 +14,8 @@ export type AuthDialog =
   | { kind: 'drive-choose' }
   /** Something went wrong connecting Drive that the person can act on (wrong account, Google blocked it, popup blocked). */
   | { kind: 'drive-problem'; problem: DriveProblem; expected?: string | null }
+  /** The "Refer a friend" panel (from the account menu). */
+  | { kind: 'refer' }
   /** Google's file picker could not open in this browser. `answer` tells the picker's caller what was chosen. */
   | { kind: 'picker-problem'; which: PickerKind; reason: PickerFailure; answer: (c: PickerChoice) => void }
 
