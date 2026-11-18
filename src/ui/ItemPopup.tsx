@@ -10,17 +10,19 @@ const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), selec
  * (what was typed is saved by the content, which autosaves); the focus goes back to where it was; the map behind it keeps its keys
  * (the role "dialog" makes the global shortcuts wait). A small popover opened inside it (a menu, a date) takes Escape first.
  *
+ * `inset` (px) keeps the popup and its dim layer off the right edge of the window: beside the side panel, never over it.
+ *
  * `header` is the title area (a title field, for example). Mark the control that should have the focus first with `data-autofocus`.
  */
 export type PopupSize = 'normal' | 'wide' | 'full'
 /** The window classes for each size. Under 640 px every size is the full-screen sheet; from 640 px: normal and wide are centred, full fills the window. */
 const SIZE_CLASS: Record<PopupSize, string> = {
-  normal: 'sm:inset-auto sm:left-1/2 sm:top-1/2 sm:max-h-[86vh] sm:min-h-[320px] sm:w-[min(640px,94vw)] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-ui sm:border sm:border-line',
-  wide: 'sm:inset-auto sm:left-1/2 sm:top-1/2 sm:h-[86vh] sm:max-h-[86vh] sm:w-[min(1040px,96vw)] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-ui sm:border sm:border-line',
+  normal: 'sm:inset-auto sm:left-1/2 sm:top-1/2 sm:max-h-[86vh] sm:min-h-[320px] sm:w-[min(640px,94%)] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-ui sm:border sm:border-line',
+  wide: 'sm:inset-auto sm:left-1/2 sm:top-1/2 sm:h-[86vh] sm:max-h-[86vh] sm:w-[min(1040px,96%)] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-ui sm:border sm:border-line',
   full: 'sm:inset-0',
 }
 
-export function ItemPopup({ label, header, actions, children, onClose, size = 'normal', wide = false }: { label: string; header?: ReactNode; actions?: ReactNode; children: ReactNode; onClose: () => void; size?: PopupSize; wide?: boolean }) {
+export function ItemPopup({ label, header, actions, children, onClose, size = 'normal', wide = false, inset = 0 }: { label: string; header?: ReactNode; actions?: ReactNode; children: ReactNode; onClose: () => void; size?: PopupSize; wide?: boolean; inset?: number }) {
   const kind: PopupSize = wide && size === 'normal' ? 'wide' : size
   const panel = useRef<HTMLDivElement>(null)
   const close = useRef(onClose)
@@ -71,7 +73,8 @@ export function ItemPopup({ label, header, actions, children, onClose, size = 'n
   return createPortal(
     <div
       data-item-popup-backdrop
-      className="fixed inset-0 z-[800] bg-black/40"
+      className="fixed inset-y-0 left-0 z-[800] bg-black/40"
+      style={{ right: inset }}
       onPointerDown={(e) => {
         if (e.target === e.currentTarget) close.current()
       }}

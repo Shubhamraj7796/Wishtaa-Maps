@@ -10,9 +10,11 @@ import { ItemPopup, type PopupSize } from '@/ui/ItemPopup'
 import { mapDoc } from '../mapdoc'
 import { showNotice } from '../notice'
 import { useEditor } from '../store'
+import { useTopicNotes } from './NoteList'
 import { NoteTaskChip, NoteTaskPanel } from './NoteTask'
+import { usePanelInset } from './panelInset'
 import { RichNoteEditor, type NoteEditorHandle } from './RichNoteEditor'
-import { closePopup } from './state'
+import { closePopup, onLeave, openNote, toggleList } from './state'
 
 const SIZE_KEY = 'wishtaa.noteSize'
 const SIZES: PopupSize[] = ['normal', 'wide', 'full']
@@ -75,6 +77,15 @@ export function NotePopup({ id }: { id: string }) {
     if (entry && !titleTimer.current) setTitle(entry.title)
   }, [entry?.title]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Where this note stands among the notes of its topic ("Note 2 of 5"), for Previous and Next.
+  const siblings = useTopicNotes(entry?.topicId ?? '')
+  const at = siblings.findIndex((e) => e.id === id)
+  // The side panel (with the Notes list) beside the popup: the popup stays off it. Without room for it (a phone) the header gets a list icon.
+  const inset = usePanelInset()
+  // Leaving this popup for another note (the side list, Previous or Next): what was typed is saved first, at once.
+  const leave = useRef<() => void>(() => undefined)
+  useEffect(() => onLeave(id, () => leave.current()), [id])
+
   if (!entry) return null
   const topicText = topics[entry.topicId]?.text.trim() || 'Untitled topic'
 
@@ -88,15 +99,20 @@ export function NotePopup({ id }: { id: string }) {
     if (entry.legacy) setNote(mapDoc, entry.topicId, html)
     else patchNote(mapDoc, entry.id, { html })
   }
-  const close = () => {
+  /** Saves what was typed and removes a new note that was left completely empty (never one with text, a title or a task). */
+  const settle = () => {
     writeTitle()
     handle.current?.flush()
     const now = noteEntry(useEditor.getState().topics, useEditor.getState().notes, entry.id)
-    // A new note that was left completely empty is not kept.
-    // (A note that has a task is kept: the task is attached to it.)
     if (now && !readOnly && !now.legacy && !now.title.trim() && !noteText(now.html) && !tasksOfNote(useEditor.getState().tasks, now.id).length) deleteNote(mapDoc, now.id)
+  }
+  leave.current = settle
+  const close = () => {
+    settle()
     closePopup()
   }
+  const prev = at > 0 ? siblings[at - 1] : undefined
+  const nextNote = at >= 0 && at < siblings.length - 1 ? siblings[at + 1] : undefined
   const remove = () => {
     writeTitle()
     handle.current?.flush()
@@ -110,6 +126,7 @@ export function NotePopup({ id }: { id: string }) {
       label={entry.legacy ? 'Note' : `Note: ${entry.title || 'untitled'}`}
       onClose={close}
       size={size}
+      inset={inset}
       header={
         <div className="min-w-0">
           {entry.legacy ? (
@@ -129,11 +146,21 @@ export function NotePopup({ id }: { id: string }) {
               className="w-full rounded-ui bg-transparent px-1 py-1 text-sm font-medium outline-none placeholder:font-normal placeholder:text-muted focus:bg-bg"
             />
           )}
-          <div className="truncate px-1 text-xs text-muted">Topic: {topicText}</div>
+          <div data-note-position className="truncate px-1 text-xs text-muted">
+            {at >= 0 ? `Note ${at + 1} of ${siblings.length} · ` : ''}Topic: {topicText}
+          </div>
         </div>
       }
       actions={
         <>
+          {siblings.length > 1 && (
+            <>
+              <IconButton icon="chevronLeft" label="Previous note" disabled={!prev} onClick={() => prev && openNote(prev.id)} className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11" />
+              <IconButton icon="chevronRight" label="Next note" disabled={!nextNote} onClick={() => nextNote && openNote(nextNote.id)} className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11" />
+            </>
+          )}
+          {/* No room for the side panel beside the popup (a phone): the list of this topic's notes opens from here, on top. */}
+          {inset === 0 && <IconButton icon="notes" label="Notes of this topic" aria-haspopup="menu" data-notes-list-button onClick={(e) => toggleList('notes', entry.topicId, e.currentTarget)} className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11" />}
           {/* On a phone the popup is always a full sheet, so the size button is not shown there. */}
           <IconButton icon={next.icon} label={next.label} data-note-size-button={size} onClick={() => setSize(next.to)} className="max-sm:hidden [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11" />
           {!readOnly && <IconButton icon="trash" label="Delete this note" onClick={remove} className="text-bad [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11" />}

@@ -1,5 +1,7 @@
 import { Icon } from '@/ui/icons'
 import { NotesTab } from '../items/NoteList'
+import { noteEntry } from '@/core/model/notes'
+import { useItems } from '../items/state'
 import { useEditor } from '../store'
 
 /**
@@ -8,7 +10,10 @@ import { useEditor } from '../store'
  */
 export default function NotesPanel() {
   const selected = useEditor((s) => s.selected)
-  const id = selected[selected.length - 1]
+  // While a note is open in its popup the tab lists the notes of THAT note's topic, so the list always shows the one being written.
+  const open = useItems((s) => (s.popup?.kind === 'note' ? s.popup.id : null))
+  const openTopic = useEditor((s) => (open ? noteEntry(s.topics, s.notes, open)?.topicId : undefined))
+  const id = openTopic ?? selected[selected.length - 1]
   const title = useEditor((s) => (id ? s.topics[id]?.text : ''))
   if (!id) {
     return (

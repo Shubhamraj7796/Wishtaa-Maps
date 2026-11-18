@@ -8,6 +8,7 @@ import { Tooltip } from '@/ui/Tooltip'
 import { Popover } from '@/ui/Popover'
 import { mapDoc } from '../mapdoc'
 import { useEditor } from '../store'
+import { SELECTED } from '@/ui/iconSize'
 import { closeList, openNote, useItems } from './state'
 
 /** The notes of one topic in the order they are shown. */
@@ -27,6 +28,8 @@ export function addNoteAndOpen(topicId: string) {
 function NoteItems({ topicId, menu }: { topicId: string; menu: boolean }) {
   const entries = useTopicNotes(topicId)
   const role = menu ? 'menuitem' : undefined
+  // The note that is open in the popup is highlighted, so the list says which note is being written.
+  const active = useItems((s) => (s.popup?.kind === 'note' ? s.popup.id : null))
   return (
     <>
       <ul aria-label="Notes of this topic" className="max-h-[50vh] overflow-y-auto">
@@ -35,7 +38,15 @@ function NoteItems({ topicId, menu }: { topicId: string; menu: boolean }) {
           const progress = checklistProgress(e.html)
           return (
             <li key={e.id}>
-              <button type="button" role={role} data-note-row={e.id} onClick={() => openNote(e.id)} className="flex w-full items-start gap-2 rounded-ui px-2 py-2 text-left hover:bg-bg focus-visible:bg-bg [@media(pointer:coarse)]:min-h-11">
+              <button
+                type="button"
+                role={role}
+                data-note-row={e.id}
+                data-active={active === e.id ? 'true' : undefined}
+                aria-current={active === e.id ? 'true' : undefined}
+                onClick={() => openNote(e.id)}
+                className={`flex w-full items-start gap-2 rounded-ui px-2 py-2 text-left focus-visible:bg-bg [@media(pointer:coarse)]:min-h-11 ${active === e.id ? SELECTED : 'hover:bg-bg'}`}
+              >
                 <Icon name="notes" size={16} className="mt-0.5 shrink-0 text-muted" />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-medium">{noteLabel(e)}</span>

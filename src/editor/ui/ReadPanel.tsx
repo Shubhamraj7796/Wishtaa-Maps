@@ -20,7 +20,7 @@ export function ReadPanel() {
   )
 
   return (
-    <aside aria-label="Topic details (read only)" data-no-wheel className="absolute inset-y-0 right-0 z-30 flex w-[min(340px,100%)] shrink-0 flex-col border-l border-line bg-surface shadow-xl md:static md:z-auto md:w-80 md:shadow-none">
+    <aside id="read-panel" aria-label="Topic details (read only)" data-no-wheel className="absolute inset-y-0 right-0 z-30 flex w-[min(340px,100%)] shrink-0 flex-col border-l border-line bg-surface shadow-xl md:static md:z-auto md:w-80 md:shadow-none">
       <div className="flex items-center justify-between border-b border-line px-4 py-2">
         <h2 className="flex items-center gap-1.5 text-sm font-semibold">
           <Icon name="lock" size={14} /> Details
