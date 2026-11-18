@@ -12,6 +12,9 @@ const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), selec
  *
  * `inset` (px) keeps the popup and its dim layer off the right edge of the window: beside the side panel, never over it.
  *
+ * `bottomInset` (px) keeps it off the bottom edge too (the tray of minimized notes is there). `minimized` hides the popup without unmounting
+ * it: no dim layer, nothing to tab to, no keys taken (Escape belongs to the popup that is open), so what is inside goes on as it was.
+ *
  * `header` is the title area (a title field, for example). Mark the control that should have the focus first with `data-autofocus`.
  */
 export type PopupSize = 'normal' | 'wide' | 'full'
@@ -22,11 +25,13 @@ const SIZE_CLASS: Record<PopupSize, string> = {
   full: 'sm:inset-0',
 }
 
-export function ItemPopup({ label, header, actions, children, onClose, size = 'normal', wide = false, inset = 0 }: { label: string; header?: ReactNode; actions?: ReactNode; children: ReactNode; onClose: () => void; size?: PopupSize; wide?: boolean; inset?: number }) {
+export function ItemPopup({ label, header, actions, children, onClose, size = 'normal', wide = false, inset = 0, bottomInset = 0, minimized = false }: { label: string; header?: ReactNode; actions?: ReactNode; children: ReactNode; onClose: () => void; size?: PopupSize; wide?: boolean; inset?: number; bottomInset?: number; minimized?: boolean }) {
   const kind: PopupSize = wide && size === 'normal' ? 'wide' : size
   const panel = useRef<HTMLDivElement>(null)
   const close = useRef(onClose)
   close.current = onClose
+  const isMin = useRef(minimized)
+  isMin.current = minimized
   const opener = useRef<HTMLElement | null>(typeof document === 'undefined' ? null : (document.activeElement as HTMLElement | null))
 
   // The first control that asks for it takes the focus (otherwise the Close button), and the focus goes back on closing.
@@ -41,10 +46,18 @@ export function ItemPopup({ label, header, actions, children, onClose, size = 'n
     }
   }, [])
 
+  // Minimized: the focus goes back to where it was (the popup is hidden and cannot keep it).
+  useEffect(() => {
+    if (!minimized) return
+    const from = opener.current
+    if (from && from !== document.body && from.isConnected) from.focus()
+    if (panel.current?.contains(document.activeElement)) (document.activeElement as HTMLElement).blur() // never leave the focus in a hidden popup
+  }, [minimized])
+
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
       const el = panel.current
-      if (!el) return
+      if (!el || isMin.current) return
       if (e.key === 'Escape') {
         if (document.querySelector('[data-popover]')) return // a popover inside the popup closes first
         e.preventDefault()
@@ -73,8 +86,10 @@ export function ItemPopup({ label, header, actions, children, onClose, size = 'n
   return createPortal(
     <div
       data-item-popup-backdrop
-      className="fixed inset-y-0 left-0 z-[800] bg-black/40"
-      style={{ right: inset }}
+      hidden={minimized}
+      aria-hidden={minimized || undefined}
+      className="fixed left-0 top-0 z-[800] bg-black/40"
+      style={{ right: inset, bottom: bottomInset }}
       onPointerDown={(e) => {
         if (e.target === e.currentTarget) close.current()
       }}

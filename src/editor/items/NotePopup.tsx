@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { timeAgo } from '@/app/format'
 import { setNote } from '@/core/model/content'
 import { deleteNote, noteEntry, noteLabel, patchNote } from '@/core/model/notes'
@@ -14,8 +14,10 @@ import { useTopicNotes } from './NoteList'
 import { NoteTaskChip, NoteTaskPanel } from './NoteTask'
 import { usePanelInset } from './panelInset'
 import { RichNoteEditor, type NoteEditorHandle } from './RichNoteEditor'
-import { closePopup, onLeave, openNote, toggleList } from './state'
+import { closeNote, closePopup, minimizeNote, onLeave, openNote, toggleList, useItems } from './state'
 
+/** The height (px) kept free at the bottom of the window for the tray of minimized notes: its chips, the gap and the status bar below them. */
+export const TRAY_STRIP = 96
 const SIZE_KEY = 'wishtaa.noteSize'
 const SIZES: PopupSize[] = ['normal', 'wide', 'full']
 /** The size the note popup was last left at on this device. */
@@ -38,7 +40,7 @@ const NEXT: Record<PopupSize, { to: PopupSize; label: string; icon: 'expand' | '
  * A note in its popup: a title (the first note of a topic has none), the rich-text editor with its icon toolbar, and when it was
  * created and edited. It autosaves; closing it saves what was typed first. A new note that was left completely empty is removed again.
  */
-export function NotePopup({ id }: { id: string }) {
+export function NotePopup({ id, minimized = false }: { id: string; minimized?: boolean }) {
   const topics = useEditor((s) => s.topics)
   const notes = useEditor((s) => s.notes)
   const readOnly = useEditor((s) => s.readOnly)
@@ -68,9 +70,18 @@ export function NotePopup({ id }: { id: string }) {
   useEffect(() => {
     if (gone) {
       showNotice('That note is no longer there.')
-      closePopup()
+      closeNote(id, false)
     }
-  }, [gone])
+  }, [gone, id])
+
+  // Restored from the tray: the text is put back at its scroll position and the cursor is where it was left (a hidden popup loses both).
+  const wasMinimized = useRef(minimized)
+  useLayoutEffect(() => {
+    if (wasMinimized.current && !minimized) handle.current?.restore()
+    wasMinimized.current = minimized
+  }, [minimized])
+  // While the tray has notes in it the popup leaves its strip at the bottom free (the tray is drawn there, on the map, not under a dim layer).
+  const trayShown = useItems((s) => s.minimized.length > 0)
 
   // The title changed from outside while it is not being typed.
   useEffect(() => {
@@ -107,6 +118,11 @@ export function NotePopup({ id }: { id: string }) {
     if (now && !readOnly && !now.legacy && !now.title.trim() && !noteText(now.html) && !tasksOfNote(useEditor.getState().tasks, now.id).length) deleteNote(mapDoc, now.id)
   }
   leave.current = settle
+  /** What was typed is written now (a minimized note keeps autosaving anyway; this only makes the saved copy current at once). */
+  const settleTyping = () => {
+    writeTitle()
+    handle.current?.flush()
+  }
   const close = () => {
     settle()
     closePopup()
@@ -127,6 +143,8 @@ export function NotePopup({ id }: { id: string }) {
       onClose={close}
       size={size}
       inset={inset}
+      bottomInset={trayShown ? TRAY_STRIP : 0}
+      minimized={minimized}
       header={
         <div className="min-w-0">
           {entry.legacy ? (
@@ -161,6 +179,7 @@ export function NotePopup({ id }: { id: string }) {
           )}
           {/* No room for the side panel beside the popup (a phone): the list of this topic's notes opens from here, on top. */}
           {inset === 0 && <IconButton icon="notes" label="Notes of this topic" aria-haspopup="menu" data-notes-list-button onClick={(e) => toggleList('notes', entry.topicId, e.currentTarget)} className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11" />}
+          <IconButton icon="minus" label="Minimize" data-note-minimize onClick={() => { settleTyping(); minimizeNote(id) }} className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11" />
           {/* On a phone the popup is always a full sheet, so the size button is not shown there. */}
           <IconButton icon={next.icon} label={next.label} data-note-size-button={size} onClick={() => setSize(next.to)} className="max-sm:hidden [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11" />
           {!readOnly && <IconButton icon="trash" label="Delete this note" onClick={remove} className="text-bad [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11" />}

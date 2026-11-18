@@ -1,6 +1,7 @@
-import { expect, test, type Browser, type Page } from '@playwright/test'
+import { expect, test } from '@playwright/test'
 import { mkdirSync } from 'node:fs'
 import { join } from 'node:path'
+import { box, dialog, fill, firstNote, newPage, nextNote } from './notesHelpers'
 
 /**
  * The note popup beside the side panel, the "Note n of m" header with Previous / Next, the highlighted note in the list, switching notes
@@ -10,49 +11,6 @@ import { join } from 'node:path'
  */
 const SHOTS = join('docs', 'screenshots', 'notes-layout')
 mkdirSync(SHOTS, { recursive: true })
-
-export async function newPage(browser: Browser, opts: { width: number; height: number; touch?: boolean; dark?: boolean }) {
-  const ctx = await browser.newContext({ viewport: { width: opts.width, height: opts.height }, hasTouch: !!opts.touch, isMobile: !!opts.touch })
-  const page = await ctx.newPage()
-  await page.goto('/')
-  await page.getByText('Blank mind map').first().click()
-  await page.getByRole('button', { name: 'Create' }).click()
-  await page.waitForURL('**/map/**')
-  await page.locator('[data-topic]').first().waitFor()
-  if (opts.dark) {
-    await page.getByRole('button', { name: 'Switch to dark mode' }).click()
-    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
-  }
-  return { page, ctx }
-}
-
-const dialog = (page: Page) => page.getByRole('dialog', { name: /^Note/ })
-
-/** Opens the first note from the Insert menu (the Notes tab); the others come from the Add a note bar. */
-export async function firstNote(page: Page, title: string, text: string) {
-  await page.locator('[aria-haspopup="menu"][aria-label^="Insert"]').first().click()
-  await page.getByRole('menuitem', { name: 'Notes' }).click()
-  await page.getByRole('button', { name: 'Add a note' }).click()
-  await fill(page, title, text)
-}
-async function fill(page: Page, title: string, text: string) {
-  await expect(dialog(page)).toBeVisible()
-  await page.getByLabel('Note title').fill(title)
-  await page.getByLabel('Note text').click()
-  await page.keyboard.type(text)
-}
-/** The next note, from the bar under the side list (the side panel stays usable while a popup is open). */
-export async function nextNote(page: Page, title: string, text: string) {
-  await page.getByRole('button', { name: 'Add a note' }).click()
-  await expect(page.getByLabel('Note title')).toHaveValue('')
-  await fill(page, title, text)
-}
-
-const box = async (page: Page, selector: string) => {
-  const b = await page.locator(selector).first().boundingBox()
-  if (!b) throw new Error(`no box for ${selector}`)
-  return b
-}
 
 for (const [name, width, height, dark] of [
   ['1366', 1366, 768, false],

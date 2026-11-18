@@ -45,6 +45,8 @@ export interface NoteEditorHandle {
   flush: () => void
   /** The editor itself (for tests and for things around it that need the cursor). */
   editor: Editor | null
+  /** Puts the text back at the scroll position it had (a hidden element loses it) and gives the editor the focus, cursor where it was. */
+  restore: () => void
 }
 
 /** One toolbar button: an icon with the shared tooltip, chosen = highlighted. The text selection stays in the editor while it is used. */
@@ -201,6 +203,8 @@ export function NoteToolbar({ editor }: { editor: Editor | null }) {
  */
 export function RichNoteEditor({ html, onSave, label, placeholder = 'Write a note…', readOnly = false, autoFocus = false, handle, belowToolbar, floating }: { html: string; onSave: (html: string) => void; label: string; placeholder?: string; readOnly?: boolean; autoFocus?: boolean; handle?: MutableRefObject<NoteEditorHandle | null>; belowToolbar?: ReactNode; floating?: ReactNode }) {
   const saved = useRef(html)
+  const body = useRef<HTMLDivElement>(null)
+  const lastScroll = useRef(0)
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const save = useRef(onSave)
   save.current = onSave
@@ -250,7 +254,15 @@ export function RichNoteEditor({ html, onSave, label, placeholder = 'Write a not
 
   useEffect(() => {
     if (!handle) return
-    handle.current = { flush: () => editor && !readOnly && write(editor), editor }
+    handle.current = {
+      flush: () => editor && !readOnly && write(editor),
+      editor,
+      restore: () => {
+        // The cursor gets the focus where it was without scrolling to it (the text goes back to where it was scrolled to instead).
+        if (editor && !readOnly) editor.commands.focus(null, { scrollIntoView: false })
+        if (body.current) body.current.scrollTop = lastScroll.current
+      },
+    }
     return () => {
       handle.current = null
     }
@@ -271,7 +283,14 @@ export function RichNoteEditor({ html, onSave, label, placeholder = 'Write a not
       {belowToolbar}
       {/* `floating` (a button over the lower-left corner of the writing area) is outside the scrolling part, so it stays put; the text keeps room under it. */}
       <div className="relative flex min-h-0 flex-1 flex-col">
-        <div className={`min-h-0 flex-1 overflow-y-auto ${floating ? 'pb-20' : ''}`} data-note-body>
+        <div
+          ref={body}
+          className={`min-h-0 flex-1 overflow-y-auto ${floating ? 'pb-20' : ''}`}
+          data-note-body
+          onScroll={(e) => {
+            if (e.currentTarget.clientHeight > 0) lastScroll.current = e.currentTarget.scrollTop // not while hidden (a hidden element reads 0)
+          }}
+        >
           <EditorContent editor={editor} />
         </div>
         {floating}

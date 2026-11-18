@@ -17,6 +17,7 @@ import { mapDoc, resetMapDoc } from './mapdoc'
 import { getTheme } from './scene'
 import { lockDoc } from '@/core/model/lock'
 import { closedPdfPanel, useEditor, type ReadReason } from './store'
+import { closeAllItems } from './items/state'
 import { unwatchFile, watchFile } from './tabwatch'
 import { startRemoteSync } from './remoteSync'
 
@@ -132,6 +133,7 @@ async function closeCurrent(flush = true): Promise<void> {
   const o = open
   if (!o) return
   open = null
+  closeAllItems() // notes open or minimized: saved first, an empty new one removed
   try {
     if (flush) await o.autosaver.flush()
   } finally {

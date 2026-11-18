@@ -2,7 +2,7 @@ import type { ComponentType, SVGProps } from 'react'
 import {
   AlignLeft, AlertTriangle, Columns2, ArrowDown, ArrowDownLeft, ArrowDownRight, ArrowLeft, ArrowLeftRight, ArrowRight, ArrowUp,
   ArrowUpDown, ArrowUpLeft, ArrowUpRight, BarChart3, Bell, Bold, Book, Bookmark, Braces, Brush, Calendar, Camera, Check,
-  CheckSquare, ChevronDown, ChevronRight, CircleHelp, Clock, Code, Command, CornerDownRight, Copy, DollarSign, Download,
+  CheckSquare, ChevronDown, ChevronRight, ChevronUp, CircleHelp, Clock, Code, Command, CornerDownRight, Copy, DollarSign, Download,
   Eraser, Eye, Flag, Flame, Focus, Gift, Globe, Hand, Heart, Hash, Heading1, Heading2, Home, Image as ImageIcon, ImagePlus,
   Info, Italic, Key, Layers, LayoutGrid, Lightbulb, Link2, List, ListChecks, ListOrdered, Lock, Locate, Mail, Maximize,
   MessageSquare, Minimize, Minus, Moon, MousePointer2, Music, Network, Notebook, Paintbrush, Palette, PanelRight, Paperclip,
@@ -27,7 +27,7 @@ export const ICONS = {
   notes: StickyNote, inlineNote: AlignLeft, tag: Tag, task: ListChecks, taskDone: CheckSquare, link: Link2, unlink: Unlink,
   attachment: Paperclip, latex: Sigma, table: Table, numbering: ListOrdered, image: ImageIcon, imageAdd: ImagePlus, camera: Camera, split: Columns2, pdf: FileText, flipH: FlipHorizontal2, highlighter: Highlighter, square: Square, circle: Circle, rotateCw: RotateCw, eyeOff: EyeOff, arrowUpRight: ArrowUpRight,
   openBook: Book, mark: Smile, clipart: Shapes, details: Layers, layout: LayoutGrid, theme: Palette, style: Brush, outline: List, map: Network,
-  chevronRight: ChevronRight, chevronLeft: ChevronLeft, expand: Maximize2, shrink: Minimize2, chevronDown: ChevronDown, zoomIn: ZoomIn, zoomOut: ZoomOut, fit: Locate, fullscreen: Maximize,
+  chevronRight: ChevronRight, chevronLeft: ChevronLeft, expand: Maximize2, shrink: Minimize2, chevronDown: ChevronDown, chevronUp: ChevronUp, zoomIn: ZoomIn, zoomOut: ZoomOut, fit: Locate, fullscreen: Maximize,
   exitFullscreen: Minimize, bold: Bold, italic: Italic, underline: Underline, strike: Strikethrough, h1: Heading1, h2: Heading2,
   bulletList: List, orderedList: ListOrdered, quote: Quote, code: Code, ocr: ScanText, download: Download, preview: Eye,
   replace: RefreshCw, reset: RotateCcw, eraser: Eraser, panel: PanelRight, notebook: Notebook, type: Type, pin: Pin,
