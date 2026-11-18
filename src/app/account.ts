@@ -3,6 +3,8 @@ import { AccountSync } from '@/core/auth/accountSync'
 import { authConfig, authEnabled } from '@/core/auth/config'
 import { AuthController, type AccountHooks, type AuthState } from '@/core/auth/controller'
 import { claimStoredReferral } from '@/core/referral/claim'
+import { FirstMapReporter } from '@/core/referral/firstMap'
+import { onMapSaved } from '@/editor/saveEvents'
 import { refFromSearch, rememberRef, searchWithoutRef } from '@/core/referral/capture'
 import { PREFS_VERSION, pickPrefs, samePrefs, sanitizePrefs } from '@/core/auth/prefs'
 import type { AccountDb, AuthUser } from '@/core/auth/types'
@@ -39,6 +41,7 @@ function returningFromAuth(): boolean {
 let sync: AccountSync | null = null
 let stopPrefs: (() => void) | null = null
 let stopDriveWatch: (() => void) | null = null
+let firstMap: FirstMapReporter | null = null
 
 const QUEUE_PREFIX = 'wishtaamaps:acct-queue:'
 const OFFER_PREFIX = 'wishtaamaps:guest-offer:'
@@ -51,6 +54,8 @@ function stopAccountSync() {
   stopPrefs = null
   stopDriveWatch?.()
   stopDriveWatch = null
+  firstMap?.stop()
+  firstMap = null
 }
 
 const hooks: AccountHooks = {
@@ -186,9 +191,21 @@ async function startAccountSync(user: AuthUser, info: { newBrowserUser: boolean 
   void auth.loadProfile()
   void reconcilePrefs(db, s, user.id).catch(() => undefined)
   void linkDrive(db, s, user)
-  void claimStoredReferral(db, local()).catch(() => undefined) // attaches a friends link, once; every no is silent
+  void startReferral(db, user.id)
   if (info.newBrowserUser) void offerGuestFiles(user.id)
 }
+
+/** Attaches a friend's link (once; every "no" is silent), then watches for the first real map if this person was invited. */
+async function startReferral(db: AccountDb, uid: string) {
+  await claimStoredReferral(db, local()).catch(() => undefined)
+  if (auth.state.user?.id !== uid) return
+  const r = new FirstMapReporter(db)
+  firstMap?.stop()
+  firstMap = r
+  await r.start()
+}
+// An invited person's saved map is reported as a number only, and only while it matters.
+onMapSaved((topics) => firstMap?.onSaved(topics))
 
 /** The account's preferences win on a new device; a brand-new account takes this device's. After that, changes go up as they happen. */
 async function reconcilePrefs(db: AccountDb, s: AccountSync, uid: string) {

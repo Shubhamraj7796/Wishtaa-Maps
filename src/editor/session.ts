@@ -1,5 +1,6 @@
 import * as Y from 'yjs'
 import { Autosaver, type MapStorage } from '@/core/autosave'
+import { emitMapSaved } from './saveEvents'
 import { buildFileIndex, referencedIds } from '@/core/files/indexer'
 import { makeThumbnail } from '@/core/files/thumbnail'
 import type { FileRecord, FileRepository, SaveMeta } from '@/core/files/types'
@@ -325,6 +326,8 @@ async function doOpen(fileId: string, repo: FileRepository, opts: OpenOptions = 
     undo.off('stack-cleared', syncUndo)
   })
 
+  // True once the person has changed something in THIS opening of the map: a first real map means one they actually typed, not a template.
+  let edited = false
   const saver = new Autosaver({
     storage: new RepoMapStorage(fileId, repo),
     serialize: () => encodeDoc(mapDoc),
@@ -334,6 +337,7 @@ async function doOpen(fileId: string, repo: FileRepository, opts: OpenOptions = 
       if (open?.fileId !== fileId && open !== null) return
       useEditor.setState({ save })
       if (save.status === 'saved') {
+        if (edited && !useEditor.getState().readOnly) emitMapSaved(Object.keys(useEditor.getState().topics).length)
         scheduleImageGc()
         void scanAttachments()
       }
@@ -342,7 +346,10 @@ async function doOpen(fileId: string, repo: FileRepository, opts: OpenOptions = 
   // Every change to the document (edits, undo/redo, images, settings) is saved; loading is not.
   const onUpdate = (_u: Uint8Array, origin: unknown) => {
     // Loading and what came in from another device are not edits of this device's: they are not saved again.
-    if (origin !== 'load' && origin !== 'refresh' && !useEditor.getState().readOnly) saver.markDirty()
+    if (origin !== 'load' && origin !== 'refresh' && !useEditor.getState().readOnly) {
+      edited = true
+      saver.markDirty()
+    }
   }
   mapDoc.ydoc.on('update', onUpdate)
   disposers.push(() => {
