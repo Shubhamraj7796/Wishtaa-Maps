@@ -45,6 +45,29 @@ export interface MyPlan {
   capReached: boolean
 }
 
+/** What the panel shows (my_referral_summary()): counts only, never who the invited people are. */
+export interface ReferralSummary extends MyPlan {
+  code: string | null
+  /** People who made an account through the link. */
+  invited: number
+  /** Of those, the ones whose email is confirmed. */
+  joined: number
+  /** Joined and saved a first real map. */
+  successful: number
+  /** Successful but still inside the waiting time (their month is on its way). */
+  waiting: number
+  monthsEarned: number
+  /** This account itself came in through a friend's link (a quiet line, nothing more). */
+  invitedByFriend: boolean
+  /** This account was invited and has not yet saved a first real map (migration 0005). Absent on older databases. */
+  awaitingFirstMap?: boolean
+  /** Topics a first map needs (migration 0005). Absent on older databases. */
+  minTopics?: number
+}
+
+export type ClaimResult = 'claimed' | 'ignored'
+export type FirstMapResult = 'none' | 'waiting' | 'qualified'
+
 /**
  * Adds whole calendar months in UTC. When the target month is shorter the day is cut to its last day
  * (31 Jan + 1 month = 28 or 29 Feb), the same rule PostgreSQL uses for `timestamp + interval 'n month'`.

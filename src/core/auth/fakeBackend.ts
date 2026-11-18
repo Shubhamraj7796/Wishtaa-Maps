@@ -1,3 +1,4 @@
+import { cleanReferralCode, DEFAULT_PLAN_SETTINGS, type ClaimResult, type FirstMapResult, type MyPlan, type ReferralSummary } from '../plan'
 import { AuthFailure, type AccountDb, type AuthBackend, type AuthUser, type BackendEvent, type DriveLinkRow, type PrefsRow, type Provider, type RecentRow } from './types'
 
 interface FakeUser {
@@ -27,6 +28,11 @@ export class FakeBackend implements AuthBackend {
   prefs = new Map<string, PrefsRow>()
   driveLinks = new Map<string, DriveLinkRow>()
   profiles = new Map<string, string>()
+  /** Referral stand-in (same rules as 0004_referrals.sql, simplified): codes, who invited whom, and the clock used for the waiting time. */
+  refCodes = new Map<string, string>()
+  invitedBy = new Map<string, { referrer: string; status: 'joined' | 'qualified' | 'rewarded'; qualifiedAt?: number }>()
+  /** Test clock for the 7 day delay. */
+  now = () => Date.now()
   db: AccountDb
 
   constructor() {
@@ -49,6 +55,10 @@ export class FakeBackend implements AuthBackend {
       deleteRecent: async (uid, refs) => (need(uid), void refs.forEach((r) => this.recents.get(uid)?.delete(r))),
       getDriveLink: async (uid) => (need(uid), this.driveLinks.get(uid) ?? null),
       putDriveLink: async (uid, link) => (need(uid), void this.driveLinks.set(uid, link)),
+      myPlan: async () => (this.net(), this.current ? this.planOf(this.current.id) : null),
+      referralSummary: async () => (this.net(), this.current ? this.summaryOf(this.current.id) : null),
+      claimReferral: async (code) => (this.net(), this.claim(code)),
+      recordFirstMap: async (topics) => (this.net(), this.firstMap(topics)),
     }
   }
 
@@ -72,6 +82,65 @@ export class FakeBackend implements AuthBackend {
     const u: FakeUser = { id: `user-${++this.seq}`, email: email.toLowerCase(), providers: new Set([provider]), confirmed, name: email.split('@')[0] ?? '' }
     this.users.set(u.email, u)
     return u
+  }
+
+  // ---- referral stand-in
+  private codeOf(uid: string) {
+    let c = this.refCodes.get(uid)
+    if (!c) {
+      c = `FAKE${String(this.refCodes.size + 1000).slice(-4)}`.replace(/[01]/g, '2')
+      this.refCodes.set(uid, c)
+    }
+    return c
+  }
+  private rewardsDue(uid: string) {
+    for (const r of this.invitedBy.values()) if (r.referrer === uid && r.status === 'qualified' && (r.qualifiedAt ?? 0) + DEFAULT_PLAN_SETTINGS.rewardDelayDays * 86_400_000 <= this.now()) r.status = 'rewarded'
+  }
+  private planOf(uid: string): MyPlan {
+    this.rewardsDue(uid)
+    const rewarded = [...this.invitedBy.values()].filter((r) => r.referrer === uid && r.status === 'rewarded').length
+    const bonus = Math.min(rewarded * DEFAULT_PLAN_SETTINGS.monthsPerReferral, DEFAULT_PLAN_SETTINGS.maxTotalMonths - DEFAULT_PLAN_SETTINGS.freeMonthsStandard)
+    return { plan: 'pro', source: bonus ? 'referral' : 'signup', freeUntil: null, founding: true, monthsTotal: DEFAULT_PLAN_SETTINGS.freeMonthsStandard + bonus, bonusMonths: bonus, capReached: bonus >= 18 }
+  }
+  private summaryOf(uid: string): ReferralSummary {
+    const plan = this.planOf(uid)
+    const mine = [...this.invitedBy.values()].filter((r) => r.referrer === uid)
+    const mineAsInvited = this.invitedBy.get(uid)
+    return {
+      ...plan,
+      code: this.codeOf(uid),
+      invited: mine.length,
+      joined: mine.length,
+      successful: mine.filter((r) => r.status !== 'joined').length,
+      waiting: mine.filter((r) => r.status === 'qualified').length,
+      monthsEarned: plan.bonusMonths,
+      invitedByFriend: !!mineAsInvited,
+      awaitingFirstMap: mineAsInvited?.status === 'joined',
+      minTopics: DEFAULT_PLAN_SETTINGS.minTopicsFirstMap,
+    }
+  }
+  private claim(code: string): ClaimResult {
+    const me = this.current
+    const clean = cleanReferralCode(code)
+    if (!me || !clean || this.invitedBy.has(me.id)) return 'ignored'
+    const referrer = [...this.refCodes.entries()].find(([, c]) => c === clean)?.[0]
+    if (!referrer || referrer === me.id) return 'ignored'
+    this.invitedBy.set(me.id, { referrer, status: 'joined' })
+    return 'claimed'
+  }
+  private firstMap(topics: number): FirstMapResult {
+    const me = this.current
+    const r = me ? this.invitedBy.get(me.id) : undefined
+    if (!me || !r || r.status !== 'joined') return 'none'
+    if (!me.confirmed || topics < DEFAULT_PLAN_SETTINGS.minTopicsFirstMap) return 'waiting'
+    r.status = 'qualified'
+    r.qualifiedAt = this.now()
+    return 'qualified'
+  }
+  /** Test helper: this person's own referral code (made on first ask). */
+  codeFor(email: string) {
+    const u = this.find(email)
+    return u ? this.codeOf(u.id) : ''
   }
 
   // ---- helpers for tests

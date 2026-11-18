@@ -1,3 +1,5 @@
+import type { ClaimResult, FirstMapResult, MyPlan, ReferralSummary } from '../plan'
+
 export type Provider = 'email' | 'google'
 
 export interface AuthUser {
@@ -64,6 +66,11 @@ export interface AccountDb {
   deleteRecent(uid: string, refs: string[]): Promise<void>
   getDriveLink(uid: string): Promise<DriveLinkRow | null>
   putDriveLink(uid: string, link: DriveLinkRow): Promise<void>
+  /** Free access and referrals (supabase/migrations/0004_referrals.sql). Each returns null / 'ignored' when the database has no such function yet. */
+  myPlan(): Promise<MyPlan | null>
+  referralSummary(): Promise<ReferralSummary | null>
+  claimReferral(code: string): Promise<ClaimResult>
+  recordFirstMap(topics: number): Promise<FirstMapResult>
 }
 
 /** Everything the app needs from the sign-in service. The real one is Supabase; tests use a fake. */

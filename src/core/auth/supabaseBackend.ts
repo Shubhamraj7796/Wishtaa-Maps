@@ -1,6 +1,7 @@
 import type { SupabaseClient, User } from '@supabase/supabase-js'
 import { DRIVE_SCOPE } from '../drive/auth'
 import { toFailure } from './errors'
+import type { MyPlan, ReferralSummary } from '../plan'
 import type { AccountDb, AuthBackend, AuthUser, BackendEvent, DriveLinkRow, PrefsRow, Provider, RecentRow } from './types'
 
 /** The browser storage key for the session. */
@@ -36,6 +37,15 @@ const EVENTS: Record<string, BackendEvent | undefined> = {
 function accountDb(c: SupabaseClient): AccountDb {
   const check = (error: { message: string; code?: string } | null) => {
     if (error) throw toFailure(error)
+  }
+  /** Calls a database function. A function that does not exist yet gives null; any other failure is thrown. */
+  const rpc = async <T>(fn: string, args?: Record<string, unknown>): Promise<T | null> => {
+    const { data, error } = await c.rpc(fn, args)
+    if (error) {
+      if (error.code === 'PGRST202' || error.code === '42883') return null
+      throw toFailure(error)
+    }
+    return (data ?? null) as T | null
   }
   return {
     async getProfile(uid) {
@@ -79,6 +89,21 @@ function accountDb(c: SupabaseClient): AccountDb {
     async putDriveLink(uid, link) {
       const { error } = await c.from('drive_links').upsert({ user_id: uid, ...link }, { onConflict: 'user_id' })
       check(error)
+    },
+    // Free access and referrals: the database does the work (functions in 0004_referrals.sql). A missing function (migration not run, or undone)
+    // is "nothing to show", never an error for the person.
+    async myPlan() {
+      return (await rpc<MyPlan>('my_plan')) ?? null
+    },
+    async referralSummary() {
+      return (await rpc<ReferralSummary>('my_referral_summary')) ?? null
+    },
+    async claimReferral(code) {
+      return (await rpc<string>('claim_referral', { p_code: code })) === 'claimed' ? 'claimed' : 'ignored'
+    },
+    async recordFirstMap(topics) {
+      const r = await rpc<string>('record_first_map', { p_topics: Math.max(0, Math.floor(topics)) })
+      return r === 'qualified' || r === 'waiting' ? r : 'none'
     },
   }
 }

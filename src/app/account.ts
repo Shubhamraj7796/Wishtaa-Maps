@@ -2,6 +2,8 @@ import { useSyncExternalStore } from 'react'
 import { AccountSync } from '@/core/auth/accountSync'
 import { authConfig, authEnabled } from '@/core/auth/config'
 import { AuthController, type AccountHooks, type AuthState } from '@/core/auth/controller'
+import { claimStoredReferral } from '@/core/referral/claim'
+import { refFromSearch, rememberRef, searchWithoutRef } from '@/core/referral/capture'
 import { PREFS_VERSION, pickPrefs, samePrefs, sanitizePrefs } from '@/core/auth/prefs'
 import type { AccountDb, AuthUser } from '@/core/auth/types'
 import type { FileRecord } from '@/core/files/types'
@@ -148,8 +150,24 @@ export const useAuth = (): AuthState => useSyncExternalStore(auth.subscribe, aut
 /** Called at start-up: reads the saved sign-in when there is one (or a sign-in link/Google return is being processed). */
 export function startAuth() {
   if (!auth.enabled) return
+  captureReferralLink()
   const s = auth.state
   if (s.status === 'signed-in' || s.status === 'loading' || returningFromAuth()) void auth.init()
+}
+
+/** A link with ?ref=CODE: remembers the code in this browser (30 days) and takes it out of the address bar. Needs no account and sends nothing. */
+export function captureReferralLink() {
+  if (typeof location === 'undefined') return
+  const code = refFromSearch(location.search)
+  if (code) rememberRef(code, local())
+  const clean = searchWithoutRef(location.search)
+  if (clean !== null) {
+    try {
+      history.replaceState(history.state, '', `${location.pathname}${clean}${location.hash}`)
+    } catch {
+      /* the address stays as it is */
+    }
+  }
 }
 
 // ---------------------------------------------------------------- account data
@@ -168,6 +186,7 @@ async function startAccountSync(user: AuthUser, info: { newBrowserUser: boolean 
   void auth.loadProfile()
   void reconcilePrefs(db, s, user.id).catch(() => undefined)
   void linkDrive(db, s, user)
+  void claimStoredReferral(db, local()).catch(() => undefined) // attaches a friends link, once; every no is silent
   if (info.newBrowserUser) void offerGuestFiles(user.id)
 }
 
