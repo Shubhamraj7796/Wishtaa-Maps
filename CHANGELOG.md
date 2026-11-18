@@ -2,9 +2,13 @@
 
 ## Unreleased
 
-### Referral programme and free access (steps 1 and 2, local commits, nothing pushed, nothing migrated)
+### Referral programme and free access (steps 1 to 6, local commits, nothing pushed)
 - Step 1: `src/core/plan.ts`: the settings (6 months standard, 1 per referral, cap 24, delay 7 days, 3 topics), calendar-month arithmetic with the month-end rule, the cap, `hasPro()` (unlocks nothing that exists today) and the referral code check, with tests.
 - Step 2: the migration FILE `supabase/migrations/0004_referrals.sql` (settings, plans, codes, referrals, append-only log, `admin_users`, owner-only RLS, functions), the RLS test `supabase/tests/referrals_rls_test.sql`, and undo files in `supabase/undo/`. Not run on Supabase; run and checked only on an in-memory PostgreSQL. See docs/referrals.md.
+- Step 3: a friend link `/?ref=CODE` is remembered for 30 days (and taken out of the address bar) and attached once after sign-in; every refusal is silent and never blocks sign-in.
+- Step 4: an invited person's first real map (typed in this session, enough topics) is reported as a number only, at most once a minute, then never again; migration `0005_referral_summary_extras.sql` (one function) with a test and an undo file.
+- Step 5: "Refer a friend" panel (account menu and Account page): my link, Copy and Share icons, counts, months earned, free period, the one note; the quiet "Invited by a friend" line in the sign-in box; all wording in `src/app/referral/wording.ts`.
+- Step 6: Terms clause 6 and Privacy section drafts (placeholders marked), docs/referrals.md, real-browser test and pictures.
 
 ### Notes and tasks (steps 1 to 5, built and committed locally, nothing pushed)
 - Step 1: one **popup shell** (`src/ui/ItemPopup.tsx`) for notes and tasks: centred on a computer or tablet, a full-screen sheet under 640 px; Tab stays inside, Escape or a press on the dim background closes it, the focus goes back to where it was, a popover opened inside it takes Escape first, and the map keys wait behind it.

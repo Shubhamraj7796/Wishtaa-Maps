@@ -1,7 +1,8 @@
 # Referral programme and free access
 
-Status: **steps 1 and 2 done** (settings + month maths in code, the database migration as a FILE). The migration has **not been run** on any real
-Supabase project. Steps 3 to 6 (capture and claim, first-map hook, "Refer a friend" panel, Terms/Privacy drafts) wait for the owner's "continue".
+Status: **all six steps built and committed locally, nothing pushed.** On the live Supabase project the owner ran `0003_accounts.sql` and
+`0004_referrals.sql`, and the RLS test printed ALL REFERRAL AND RLS TESTS PASSED there. **Not yet run on Supabase: `0005_referral_summary_extras.sql`**
+(optional, see below). Not tested for real: Google sign-in, email delivery, the native share sheet on a phone, Safari, Firefox.
 
 ## The rules (owner, final)
 - Every new account gets **6 months** of free access (referred or not).
@@ -77,7 +78,8 @@ lazy reward step inside `my_plan()` / `my_referral_summary()`) or by the owner i
    Check (read-only): `select key, value from public.app_settings order by key;` should show 7 rows, and
    `select tablename, rowsecurity from pg_tables where schemaname = 'public' and tablename in ('app_settings','admin_users','entitlements','referral_codes','referrals','entitlement_log');`
    should show `true` on all 6. After a new sign-up, `select count(*) from public.entitlements;` goes up by one (or it is filled on first sign-in).
-4. Run the test: `supabase/tests/referrals_rls_test.sql` (see below). Do NOT run `0001_schema.sql` or `0002_rls.sql` (an old unused plan).
+4. Run the test: `supabase/tests/referrals_rls_test.sql` (see below). Do NOT run `0001_schema.sql` or `0002_rls.sql` (an old unused plan), and do NOT run
+   `docs/proposed/0003_files_and_kb.sql` (a proposal for a different, unused design; it changes tables that do not exist in this project).
 
 ## The RLS and rules test
 `supabase/tests/referrals_rls_test.sql`: paste it into the SQL editor and Run, **after** 0004. It makes test accounts (`@rls-test.invalid`) inside one
@@ -97,6 +99,41 @@ rule; the log refuses update, delete and truncate; admin is only a table row; de
   Its first statement stops the script until you delete that one line. Keeps accounts, Drive files and maps (maps are never in Supabase).
 - Neither undo is ever run by the assistant.
 
-## Code (so far)
-- `src/core/plan.ts` (+ `plan.test.ts`): settings defaults mirroring the seed, `addMonthsUtc`, `totalMonths`, `bonusRoom`, `freeUntil`, `hasPro`,
-  `cleanReferralCode`.
+## Migration 0005 (small, optional but recommended)
+`supabase/migrations/0005_referral_summary_extras.sql` replaces ONE function (`my_referral_summary`) so it also says whether THIS account was invited and has
+not saved a first real map yet (`awaitingFirstMap`) and how many topics that map needs (`minTopics`). No table or data changes. Run it by hand after 0004,
+then `supabase/tests/referrals_0005_test.sql` (ends with ROLLBACK; good result: `0005 TESTS PASSED`). Without it the app still works: an invited person is
+then treated as waiting, and the database answer ends it. Undo: `supabase/undo/0005_referral_summary_extras_undo.sql`.
+
+## How it works in the app
+1. **Capture** (`src/core/referral/capture.ts`, called from `startAuth()` in `src/app/account.ts`): a link `https://maps.wishtaa.com/?ref=CODE` is checked (8 allowed
+   characters), stored in local storage as `wishtaamaps:ref` for 30 days (it survives the trip to Google and the emailed confirmation link), and `ref` is removed from
+   the address bar. A bad code changes nothing; the newest good link wins. Only when this site has accounts switched on.
+2. **Claim** (`src/core/referral/claim.ts`): after every sign-in the remembered code is sent once to `claim_referral`. The DATABASE decides (new account, real code, not
+   your own, not an alias of you, not already invited); every "no" is the silent answer `ignored`; the code is forgotten after any answer and kept only if the network failed.
+3. **First real map** (`src/core/referral/firstMap.ts`, `src/editor/saveEvents.ts`): when an INVITED person has changed something in a map in this session (a template
+   opened and saved without typing does not count) and the save finishes, the app sends ONE number (how many topics) to `record_first_map`, at most once a minute, only
+   while the account is waiting, and stops for good when the database answers "qualified" or "none". Read mode and edits that arrive from another device never count.
+4. **Reward** (database, lazy): when the referrer opens the panel or signs in (`my_plan()` / `my_referral_summary()`), referrals past the 7 day wait add their month.
+5. **Panel** (`src/app/referral/ReferFriend.tsx`): account menu, "Refer a friend" (gift icon) and a section on the Account page. My link with Copy and Share icons (Share only
+   where the device has a share sheet), Invited / Joined / Successful counts, months earned (+ "n on the way"), the free period line, the cap line, and the one note.
+   Invited people are never shown: counts only. A database without the referral functions shows "Referrals are not available yet." (no error screen).
+6. **Quiet line:** the sign-in box shows "Invited by a friend" only when a remembered link is waiting. No banners anywhere.
+
+## Wording
+Every word the person sees about the programme is in ONE file: `src/app/referral/wording.ts` (title, the note, "Free for founding members", "Free until <date>",
+"Maximum free period reached", "Invited by a friend"). Change the text there; the numbers are settings in the database (table above).
+
+## Terms and Privacy drafts
+`public/terms/index.html` has a new clause 6 "Free access and referrals" (later clauses renumbered 7 to 11) and `public/privacy/index.html` a new section "Free access, referrals
+and administrators" plus a bullet in "What we store" and an addition to "How long we keep it". Placeholders are marked `[ ... ]` for the owner: the numbers (6, 1, 7, 24),
+the launch date, what happens when free access ends, how long the log is kept. They are drafts, not legal advice, and the DRAFT box stays until the owner removes it.
+The Privacy draft states that an administrator never sees map content or pictures (they are not in Supabase), that the inviter sees only counts, and that the hashed email exists only to stop double counting.
+
+## Tests
+- Unit: `src/core/plan.test.ts` (month maths, cap, hasPro), `src/core/referral/claim.test.ts` and `firstMap.test.ts`, `src/app/referralCapture.test.ts`,
+  `src/editor/saveEvents.test.ts` (the editor announces a save only after the person typed), `src/app/referral/referral.ui.test.tsx` (panel, copy, share, cap, errors, the whole chain with
+  the stand-in sign-in service), `src/app/legalPages.test.ts`.
+- Real browser (Chrome, pretend Supabase): `e2e/referral.spec.ts` (`node e2e/build-auth.mjs`, then `npx playwright test e2e/referral.spec.ts`). Pictures: `docs/screenshots/referral/`.
+- Database: `supabase/tests/referrals_rls_test.sql` and `referrals_0005_test.sql` (run by the owner on Supabase: 0004 passed).
+- NOT tested: real Google sign-in, real email delivery, the real native share sheet on a phone or tablet, Safari, Firefox, a screen reader.

@@ -1,3 +1,4 @@
+/* global process, console */
 // Builds one PDF from the notes layout pictures (a caption above each), using the installed Chrome.
 // Run: CHROME_PATH=... node scripts/notes-report-pdf.mjs
 import { chromium } from '@playwright/test'
