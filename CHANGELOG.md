@@ -51,6 +51,12 @@
 - **Fix:** while page sizes are still being learned in the background, the page in view no longer slides away in a PDF whose pages differ in size (the place is put back each time).
 - The two-pages book button is on the top bar from a 560 px panel; below that it is in the View menu. The View menu opens to the left when it would run off the window, even after the panel moved under it.
 
+### Task view: Month and Board (local commits, nothing pushed)
+- The Task view has three icon choices: **Agenda**, **Month** and **Board** (remembered on this device).
+- **Month:** a calendar of the map's tasks (Monday-to-Sunday weeks, today marked, tasks on their days, a day list beside it or below it, a no-date icon, keys for days and months, the plus icon adds a task on the picked day).
+- **Board:** To do, Doing and Done columns; drag a card with the mouse or use the two icons on a card; the plus icon in a column adds a task there.
+- Tests in jsdom and real Chrome (desktop, phone-size, dark mode). Not built: dragging a task to another day, finger dragging on the Board, all maps.
+
 ### Icons first, steps 5 to 7 (local commits, nothing pushed)
 - **No native `title` tooltips left in the app.** Every plain HTML element that had one now uses the shared tooltip (hover after half a second, keyboard focus, long press on touch). A button with only an icon gets its screen-reader name from the same text. A guard test (`src/ui/noNativeTitle.test.ts`) keeps it that way.
 - **Map toolbar and Read toolbar: captions removed** (icons with tooltips). Measured at 1366 x 768: the toolbar went from 51 to 39 px high, so the drawing area grew from 633 to 645 px (+12 px). At 1024 x 768 and 768 x 1024 the toolbar was already 39 px (the captions only showed from 1280 px) and nothing changed.

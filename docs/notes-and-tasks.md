@@ -35,7 +35,7 @@ Several notes per topic, tasks of their own, and a Task view. Built in five smal
 - **Filters** (hidden until the filter icon is pressed; the icon is highlighted while anything but the start view is chosen, and a Clear icon appears): status (starts with To do and Doing), priority 1 to 5, topic with "this topic only" or "with its sub topics", due between two dates (tasks with no date drop out), a search box (title, details, topic path; finds tasks with no topic too). The state is kept while switching between Map, Outline and Tasks. "Project" is this map (the all-maps scope is a later step; the screen says "This map only").
 - **Add a task** (plus icon) starts a task on the selected topic and opens it. Read mode: no Add, a tick says reading mode.
 - Tests: `agenda.test.ts`, `taskView.test.tsx`, `e2e/notes-tasks.spec.ts` (real Chrome: groups, tick, filters, popup from a row, map keys ignored, phone-size window without sideways scroll).
-- **Not built (later steps, waiting for a new "go"):** Month calendar, Board by status, all maps ("maps opened on this device").
+- **Month and Board:** built later, see "Month and Board" below. **Not built:** all maps ("maps opened on this device").
 
 # Part 2: wider notes, a task on the note, the Task view by time
 
@@ -87,3 +87,22 @@ Several notes per topic, tasks of their own, and a Task view. Built in five smal
 - **Minimize** (`state.ts`: `minimizeNote`, `restoreNote`, `closeNote`, `closeAllItems`; `MinimizedTray.tsx`; `ItemsHost`): the open note and the minimized ones (at most 4, `MAX_MINIMIZED`) are all mounted; a minimized popup is only hidden (`hidden`, `aria-hidden`), takes no keys and has no focus, so the editor keeps its text, cursor and undo history; the scroll position is saved and put back (`RichNoteEditor` `restore`). Closing the map saves everything first (`closeCurrent` in `session.ts`).
 - **Tray placement** (`usePanelBox`): bottom left, 44 px above the window bottom (status bar below); beside the side panel on a wide window; on a phone above the bottom sheet when no popup covers it, and at most `100vw - 172 px` wide so it stops short of the bottom-right floating buttons. While it has chips the open popup leaves 96 px (`TRAY_STRIP`) free at the bottom.
 - **F8** (`registry.ts` `notes`, `actions.ts` `toggleNotes`): see `docs/keyboard-shortcuts.md`.
+
+# Month and Board (Task view)
+
+## The three ways to see the tasks
+The Task view has three icon choices at the left of its bar (a radio group "Task view"): **Agenda** (the list by date, as before), **Month** and **Board**. The choice is remembered on this device (`wishtaa.taskMode`; a bad value means Agenda). Search, the filters and the plus icon are shared; the Arrange menu belongs to the Agenda only. State is in `taskViewState.ts` (`mode`, `month`, `day`).
+
+## Month (`MonthView.tsx`, logic in `core/tasks/month.ts`, tests in `monthBoard.test.ts` and `taskModes.test.tsx`)
+- Whole Monday-to-Sunday weeks (the same week the Agenda uses), 4 to 6 rows, today marked. A square shows its day number and the first three tasks (with their time, earliest first; "+n" for more) from a tablet width; on a phone small dots. Done tasks appear only when the Done status is shown in the filters (dimmed, struck through); overdue ones are red.
+- A click on a square picks the day; its tasks are listed beside the calendar (below it on a narrow window). A click on a task chip or row opens the task popup. Tasks with no date have their own icon with a count (they are not on the grid).
+- Keyboard: arrow keys move a day or a week, Page Up / Page Down a month (31 Jan + 1 month = 28 Feb), Home / End the first and last day of the month; the focus follows. Icons: previous / next month, Go to today.
+- The plus icon adds a task due on the picked day (tooltip "Add a task on 19 Nov") and opens it. Read mode: nothing can be added. Not built: dragging a task to another day (change the date in the task popup).
+
+## Board (`BoardView.tsx`, logic in `core/tasks/board.ts`)
+- Three columns, To do, Doing and Done, always there (an empty one stays so a card can be dropped in). Cards are sorted by priority (1 first, none last), then due date and time (none last), then name. The status filter does not apply (the columns are the statuses), so its row is hidden; the other filters and the search do.
+- Moving a card: drag it to another column with the mouse, or use the two small icons on the card ("Move to Doing", "Move to Done": every device, keyboard and screen readers too). The status is written to the task (a topic that is a task works too). Finger dragging is not built; the card icons are the touch way. In Read mode cards are not draggable and the icons only say that reading mode cannot change a task.
+- The plus icon in a column adds a task in that status and opens it (a new task left with no title is removed again, as always). On a phone the columns sit side by side and scroll sideways inside the board (the page itself never scrolls sideways).
+
+## Tests and what was not tested
+`monthBoard.test.ts` (pure logic), `taskModes.test.tsx` (the view in jsdom), `e2e/task-modes.spec.ts` (real Chrome, desktop, phone-size touch window, dark mode, a real mouse drag, keys, reload). NOT tested: a real phone or tablet, finger dragging, Safari, Firefox, a screen reader. Pictures: `docs/screenshots/task-month-board/`.
