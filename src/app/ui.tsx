@@ -2,7 +2,10 @@ import { useCallback, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import type { SortKey, SortSpec } from '@/core/files/types'
 import { ArrowDown, ArrowUp, LayoutGrid, List } from './icons'
-import { TipButton } from '@/ui/IconButton'
+import { IconButton, TipButton } from '@/ui/IconButton'
+import { Icon, type IconName } from '@/ui/icons'
+import { SELECTED, UNSELECTED } from '@/ui/iconSize'
+import { Popover } from '@/ui/Popover'
 
 /** A value remembered in this browser (view mode, sort order, dismissed banners). */
 export function usePref<T extends string>(key: string, fallback: T, allowed?: readonly T[]): [T, (v: T) => void] {
@@ -102,20 +105,35 @@ export function Chips<T extends string>({ chips, value, onChange, label }: { chi
 
 const SORT_LABELS: Record<SortKey, string> = { modified: 'Editing time', name: 'Name', created: 'Created' }
 
+const SORT_ICON: Record<SortKey, IconName> = { modified: 'clock', name: 'type', created: 'filePlus' }
+
+/** Sort: an icon (its tooltip names the current choice) that opens a small menu of what to sort by, and an icon that turns the order round. */
 export function SortControl({ sort, onChange }: { sort: SortSpec; onChange: (s: SortSpec) => void }) {
+  const [anchor, setAnchor] = useState<HTMLElement | null>(null)
   return (
     <div className="flex items-center gap-1">
-      <label className="sr-only" htmlFor="sort-key">Sort by</label>
-      <select
-        id="sort-key"
-        value={sort.key}
-        onChange={(e) => onChange({ ...sort, key: e.target.value as SortKey })}
-        className="rounded-ui border border-line bg-surface px-2 py-1.5 text-sm"
-      >
-        {(Object.keys(SORT_LABELS) as SortKey[]).map((k) => (
-          <option key={k} value={k}>{SORT_LABELS[k]}</option>
-        ))}
-      </select>
+      <IconButton icon="arrange" label={`Sort by: ${SORT_LABELS[sort.key]}`} aria-haspopup="menu" aria-expanded={!!anchor} selected={!!anchor} onClick={(e) => setAnchor(anchor ? null : e.currentTarget)} className="h-8 w-8 border-line bg-surface" />
+      {anchor && (
+        <Popover anchor={anchor} onClose={() => setAnchor(null)} label="Sort by" className="w-48 p-1">
+          {(Object.keys(SORT_LABELS) as SortKey[]).map((k, i) => (
+            <button
+              key={k}
+              type="button"
+              role="menuitemradio"
+              aria-checked={sort.key === k}
+              data-autofocus={sort.key === k || (i === 0 && !sort.key) ? '' : undefined}
+              onClick={() => {
+                onChange({ ...sort, key: k })
+                setAnchor(null)
+              }}
+              className={`flex w-full items-center gap-2 rounded-ui px-2 py-1.5 text-left text-sm [@media(pointer:coarse)]:min-h-11 ${sort.key === k ? SELECTED : UNSELECTED}`}
+            >
+              <Icon name={SORT_ICON[k]} size={18} className="shrink-0" />
+              <span className="min-w-0 flex-1 truncate">{SORT_LABELS[k]}</span>
+            </button>
+          ))}
+        </Popover>
+      )}
       <TipButton
         type="button"
         onClick={() => onChange({ ...sort, dir: sort.dir === 'asc' ? 'desc' : 'asc' })}

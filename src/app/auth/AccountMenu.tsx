@@ -4,7 +4,7 @@ import type { AuthUser } from '@/core/auth/types'
 import { auth, useAuth } from '../account'
 import { useAuthUi } from '../authUi'
 import { useFiles } from '../FilesContext'
-import { Gift, LogOut, User, UserRound } from '../icons'
+import { Gift, HardDrive, LogOut, Settings, User, UserRound } from '../icons'
 import { WORDING } from '../referral/wording'
 import { TipButton } from '@/ui/IconButton'
 
@@ -95,8 +95,8 @@ export function AccountMenu() {
             </div>
           </div>
           <div className="my-1 h-px bg-line" role="separator" />
-          <button type="button" role="menuitem" className={item} onClick={choose(() => f.setDialog({ kind: 'preferences' }))}>Preferences</button>
-          <button type="button" role="menuitem" className={item} onClick={choose(() => f.setDialog({ kind: 'storage' }))}>Storage settings</button>
+          <button type="button" role="menuitem" className={item} onClick={choose(() => f.setDialog({ kind: 'preferences' }))}><Settings size={15} aria-hidden="true" /> Preferences</button>
+          <button type="button" role="menuitem" className={item} onClick={choose(() => f.setDialog({ kind: 'storage' }))}><HardDrive size={15} aria-hidden="true" /> Storage settings</button>
           <button type="button" role="menuitem" className={item} onClick={choose(() => navigate('/account'))}><User size={15} aria-hidden="true" /> Account</button>
           <button type="button" role="menuitem" className={item} onClick={choose(() => openAuth({ kind: 'refer' }))}><Gift size={15} aria-hidden="true" /> {WORDING.title}</button>
           <div className="my-1 h-px bg-line" role="separator" />

@@ -151,7 +151,8 @@ describe('file list', () => {
     await seed()
     mount('/files')
     await screen.findByRole('button', { name: 'Open Beta' })
-    fireEvent.change(screen.getByLabelText('Sort by'), { target: { value: 'name' } })
+    fireEvent.click(screen.getByRole('button', { name: /^Sort by: / }))
+    fireEvent.click(await screen.findByRole('menuitemradio', { name: 'Name' }))
     fireEvent.click(screen.getByRole('button', { name: /^Descending/ }))
     const order = () =>
       within(screen.getByRole('list', { name: 'Files' }))
