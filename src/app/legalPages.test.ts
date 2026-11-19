@@ -35,7 +35,7 @@ describe('privacy and terms pages (static drafts)', () => {
     expect(privacy).toMatch(/never see your maps, notes, PDFs or pictures, because these are not stored on our servers/)
     expect(privacy).toMatch(/how many topics it has/)
     expect(privacy).toMatch(/We keep no payment details/)
-    expect(privacy).toMatch(/The log is kept for up to 24 months/)
+    expect(privacy).toMatch(/The log is kept for as long as your account exists, and for up to 24 months after it is closed/)
     expect(terms).toMatch(/<h2>6\. Free access and referrals<\/h2>/)
     expect(terms).toMatch(/<mark>\[6\]<\/mark> months of free access/)
     expect(terms).toMatch(/<mark>\[1\]<\/mark> more month/)
