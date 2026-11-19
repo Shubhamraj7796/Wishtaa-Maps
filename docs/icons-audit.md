@@ -5,7 +5,13 @@ Rule 8 in `CLAUDE.md`: an icon with a tooltip wherever it can be understood alon
 ## Progress
 
 - Steps 1 to 4 done: shared Tooltip and controls, the 14 icons, the PDF View menu, the PDF top bar, the capture bar, the selected-markup and lasso bars, and the pen bar tooltips.
-- Steps 5 to 7 to do: map toolbar and header (captions, native titles), Insert menu, quick toolbar, picture bars, Files, leading icons in the menus, then whatever Part 2 still lists.
+- Steps 5 to 7 done (2026-11-19): 
+  - **No native `title` anywhere.** 133 buttons now use `TipButton` and the other 17 elements (spans, labels, a select, inputs, divs) are wrapped in the shared `<Tooltip>`; inputs and selects keep their name as `aria-label`. `src/ui/noNativeTitle.test.ts` fails the build if a `title` attribute is added to a plain HTML element again (an iframe title for screen readers is allowed).
+  - **Captions gone** from the map toolbar and the Read toolbar (Map, Outline, Tasks, Topic, Sub Topic, Floating, Relationship, Callout, Boundary, Summary, Insert): icons with tooltips. The `caption` option of `IconButton` was removed.
+  - **Files browser:** Sort is an icon (its tooltip names the current choice) that opens a small menu with icons (Editing time, Name, Created); the direction and the grid/list view were already icons. Create folder stays a card with words (it is a start-of-task card, not a toolbar control).
+  - **Menus:** the file, right-click and Insert menus already had a leading icon on every row; the account menu now has one on Preferences and Storage settings too.
+  - **Kept with words on purpose (Part 1):** Edit | Read switch, save status and location chips, dialogs, sign-in, Preferences, Terms/Privacy, settings forms, primary buttons (Add, Cancel, Save), the Insert menu list (eleven different objects; icon plus word), PDF rare-command menus.
+  - **A tooltip fix found on the way:** when a control with a tooltip sits inside a wrapper that has its own tooltip, focus and long press now show the inner control's name (they used to be replaced by the wrapper's).
 - The scan below counts controls with words; rows in the PDF panel that are meant to keep words (menus of rare commands, the customise checklist, Into: / Change, dialogs) still appear in it.
 
 ## Part 1: decisions

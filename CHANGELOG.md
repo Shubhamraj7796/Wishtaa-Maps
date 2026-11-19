@@ -51,6 +51,12 @@
 - **Fix:** while page sizes are still being learned in the background, the page in view no longer slides away in a PDF whose pages differ in size (the place is put back each time).
 - The two-pages book button is on the top bar from a 560 px panel; below that it is in the View menu. The View menu opens to the left when it would run off the window, even after the panel moved under it.
 
+### Icons first, steps 5 to 7 (local commits, nothing pushed)
+- **No native `title` tooltips left in the app.** Every plain HTML element that had one now uses the shared tooltip (hover after half a second, keyboard focus, long press on touch). A button with only an icon gets its screen-reader name from the same text. A guard test (`src/ui/noNativeTitle.test.ts`) keeps it that way.
+- **Map toolbar and Read toolbar: captions removed** (icons with tooltips). Measured at 1366 x 768: the toolbar went from 51 to 39 px high, so the drawing area grew from 633 to 645 px (+12 px). At 1024 x 768 and 768 x 1024 the toolbar was already 39 px (the captions only showed from 1280 px) and nothing changed.
+- **Files:** Sort is now an icon with a menu (Editing time, Name, Created); the account menu rows Preferences and Storage settings got leading icons.
+- **Fix:** a control inside a wrapper that has its own tooltip now shows its own name on focus and long press.
+
 ### Icons first, steps 1 to 4 (shared tooltip, icon set, PDF View menu and bars)
 - **One tooltip for the whole app** (`src/ui/Tooltip.tsx`): hover (after half a second, at once between neighbours), keyboard focus, and a **long-press on touch** that shows the name without running the control. It is drawn in a layer above everything, so a menu or panel never clips it, and it follows the screen edge. The header and Read-toolbar buttons use it now.
 - **Shared controls** (`IconButton`, `IconTile`, `IconToggleGroup`, `Swatch`, `TipButton`): the name is required (aria-label and tooltip), the chosen option is a highlighted background, one size (36 px, 44 px on touch).
@@ -58,7 +64,7 @@
 - **PDF View menu rebuilt as icons**: pages (one, two, first page alone), reading (scrolling, 1-page flipping, right to left), four colour swatches, zoom - / % / + (the percentage is the real zoom, also while Fit is on; click it for a list), fit width / page / height, actual size, presentation (greyed), reset. 296 x 257 px with no scrolling (it was 288 x 600 px and scrolled). First page alone and 1-page flipping are greyed out, not hidden, until two pages are chosen. The menu opens to the left when it would run off the window.
 - **PDF top bar**: Capture area, Split, Markup, View, Two pages, Focus, More, the page arrows and the size button are icons only (the PDF name, page number and zoom percentage stay text). Split now fits from a 560 px panel (it was 700 px).
 - **Capture bar**: Add as Sub-topic / Next sibling / New branch and Keep capturing are icon toggles. **Selected markup and lasso bars**: Add note, Make topic, Copy, Delete, Done are icons. The pen bar, its flyouts and the customise panel use the shared tooltip instead of the browser one.
-- Steps 5 to 7 (map toolbar and header captions, Insert menu, Files, menu icons, the rest of `docs/icons-audit.md`) are still to do.
+- Steps 5 to 7: see "Icons first, steps 5 to 7" above.
 
 ### Pen and markup: customisable bar, pressure, straight-angle correction, palm rejection, lasso (PDF panel, Part 2 C1 to C3)
 - **Customise the tools** (the sliders button on the pen bar): choose which tools show and their order (Select always stays), with **Reset to defaults** (every tool back, presets forgotten, pen settings back). Kept on this device.
