@@ -137,3 +137,20 @@ The Privacy draft states that an administrator never sees map content or picture
 - Real browser (Chrome, pretend Supabase): `e2e/referral.spec.ts` (`node e2e/build-auth.mjs`, then `npx playwright test e2e/referral.spec.ts`). Pictures: `docs/screenshots/referral/`.
 - Database: `supabase/tests/referrals_rls_test.sql` and `referrals_0005_test.sql` (run by the owner on Supabase: 0004 passed).
 - NOT tested: real Google sign-in, real email delivery, the real native share sheet on a phone or tablet, Safari, Firefox, a screen reader.
+
+## Before you announce the programme (dashboards, your part, in this order)
+1. **Custom email sender (SMTP)** first, because a friend only counts after confirming their email, and Supabase's built-in mailer sends very few emails per hour.
+   Steps: `docs/auth-setup.md` Part A step 7 (create the sender `no-reply@wishtaa.com` with Resend/Postmark/Brevo/SES, publish its SPF, DKIM and DMARC records, wait for "Verified", then Supabase Authentication, Emails, SMTP Settings, Enable Custom SMTP, Save, and test by signing in with a code).
+2. **Turnstile** (stops bots farming sign-ups): `docs/auth-setup.md` Part A step 10, strictly in its order: Cloudflare Turnstile widget (hostnames `maps.wishtaa.com` and `localhost`), copy the Site key and Secret key,
+   put the Site key in Vercel as `VITE_TURNSTILE_SITE_KEY`, redeploy, and ONLY THEN switch on CAPTCHA protection in Supabase (Authentication, Attack Protection) with the Secret key. Test sign-in on the live site; if it fails, switch protection off again.
+3. **`VITE_SUPPORT_EMAIL` in Vercel** (Project, Settings, Environment Variables, all three environments): the address people should write to. Do it in the same redeploy as step 2. Use the same address for the contact placeholders in Terms and Privacy.
+Google: the consent screen is already In production (External). Allowed origins are `http://localhost:5181` and `https://maps.wishtaa.com`; open the app at localhost, NOT 127.0.0.1, when testing Google or Drive locally.
+
+## What migration 0005 adds (decide later, do not run now)
+It replaces one database function so the referral summary also says whether this account is waiting for its first real map and how many topics that needs; the app works without it.
+
+## Placeholders still for the owner (Terms and Privacy drafts)
+Company or owner legal name (and address): Terms 1 and Privacy "Who we are"; contact email (Terms 11 and footer, Privacy "Who we are", "Your choices", footer); minimum age; country/state and court; the numbers shown as [6] [1] [7] [24] (match the settings); the launch date announcement; region of the Supabase project; name of the email service; backup retention days; grievance officer details; the age for children. The DRAFT box stays until a lawyer or the owner's CA has reviewed both pages.
+
+## Known gap: the 24 month log retention is a promise, not yet enforced
+The Privacy draft says the log is kept for up to 24 months, but the database log is append-only (a trigger refuses every delete, even for the owner), so nothing purges it. Before relying on that sentence a small owner-run purge function (older than 24 months, anonymous rows only) needs to be written and reviewed. Not built.
