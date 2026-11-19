@@ -1,6 +1,6 @@
 import type { ComponentType, SVGProps } from 'react'
 import {
-  AlignLeft, AlertTriangle, Columns2, ArrowDown, ArrowDownLeft, ArrowDownRight, ArrowLeft, ArrowLeftRight, ArrowRight, ArrowUp,
+  AlignLeft, AlertTriangle, CalendarCheck, Columns2, Columns3, ArrowDown, ArrowDownLeft, ArrowDownRight, ArrowLeft, ArrowLeftRight, ArrowRight, ArrowUp,
   ArrowUpDown, ArrowUpLeft, ArrowUpRight, BarChart3, Bell, Bold, Book, Bookmark, Braces, Brush, Calendar, Camera, Check,
   CheckSquare, ChevronDown, ChevronRight, ChevronUp, CircleHelp, Clock, Code, Command, CornerDownRight, Copy, DollarSign, Download,
   Eraser, Eye, Flag, Flame, Focus, Gift, Globe, Hand, Heart, Hash, Heading1, Heading2, Home, Image as ImageIcon, ImagePlus,
@@ -23,7 +23,7 @@ export const ICONS = {
   undo: Undo2, redo: Redo2, plus: Plus, minus: Minus, close: X, check: Check, copy: Copy, trash: Trash2, edit: Pencil,
   topic: Plus, subTopic: CornerDownRight, floating: Shapes, hand: Hand, select: MousePointer2, format: SlidersHorizontal,
   painter: Paintbrush, search: Search, focus: Focus, command: Command, help: CircleHelp, moon: Moon, sun: Sun,
-  share: Share2, relationship: Share2, callout: MessageSquare, boundary: SquareDashed, summary: Braces, insert: Plus,
+  share: Share2, board: Columns3, today: CalendarCheck, relationship: Share2, callout: MessageSquare, boundary: SquareDashed, summary: Braces, insert: Plus,
   notes: StickyNote, inlineNote: AlignLeft, tag: Tag, task: ListChecks, taskDone: CheckSquare, link: Link2, unlink: Unlink,
   attachment: Paperclip, latex: Sigma, table: Table, numbering: ListOrdered, image: ImageIcon, imageAdd: ImagePlus, camera: Camera, split: Columns2, pdf: FileText, flipH: FlipHorizontal2, highlighter: Highlighter, square: Square, circle: Circle, rotateCw: RotateCw, eyeOff: EyeOff, arrowUpRight: ArrowUpRight,
   openBook: Book, mark: Smile, clipart: Shapes, details: Layers, layout: LayoutGrid, theme: Palette, style: Brush, outline: List, map: Network,

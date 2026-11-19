@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { addTask, tasksOfTopic, toggleTaskEntry, type TaskEntry } from '@/core/model/tasks'
+import { addTask, tasksOfTopic, toggleTaskEntry, type TaskEntry, type TaskStatus } from '@/core/model/tasks'
 import { IconButton, IconTile } from '@/ui/IconButton'
 import { Popover } from '@/ui/Popover'
 import { formatDue } from '@/core/tasks/agenda'
@@ -17,9 +17,9 @@ export function useTopicTasks(topicId: string, legacy = true): TaskEntry[] {
   return useMemo(() => tasksOfTopic(topics, tasks, topicId).filter((e) => legacy || !e.legacy), [topics, tasks, topicId, legacy])
 }
 
-/** Adds a task to a topic and opens it. */
-export function addTaskAndOpen(topicId: string | null) {
-  openTask(addTask(mapDoc, { topicId }))
+/** Adds a task to a topic and opens it. `init` can set the day it is due (from the calendar) or its status (from a Board column). */
+export function addTaskAndOpen(topicId: string | null, init: { due?: string; status?: TaskStatus } = {}) {
+  openTask(addTask(mapDoc, { topicId, ...init }))
 }
 
 /** A tick box for a task: To do or Doing becomes Done, Done becomes To do. Read mode never changes a task. */
