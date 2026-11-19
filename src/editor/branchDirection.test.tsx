@@ -13,6 +13,7 @@ import { getScene } from './scene'
 import { closeFile, mapDoc, openFile } from './session'
 import { useEditor } from './store'
 import { CanvasTab } from './ui/CanvasTab'
+import { tipOf } from '../test/tipText'
 
 let repo: RepositoryCore
 let fileId = ''
@@ -44,8 +45,9 @@ describe('the Branch direction row (Canvas tab)', () => {
     render(<CanvasTab />)
     expect(group()).toBeTruthy()
     expect(['Balanced', 'Clockwise', 'Reverse'].map((n) => button(n).getAttribute('aria-checked'))).toEqual(['true', 'false', 'false'])
-    expect(button('Clockwise').getAttribute('title')).toMatch(/down the right side, then up the left/)
-    expect(button('Reverse').getAttribute('title')).toMatch(/anticlockwise/)
+    expect(button('Clockwise').getAttribute('title')).toBeNull()
+    expect(tipOf(button('Clockwise'))).toMatch(/down the right side, then up the left/)
+    expect(tipOf(button('Reverse'))).toMatch(/anticlockwise/)
     expect(button('Balanced').querySelector('svg')).toBeTruthy()
   })
 

@@ -10,6 +10,7 @@ import { Color, Row, Section, field } from './panelKit'
 import { TopicSection } from './TopicStylePanel'
 import { getScene, useScene, useTheme } from '../scene'
 import { useEditor } from '../store'
+import { TipButton } from '@/ui/IconButton'
 
 // ---------------------------------------------------------------------------------------------
 
@@ -52,13 +53,13 @@ export function StyleTab() {
         </Row>
         <Row label="Size">
           <span className="flex items-center gap-1">
-            <button type="button" aria-label="Smaller text" title="Smaller text" onClick={() => A.nudgeFontSize(-2)} className={`${field} px-2 text-xs`}>
+            <TipButton type="button" aria-label="Smaller text" tip="Smaller text" onClick={() => A.nudgeFontSize(-2)} className={`${field} px-2 text-xs`}>
               A−
-            </button>
+            </TipButton>
             <input type="number" aria-label="Font size" min={8} max={72} value={st.fontSize ?? ''} placeholder={String(look.fontSize)} onChange={(e) => A.styleSelected({ fontSize: num(e.target.value) })} className={`${field} w-16`} />
-            <button type="button" aria-label="Bigger text" title="Bigger text" onClick={() => A.nudgeFontSize(2)} className={`${field} px-2 text-sm`}>
+            <TipButton type="button" aria-label="Bigger text" tip="Bigger text" onClick={() => A.nudgeFontSize(2)} className={`${field} px-2 text-sm`}>
               A+
-            </button>
+            </TipButton>
           </span>
         </Row>
         <Color
@@ -70,24 +71,24 @@ export function StyleTab() {
         />
         <Color label="Highlight" value={look.highlight ?? 'transparent'} onChange={(v) => A.styleSelected({ highlight: v })} onNone={st.highlight ? () => A.styleSelected({ highlight: undefined }) : undefined} />
         <div className="flex flex-wrap gap-2" role="group" aria-label="Text style">
-          <button type="button" aria-pressed={look.fontWeight >= 700} aria-label="Bold" title="Bold" onClick={() => A.styleSelected({ fontWeight: look.fontWeight >= 700 ? undefined : 700 })} className={`${field} font-bold ${look.fontWeight >= 700 ? 'border-brand bg-brand/15' : ''}`}>
+          <TipButton type="button" aria-pressed={look.fontWeight >= 700} aria-label="Bold" tip="Bold" onClick={() => A.styleSelected({ fontWeight: look.fontWeight >= 700 ? undefined : 700 })} className={`${field} font-bold ${look.fontWeight >= 700 ? 'border-brand bg-brand/15' : ''}`}>
             B
-          </button>
-          <button type="button" aria-pressed={look.italic} aria-label="Italic" title="Italic" onClick={() => A.styleSelected({ italic: look.italic ? undefined : true })} className={`${field} italic ${look.italic ? 'border-brand bg-brand/15' : ''}`}>
+          </TipButton>
+          <TipButton type="button" aria-pressed={look.italic} aria-label="Italic" tip="Italic" onClick={() => A.styleSelected({ italic: look.italic ? undefined : true })} className={`${field} italic ${look.italic ? 'border-brand bg-brand/15' : ''}`}>
             I
-          </button>
-          <button type="button" aria-pressed={look.underline} aria-label="Underline" title="Underline" onClick={() => A.styleSelected({ underline: look.underline ? undefined : true })} className={`${field} underline ${look.underline ? 'border-brand bg-brand/15' : ''}`}>
+          </TipButton>
+          <TipButton type="button" aria-pressed={look.underline} aria-label="Underline" tip="Underline" onClick={() => A.styleSelected({ underline: look.underline ? undefined : true })} className={`${field} underline ${look.underline ? 'border-brand bg-brand/15' : ''}`}>
             U
-          </button>
-          <button type="button" aria-pressed={look.strike} aria-label="Strikethrough" title="Strikethrough" onClick={() => A.styleSelected({ strike: look.strike ? undefined : true })} className={`${field} line-through ${look.strike ? 'border-brand bg-brand/15' : ''}`}>
+          </TipButton>
+          <TipButton type="button" aria-pressed={look.strike} aria-label="Strikethrough" tip="Strikethrough" onClick={() => A.styleSelected({ strike: look.strike ? undefined : true })} className={`${field} line-through ${look.strike ? 'border-brand bg-brand/15' : ''}`}>
             S
-          </button>
+          </TipButton>
         </div>
         <div className="flex gap-1.5" role="radiogroup" aria-label="Text alignment">
           {(['left', 'center', 'right'] as const).map((al) => (
-            <button key={al} type="button" role="radio" aria-checked={look.align === al} aria-label={`Align ${al}`} title={`Align ${al}`} onClick={() => A.styleSelected({ align: al === 'center' ? undefined : al })} className={`${field} flex-1 ${look.align === al ? 'border-brand bg-brand/15' : ''}`}>
+            <TipButton key={al} type="button" role="radio" aria-checked={look.align === al} aria-label={`Align ${al}`} tip={`Align ${al}`} onClick={() => A.styleSelected({ align: al === 'center' ? undefined : al })} className={`${field} flex-1 ${look.align === al ? 'border-brand bg-brand/15' : ''}`}>
               {al === 'left' ? '⇤' : al === 'center' ? '↔' : '⇥'}
-            </button>
+            </TipButton>
           ))}
         </div>
       </Section>
@@ -98,18 +99,18 @@ export function StyleTab() {
       )}
       <Section title="Format painter">
         <div className="flex flex-wrap gap-2">
-          <button type="button" onClick={A.copyFormat} aria-label="Copy format" title="Copy format (Alt+Shift+C)" className={`${field} flex items-center gap-1.5 hover:bg-bg`}>
+          <TipButton type="button" onClick={A.copyFormat} aria-label="Copy format" tip="Copy format (Alt+Shift+C)" className={`${field} flex items-center gap-1.5 hover:bg-bg`}>
             <Icon name="copy" size={15} /> Copy
-          </button>
-          <button type="button" onClick={A.pasteFormat} disabled={!copied} aria-label="Paste format" title="Paste format (Alt+Shift+V)" className={`${field} flex items-center gap-1.5 hover:bg-bg disabled:opacity-40`}>
+          </TipButton>
+          <TipButton type="button" onClick={A.pasteFormat} disabled={!copied} aria-label="Paste format" tip="Paste format (Alt+Shift+V)" className={`${field} flex items-center gap-1.5 hover:bg-bg disabled:opacity-40`}>
             <Icon name="format" size={15} /> Paste
-          </button>
-          <button type="button" aria-pressed={!!painter} onClick={A.togglePainter} aria-label="Format painter" title="Format painter" className={`${field} flex items-center gap-1.5 ${painter ? 'border-brand bg-brand/15' : 'hover:bg-bg'}`}>
+          </TipButton>
+          <TipButton type="button" aria-pressed={!!painter} onClick={A.togglePainter} aria-label="Format painter" tip="Format painter" className={`${field} flex items-center gap-1.5 ${painter ? 'border-brand bg-brand/15' : 'hover:bg-bg'}`}>
             <Icon name="painter" size={15} /> Painter
-          </button>
-          <button type="button" onClick={A.resetStyleSelected} aria-label="Reset style" title="Reset style" className={`${field} flex items-center gap-1.5 hover:bg-bg`}>
+          </TipButton>
+          <TipButton type="button" onClick={A.resetStyleSelected} aria-label="Reset style" tip="Reset style" className={`${field} flex items-center gap-1.5 hover:bg-bg`}>
             <Icon name="reset" size={15} /> Reset
-          </button>
+          </TipButton>
         </div>
       </Section>
       {!hasRoot && (

@@ -6,6 +6,7 @@ import { commitImageSize, copyImage, downloadImage, removeImage, replaceImage, r
 import { originalFor } from '../pictures/flow'
 import { useEditor } from '../store'
 import { Section, field } from './panelKit'
+import { TipButton } from '@/ui/IconButton'
 
 /** Pictures are kept between these sizes (px), the same rule the resize handles follow. */
 export const MIN_PICTURE = 40
@@ -87,9 +88,9 @@ export function PictureFormat() {
       <Section title="Picture format">
         <div className="flex flex-wrap items-center gap-2 text-sm" role="group" aria-label="Picture size">
           {field2('w', 'Picture width')}
-          <button type="button" aria-pressed={keep} aria-label="Keep aspect ratio" title="Keep aspect ratio" onClick={() => setKeep(!keep)} className={`${iconBtn} ${keep ? 'border-brand bg-brand/15' : ''}`}>
+          <TipButton type="button" aria-pressed={keep} aria-label="Keep aspect ratio" tip="Keep aspect ratio" onClick={() => setKeep(!keep)} className={`${iconBtn} ${keep ? 'border-brand bg-brand/15' : ''}`}>
             <Icon name={keep ? 'link' : 'unlink'} size={15} />
-          </button>
+          </TipButton>
           {field2('h', 'Picture height')}
           <span className="text-xs text-muted">px ({MIN_PICTURE} to {MAX_PICTURE})</span>
         </div>
@@ -129,9 +130,9 @@ export function PictureFormat() {
       <Section title="Position">
         <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Picture position">
           {IMAGE_POSITIONS.map((p) => (
-            <button key={p} type="button" role="radio" aria-checked={pos === p} aria-label={POSITION_LABEL[p]} title={POSITION_LABEL[p]} onClick={() => setPicturePosition(id, p)} className={`${iconBtn} h-9 w-9 ${pos === p ? 'border-brand bg-brand/15' : ''}`}>
+            <TipButton key={p} type="button" role="radio" aria-checked={pos === p} aria-label={POSITION_LABEL[p]} tip={POSITION_LABEL[p]} onClick={() => setPicturePosition(id, p)} className={`${iconBtn} h-9 w-9 ${pos === p ? 'border-brand bg-brand/15' : ''}`}>
               <PositionIcon position={p} />
-            </button>
+            </TipButton>
           ))}
         </div>
         <p className="text-xs text-muted">{POSITION_LABEL[pos]}</p>
@@ -153,26 +154,26 @@ export function PictureFormat() {
           />
         </label>
         <div className="flex flex-wrap gap-1.5">
-          <button type="button" aria-label="Replace the picture" title="Replace the picture" onClick={() => void replaceImage(id)} className={`${field} flex items-center gap-1.5 hover:bg-bg`}>
+          <TipButton type="button" aria-label="Replace the picture" tip="Replace the picture" onClick={() => void replaceImage(id)} className={`${field} flex items-center gap-1.5 hover:bg-bg`}>
             <Icon name="replace" size={15} /> Replace
-          </button>
+          </TipButton>
           {originalFor(image.imageId) && (
-            <button type="button" aria-label="Crop again" title="Crop again (until you close this tab)" onClick={() => useEditor.setState({ pictureDraft: { blob: originalFor(image.imageId) as Blob, source: 'upload', target: { kind: 'replace', id } } })} className={`${field} flex items-center gap-1.5 hover:bg-bg`}>
+            <TipButton type="button" aria-label="Crop again" tip="Crop again (until you close this tab)" onClick={() => useEditor.setState({ pictureDraft: { blob: originalFor(image.imageId) as Blob, source: 'upload', target: { kind: 'replace', id } } })} className={`${field} flex items-center gap-1.5 hover:bg-bg`}>
               <Icon name="image" size={15} /> Crop again
-            </button>
+            </TipButton>
           )}
-          <button type="button" aria-label="Preview the picture" title="Preview" onClick={() => showPreview(image.imageId)} className={iconBtn}>
+          <TipButton type="button" aria-label="Preview the picture" tip="Preview" onClick={() => showPreview(image.imageId)} className={iconBtn}>
             <Icon name="preview" size={16} />
-          </button>
-          <button type="button" aria-label="Download the original picture" title="Download the original" onClick={() => void downloadImage(image.imageId, topic.text)} className={iconBtn}>
+          </TipButton>
+          <TipButton type="button" aria-label="Download the original picture" tip="Download the original" onClick={() => void downloadImage(image.imageId, topic.text)} className={iconBtn}>
             <Icon name="download" size={16} />
-          </button>
-          <button type="button" aria-label="Copy the picture" title="Copy" onClick={() => void copyImage(image.imageId)} className={iconBtn}>
+          </TipButton>
+          <TipButton type="button" aria-label="Copy the picture" tip="Copy" onClick={() => void copyImage(image.imageId)} className={iconBtn}>
             <Icon name="copy" size={16} />
-          </button>
-          <button type="button" aria-label="Delete the picture" title="Delete the picture" onClick={() => removeImage(id)} className={`${iconBtn} text-bad`}>
+          </TipButton>
+          <TipButton type="button" aria-label="Delete the picture" tip="Delete the picture" onClick={() => removeImage(id)} className={`${iconBtn} text-bad`}>
             <Icon name="trash" size={16} />
-          </button>
+          </TipButton>
         </div>
         {/* TODO: AI picture tools and reading text from a picture (OCR) are left out here on purpose. */}
       </Section>

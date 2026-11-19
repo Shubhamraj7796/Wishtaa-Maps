@@ -6,7 +6,7 @@ import { reopenFile } from '@/editor/session'
 import { useEditor } from '@/editor/store'
 import { commandById, displayKeys } from '@/editor/registry'
 import { Icon } from '@/ui/icons'
-import { IconButton } from '@/ui/IconButton'
+import { IconButton, TipButton } from '@/ui/IconButton'
 import { driveRepository } from './repo'
 
 const Divider = () => <div className="mx-1 h-7 w-px shrink-0 bg-line" aria-hidden="true" />
@@ -57,15 +57,15 @@ export function ReadToolbar({ file }: { file: FileRecord }) {
       {drive && (
         <>
           <Divider />
-          <button
+          <TipButton
             type="button"
             disabled={busy}
             onClick={() => void refresh()}
             className="flex items-center gap-1.5 rounded-ui px-2 py-1 text-sm hover:bg-bg disabled:opacity-50"
-            title="Check Google Drive for changes made elsewhere. Nothing is written to Drive."
+            tip="Check Google Drive for changes made elsewhere. Nothing is written to Drive."
           >
             <Icon name="refresh" size={16} /> {busy ? 'Checking…' : 'Refresh from Drive'}
-          </button>
+          </TipButton>
         </>
       )}
       <span className="ml-auto hidden text-xs text-muted md:inline">Read mode: nothing can be changed.</span>

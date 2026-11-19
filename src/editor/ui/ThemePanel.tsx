@@ -12,6 +12,7 @@ import { themeRepository, useSavedThemes } from '../themeLibrary'
 import { Check, Color, Row, Section, field } from './panelKit'
 import { PopoverRow } from './PopoverRow'
 import { LazyThemeThumb, ThemeThumb } from './ThemeThumb'
+import { TipButton } from '@/ui/IconButton'
 
 type GalleryTab = 'light' | 'dark' | 'custom'
 
@@ -68,11 +69,11 @@ function ThemeCard({ theme, active, onApply, preview, children }: { theme: Theme
 
 function SchemeButton({ name, colors, active, onApply, preview }: { name: string; colors: string[]; active: boolean; onApply: () => void; preview: ReturnType<ReturnType<typeof useHoverPreview>> }) {
   return (
-    <button
+    <TipButton
       type="button"
       aria-pressed={active}
       aria-label={`${name} colour scheme`}
-      title={name}
+      tip={name}
       onClick={onApply}
       {...preview}
       className={`flex flex-col gap-1 rounded-ui border p-1.5 text-left ${active ? 'border-brand ring-2 ring-brand/40' : 'border-line hover:border-muted'}`}
@@ -83,7 +84,7 @@ function SchemeButton({ name, colors, active, onApply, preview }: { name: string
         ))}
       </span>
       <span className="truncate text-[11px]">{name}</span>
-    </button>
+    </TipButton>
   )
 }
 

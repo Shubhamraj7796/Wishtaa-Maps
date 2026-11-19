@@ -1,4 +1,5 @@
 import { ColorPicker, type ColorPickerProps } from './ColorPicker'
+import { Tooltip } from '@/ui/Tooltip'
 
 export const field = 'rounded-ui border border-line bg-surface px-2 py-1 text-sm'
 
@@ -13,10 +14,10 @@ export function Row({ label, children }: { label: string; children: React.ReactN
 
 export function Check({ label, checked, onChange, hint }: { label: string; checked: boolean; onChange: (v: boolean) => void; hint?: string }) {
   return (
-    <label className="flex items-start gap-2 text-sm" title={hint}>
+    <Tooltip label={hint}><label className="flex items-start gap-2 text-sm">
       <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="mt-0.5 h-4 w-4 accent-[rgb(var(--c-brand))]" />
       <span>{label}</span>
-    </label>
+    </label></Tooltip>
   )
 }
 

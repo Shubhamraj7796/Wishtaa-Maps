@@ -20,6 +20,7 @@ import { Formula } from '../ui/Formula'
 import { MarkBadge } from '../ui/MarkBadge'
 import { SourceBadge } from '../pdf/SourceBadge'
 import { PictureFace } from '../pictures/PictureFace'
+import { TipButton } from '@/ui/IconButton'
 
 export interface TopicViewProps {
   box: LaidOut
@@ -177,17 +178,17 @@ function TopicPicture(props: {
         </div>
         {selected && (
           <>
-            <button
+            <TipButton
               type="button"
               data-imgbtn
               aria-label="Remove image"
-              title="Remove image"
+              tip="Remove image"
               onPointerDown={(e) => e.stopPropagation()}
               onClick={() => removeImage(topicId)}
               className="absolute -right-3 -top-9 grid h-6 w-6 place-items-center rounded-full border border-line bg-surface text-ink shadow"
             >
               <Icon name="close" size={13} />
-            </button>
+            </TipButton>
             {CORNERS.map((c) => (
               <button
                 key={c.corner}
@@ -217,11 +218,11 @@ const formatDue = (d: string) => {
 /** Small round action button inside a topic (does not start a drag). */
 function Mini({ label, onClick, children }: { label: string; onClick: () => void; children: React.ReactNode }) {
   return (
-    <button
+    <TipButton
       type="button"
       data-action
       aria-label={label}
-      title={label}
+      tip={label}
       onClick={(e) => {
         e.stopPropagation()
         onClick()
@@ -229,7 +230,7 @@ function Mini({ label, onClick, children }: { label: string; onClick: () => void
       className="inline-flex h-[18px] items-center gap-0.5 rounded px-0.5 text-[10px] leading-none hover:bg-black/10"
     >
       {children}
-    </button>
+    </TipButton>
   )
 }
 
@@ -439,10 +440,10 @@ function WidthHandle({ id, width }: { id: string; width: number }) {
     if (commit && live) commitTopicWidth(live.width)
   }
   return (
-    <button
+    <TipButton
       type="button"
       aria-label="Resize width: drag, or press Alt+Shift+Left or Right. Double-click for automatic width"
-      title="Drag to set a custom width (double-click: automatic)"
+      tip="Drag to set a custom width (double-click: automatic)"
       className="absolute top-1/2 z-20 h-7 w-2.5 -translate-y-1/2 cursor-ew-resize rounded-full border border-surface bg-brand shadow"
       style={{ left: width - 5, touchAction: 'none' }}
       onPointerDown={(e) => {

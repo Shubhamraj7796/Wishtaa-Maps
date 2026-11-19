@@ -15,6 +15,7 @@ vi.mock('@/app/repo', () => ({
   driveRepository: { subscribeSync: () => () => undefined, syncInfoOf: () => ({ state: 'idle', syncedAt: null }) },
 }))
 import { SaveStatus } from './SaveStatus'
+import { tipOf } from '../../test/tipText'
 
 const set = (s: Partial<SyncStatus>) => act(() => ((status = { ...base, ...s }), listeners.forEach((l) => l())))
 beforeEach(() => {
@@ -43,8 +44,9 @@ describe('the pictures indicator next to "Saved"', () => {
     set({ pictures: 67, paused: true, pausedReason: 'auth' })
     const b = screen.getByTestId('pictures-paused')
     expect(b.textContent).toBe('67 pictures paused: sign in to Google Drive to continue · Sign in')
-    expect(b.getAttribute('title')).toMatch(/in all your maps/)
-    expect(b.getAttribute('title')).toMatch(/The map itself is saved/)
+    expect(b.getAttribute('title')).toBeNull()
+    expect(tipOf(b)).toMatch(/in all your maps/)
+    expect(tipOf(b)).toMatch(/The map itself is saved/)
     expect(screen.getByRole('status').textContent).toMatch(/Saved/) // the map is saved whatever the pictures are doing
     fireEvent.click(b)
     expect(resumePictureUploads).toHaveBeenCalledTimes(1)

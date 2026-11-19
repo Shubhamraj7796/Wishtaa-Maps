@@ -13,6 +13,8 @@ import { useEditor } from '../store'
 import { BranchControls, CURVE_CHOICES, curvePatch } from './BranchControls'
 import { ColorPicker } from './ColorPicker'
 import { ShapePicker } from './TopicStylePanel'
+import { TipButton } from '@/ui/IconButton'
+import { Tooltip } from '@/ui/Tooltip'
 
 const tap = 'grid h-9 min-w-9 shrink-0 place-items-center rounded-ui border px-1.5 text-sm transition-colors [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:min-w-11'
 const on = 'border-brand bg-brand/15'
@@ -53,10 +55,10 @@ function PopButton({ label, icon, text, children, wide }: { label: string; icon?
 
   return (
     <>
-      <button ref={trigger} type="button" aria-haspopup="dialog" aria-expanded={open} aria-label={label} title={label} onClick={() => setOpen((o) => !o)} className={`${tap} ${open ? on : off} !inline-flex items-center gap-1`}>
+      <TipButton ref={trigger} type="button" aria-haspopup="dialog" aria-expanded={open} aria-label={label} tip={label} onClick={() => setOpen((o) => !o)} className={`${tap} ${open ? on : off} !inline-flex items-center gap-1`}>
         {icon && <Icon name={icon} size={17} />}
         {text && <span>{text}</span>}
-      </button>
+      </TipButton>
       {open &&
         createPortal(
           <>
@@ -149,39 +151,39 @@ export function QuickToolbar() {
       className="absolute z-20 flex w-max max-w-[calc(100%-1rem)] flex-wrap items-center gap-0.5 rounded-ui border border-line bg-surface px-1 py-1 shadow-lg"
       style={{ left: place.left, top: place.top }}
     >
-      <select aria-label="Font family" title="Font family" value={st.fontFamily ?? ''} onChange={(e) => A.styleSelected({ fontFamily: e.target.value || undefined })} className="h-9 w-28 rounded-ui border border-transparent bg-surface px-1 text-sm hover:bg-bg [@media(pointer:coarse)]:h-11">
+      <Tooltip label="Font family"><select aria-label="Font family" value={st.fontFamily ?? ''} onChange={(e) => A.styleSelected({ fontFamily: e.target.value || undefined })} className="h-9 w-28 rounded-ui border border-transparent bg-surface px-1 text-sm hover:bg-bg [@media(pointer:coarse)]:h-11">
         <option value="">Theme font</option>
         {FONT_OPTIONS.map((f) => (
           <option key={f.label} value={f.value}>
             {f.label}
           </option>
         ))}
-      </select>
-      <button type="button" aria-label="Smaller text" title="Smaller text" onClick={() => A.nudgeFontSize(-2)} className={`${tap} ${off}`}>
+      </select></Tooltip>
+      <TipButton type="button" aria-label="Smaller text" tip="Smaller text" onClick={() => A.nudgeFontSize(-2)} className={`${tap} ${off}`}>
         A−
-      </button>
+      </TipButton>
       <span className="w-7 text-center text-xs tabular-nums text-muted" aria-label={`Font size ${look.fontSize}`}>
         {look.fontSize}
       </span>
-      <button type="button" aria-label="Bigger text" title="Bigger text" onClick={() => A.nudgeFontSize(2)} className={`${tap} ${off}`}>
+      <TipButton type="button" aria-label="Bigger text" tip="Bigger text" onClick={() => A.nudgeFontSize(2)} className={`${tap} ${off}`}>
         A+
-      </button>
+      </TipButton>
       <Sep />
-      <button type="button" aria-pressed={look.fontWeight >= 700} aria-label="Bold" title="Bold" onClick={() => toggle(look.fontWeight >= 700, { fontWeight: 700 })} className={`${tap} font-bold ${look.fontWeight >= 700 ? on : off}`}>
+      <TipButton type="button" aria-pressed={look.fontWeight >= 700} aria-label="Bold" tip="Bold" onClick={() => toggle(look.fontWeight >= 700, { fontWeight: 700 })} className={`${tap} font-bold ${look.fontWeight >= 700 ? on : off}`}>
         B
-      </button>
-      <button type="button" aria-label="Add picture" title="Add a picture to this topic: take a photo, choose from Photos, paste or capture the screen" onClick={() => void cmdAddImage(primary)} className={`${tap} ${off}`}>
+      </TipButton>
+      <TipButton type="button" aria-label="Add picture" tip="Add a picture to this topic: take a photo, choose from Photos, paste or capture the screen" onClick={() => void cmdAddImage(primary)} className={`${tap} ${off}`}>
         <Icon name="camera" size={17} />
-      </button>
-      <button type="button" aria-pressed={look.italic} aria-label="Italic" title="Italic" onClick={() => toggle(look.italic, { italic: true })} className={`${tap} italic ${look.italic ? on : off}`}>
+      </TipButton>
+      <TipButton type="button" aria-pressed={look.italic} aria-label="Italic" tip="Italic" onClick={() => toggle(look.italic, { italic: true })} className={`${tap} italic ${look.italic ? on : off}`}>
         I
-      </button>
-      <button type="button" aria-pressed={look.underline} aria-label="Underline" title="Underline" onClick={() => toggle(look.underline, { underline: true })} className={`${tap} underline ${look.underline ? on : off}`}>
+      </TipButton>
+      <TipButton type="button" aria-pressed={look.underline} aria-label="Underline" tip="Underline" onClick={() => toggle(look.underline, { underline: true })} className={`${tap} underline ${look.underline ? on : off}`}>
         U
-      </button>
-      <button type="button" aria-pressed={look.strike} aria-label="Strikethrough" title="Strikethrough" onClick={() => toggle(look.strike, { strike: true })} className={`${tap} line-through ${look.strike ? on : off}`}>
+      </TipButton>
+      <TipButton type="button" aria-pressed={look.strike} aria-label="Strikethrough" tip="Strikethrough" onClick={() => toggle(look.strike, { strike: true })} className={`${tap} line-through ${look.strike ? on : off}`}>
         S
-      </button>
+      </TipButton>
       <ColorPicker
         variant="swatch"
         label="Text colour"
@@ -192,9 +194,9 @@ export function QuickToolbar() {
         contrastAgainst={{ color: fillShown, large: isLargeText(look.fontSize, look.fontWeight), what: 'on this topic’s fill' }}
       />
       <ColorPicker variant="swatch" label="Highlight" glyph="H" value={look.highlight ?? 'transparent'} onChange={(v) => A.styleSelected({ highlight: v })} onNone={st.highlight ? () => A.styleSelected({ highlight: undefined }) : undefined} />
-      <button type="button" aria-label={`Text alignment: ${look.align}. Change`} title={`Align ${look.align}. Click to change`} onClick={() => A.styleSelected({ align: NEXT_ALIGN[look.align] === 'center' ? undefined : NEXT_ALIGN[look.align] })} className={`${tap} ${off}`}>
+      <TipButton type="button" aria-label={`Text alignment: ${look.align}. Change`} tip={`Align ${look.align}. Click to change`} onClick={() => A.styleSelected({ align: NEXT_ALIGN[look.align] === 'center' ? undefined : NEXT_ALIGN[look.align] })} className={`${tap} ${off}`}>
         {ALIGN_GLYPH[look.align]}
-      </button>
+      </TipButton>
       <Sep />
       <ColorPicker
         variant="swatch"
@@ -240,9 +242,9 @@ export function QuickToolbar() {
           </PopButton>
         </>
       )}
-      <button type="button" aria-pressed={!!painter} aria-label="Format painter" title="Format painter: copy this look, then click topics" onClick={A.togglePainter} className={`${tap} ${painter ? on : off}`}>
+      <TipButton type="button" aria-pressed={!!painter} aria-label="Format painter" tip="Format painter: copy this look, then click topics" onClick={A.togglePainter} className={`${tap} ${painter ? on : off}`}>
         <Icon name="painter" size={17} />
-      </button>
+      </TipButton>
       <PopButton label="More" text="⋯">
         {(close) => (
           <div role="menu" aria-label="More format tools" className="space-y-0.5">

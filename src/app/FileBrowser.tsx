@@ -5,6 +5,7 @@ import { useFiles } from './FilesContext'
 import { timeAgo } from './format'
 import { BookOpen, BookOpenCheck, Check, Cloud, Download, Lock, Copy, Share2, Folder, FolderInput, HardDrive, MoreVertical, Network, Pencil, RotateCcw, Star, Trash2 } from './icons'
 import { useDriveActions } from './useDrive'
+import { Tooltip } from '@/ui/Tooltip'
 
 export const DRAG_TYPE = 'application/x-wishtaa-files'
 
@@ -36,10 +37,10 @@ function Thumb({ file }: { file: FileRecord }) {
 function DriveBadge({ file }: { file: FileRecord }) {
   if (file.storage !== 'drive') return null
   return (
-    <span title="Stored in Google Drive" className="inline-flex shrink-0 items-center gap-1 rounded-full bg-brand/15 px-1.5 py-0.5 text-[10px] font-semibold text-ink">
+    <Tooltip label="Stored in Google Drive"><span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-brand/15 px-1.5 py-0.5 text-[10px] font-semibold text-ink">
       <Cloud size={11} aria-hidden="true" />
       <span>Drive</span>
-    </span>
+    </span></Tooltip>
   )
 }
 

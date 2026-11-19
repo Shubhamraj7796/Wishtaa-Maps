@@ -3,6 +3,7 @@ import { checkPassword } from '@/core/auth/passwords'
 import { AuthFailure } from '@/core/auth/types'
 import { toFailure } from '@/core/auth/errors'
 import { Check, Eye, EyeOff, X } from '../icons'
+import { TipButton } from '@/ui/IconButton'
 
 export const inputClass = 'w-full rounded-ui border border-line bg-bg px-3 py-2 text-sm focus:border-brand disabled:opacity-60'
 
@@ -25,9 +26,9 @@ export function PasswordInput({ value, onChange, autoComplete, id, ...rest }: { 
   return (
     <div className="relative">
       <input {...rest} id={id} type={shown ? 'text' : 'password'} value={value} onChange={(e) => onChange(e.target.value)} autoComplete={autoComplete} className={`${inputClass} pr-10`} />
-      <button type="button" onClick={() => setShown(!shown)} aria-label={shown ? 'Hide password' : 'Show password'} aria-pressed={shown} title={shown ? 'Hide password' : 'Show password'} className="absolute right-1 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-ui text-muted hover:bg-surface">
+      <TipButton type="button" onClick={() => setShown(!shown)} aria-label={shown ? 'Hide password' : 'Show password'} aria-pressed={shown} tip={shown ? 'Hide password' : 'Show password'} className="absolute right-1 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-ui text-muted hover:bg-surface">
         {shown ? <EyeOff size={16} aria-hidden="true" /> : <Eye size={16} aria-hidden="true" />}
-      </button>
+      </TipButton>
     </div>
   )
 }

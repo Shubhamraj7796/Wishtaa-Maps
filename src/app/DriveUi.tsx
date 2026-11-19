@@ -9,6 +9,7 @@ import { timeAgo } from './format'
 import { Modal, buttonPrimary, buttonSecondary } from './Modal'
 import { Cloud, Info, X } from './icons'
 import { useDriveActions, useDriveAuth, useDriveConflicts } from './useDrive'
+import { TipButton } from '@/ui/IconButton'
 
 /** Shown when the same file changed in Google Drive and here. Nothing is overwritten until the user chooses. */
 export function ConflictPrompt() {
@@ -83,9 +84,9 @@ export function DriveBanner() {
         {auth.status === 'reconnect' ? 'Reconnect' : 'Connect again'}
       </button>
       {auth.status === 'disconnected' && (
-        <button type="button" onClick={() => driveAuth.dismissMessage()} aria-label="Dismiss" title="Dismiss" className="grid h-7 w-7 shrink-0 place-items-center rounded-ui hover:bg-bg">
+        <TipButton type="button" onClick={() => driveAuth.dismissMessage()} aria-label="Dismiss" tip="Dismiss" className="grid h-7 w-7 shrink-0 place-items-center rounded-ui hover:bg-bg">
           <X size={16} aria-hidden="true" />
-        </button>
+        </TipButton>
       )}
     </div>
   )

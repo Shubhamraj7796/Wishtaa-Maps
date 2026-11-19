@@ -2,6 +2,7 @@ import { useCallback, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import type { SortKey, SortSpec } from '@/core/files/types'
 import { ArrowDown, ArrowUp, LayoutGrid, List } from './icons'
+import { TipButton } from '@/ui/IconButton'
 
 /** A value remembered in this browser (view mode, sort order, dismissed banners). */
 export function usePref<T extends string>(key: string, fallback: T, allowed?: readonly T[]): [T, (v: T) => void] {
@@ -115,31 +116,31 @@ export function SortControl({ sort, onChange }: { sort: SortSpec; onChange: (s: 
           <option key={k} value={k}>{SORT_LABELS[k]}</option>
         ))}
       </select>
-      <button
+      <TipButton
         type="button"
         onClick={() => onChange({ ...sort, dir: sort.dir === 'asc' ? 'desc' : 'asc' })}
         aria-label={sort.dir === 'asc' ? 'Ascending. Switch to descending' : 'Descending. Switch to ascending'}
-        title={sort.dir === 'asc' ? 'Ascending' : 'Descending'}
+        tip={sort.dir === 'asc' ? 'Ascending' : 'Descending'}
         className="grid h-8 w-8 place-items-center rounded-ui border border-line bg-surface hover:bg-bg"
       >
         {sort.dir === 'asc' ? <ArrowUp size={16} aria-hidden="true" /> : <ArrowDown size={16} aria-hidden="true" />}
-      </button>
+      </TipButton>
     </div>
   )
 }
 
 export function ViewToggle({ view, onChange }: { view: 'grid' | 'list'; onChange: (v: 'grid' | 'list') => void }) {
   const btn = (v: 'grid' | 'list', label: string, icon: ReactNode) => (
-    <button
+    <TipButton
       type="button"
       aria-label={label}
-      title={label}
+      tip={label}
       aria-pressed={view === v}
       onClick={() => onChange(v)}
       className={`grid h-8 w-8 place-items-center ${view === v ? 'bg-brand/15 text-ink' : 'text-muted hover:bg-bg'}`}
     >
       {icon}
-    </button>
+    </TipButton>
   )
   return (
     <div className="flex overflow-hidden rounded-ui border border-line bg-surface" role="group" aria-label="View">

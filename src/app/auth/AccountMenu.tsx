@@ -6,6 +6,7 @@ import { useAuthUi } from '../authUi'
 import { useFiles } from '../FilesContext'
 import { Gift, LogOut, User, UserRound } from '../icons'
 import { WORDING } from '../referral/wording'
+import { TipButton } from '@/ui/IconButton'
 
 const initials = (u: AuthUser) => (u.name || u.email || '?').trim().split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('') || '?'
 
@@ -80,9 +81,9 @@ export function AccountMenu() {
   const item = 'flex w-full items-center gap-2 rounded-ui px-3 py-2 text-left text-sm hover:bg-bg focus:bg-bg'
   return (
     <div ref={root} className="relative">
-      <button ref={button} type="button" onClick={() => setOpen(!open)} aria-haspopup="menu" aria-expanded={open} aria-label={`Account menu, ${user.name || user.email || 'signed in'}`} title="Account" className="grid h-9 w-9 place-items-center rounded-full hover:bg-bg">
+      <TipButton ref={button} type="button" onClick={() => setOpen(!open)} aria-haspopup="menu" aria-expanded={open} aria-label={`Account menu, ${user.name || user.email || 'signed in'}`} tip="Account" className="grid h-9 w-9 place-items-center rounded-full hover:bg-bg">
         <Avatar user={user} />
-      </button>
+      </TipButton>
       {open && (
         <div role="menu" aria-label="Account" className="absolute right-0 top-full z-50 mt-1 w-64 rounded-ui border border-line bg-surface p-1 shadow-xl">
           <div className="flex items-center gap-3 px-3 py-2">

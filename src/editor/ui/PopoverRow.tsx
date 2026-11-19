@@ -2,6 +2,7 @@ import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Icon } from '@/ui/icons'
 import { useBusyWhile } from '../panel/busy'
+import { TipButton } from '@/ui/IconButton'
 
 /**
  * A compact settings row: a label, and a button showing the current value (with a small picture) that opens a popover. On a
@@ -58,7 +59,7 @@ export function PopoverRow({
       <span id={labelId} className="shrink-0">
         {label}
       </span>
-      <button
+      <TipButton
         ref={trigger}
         type="button"
         data-testid={testId}
@@ -66,14 +67,14 @@ export function PopoverRow({
         aria-expanded={open}
         aria-labelledby={labelId}
         aria-describedby={undefined}
-        title={`${label}: ${value}`}
+        tip={`${label}: ${value}`}
         onClick={() => setOpen((o) => !o)}
         className="flex min-w-0 max-w-[13rem] items-center gap-2 rounded-ui border border-line bg-surface px-2 py-1 hover:bg-bg"
       >
         {thumb && <span className="shrink-0">{thumb}</span>}
         <span className="truncate">{value}</span>
         <Icon name="chevronDown" size={14} className="shrink-0 text-muted" />
-      </button>
+      </TipButton>
       {open &&
         createPortal(
           <>

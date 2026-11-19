@@ -19,6 +19,8 @@ import { showPreview } from '../content'
 import { useScene } from '../scene'
 import { useEditor, type PdfTool } from '../store'
 import { showNotice } from '../notice'
+import { TipButton } from '@/ui/IconButton'
+import { Tooltip } from '@/ui/Tooltip'
 
 /** The pictures of the map in reading order (the order of the topics), each once. */
 export function mapImageIds(topics: Record<string, { image?: { imageId: string } | null | undefined }>, order: string[]): string[] {
@@ -271,18 +273,18 @@ export function PictureViewer({ imageId }: { imageId: string }) {
         {canEdit && <MarkupToolbar tool={tool} onTool={choose} styles={styles} onStyle={setToolStyle} shape={shape} extras={extras} placeKey="picture" label="Picture markup tools" />}
       </div>
 
-      <button ref={close} data-viewer-ui type="button" aria-label="Close preview" title="Close (Esc)" onClick={() => showPreview(null)} className={`absolute right-4 top-4 z-30 ${btn}`}>
+      <TipButton ref={close} data-viewer-ui type="button" aria-label="Close preview" tip="Close (Esc)" onClick={() => showPreview(null)} className={`absolute right-4 top-4 z-30 ${btn}`}>
         <Icon name="close" size={20} />
-      </button>
+      </TipButton>
 
       <div data-viewer-ui className="absolute bottom-4 left-1/2 z-30 flex max-w-[96vw] -translate-x-1/2 items-center gap-1 rounded-full bg-surface/90 px-2 py-1 text-sm shadow">
-        <button type="button" aria-label="Previous picture" title="Previous (Left arrow)" disabled={ids.length < 2} onClick={() => step(-1)} className={btn}>‹</button>
+        <TipButton type="button" aria-label="Previous picture" tip="Previous (Left arrow)" disabled={ids.length < 2} onClick={() => step(-1)} className={btn}>‹</TipButton>
         <span aria-live="polite" className="min-w-16 text-center tabular-nums">{ids.length > 1 ? `${at + 1} of ${ids.length}` : '1 picture'}</span>
-        <button type="button" aria-label="Next picture" title="Next (Right arrow)" disabled={ids.length < 2} onClick={() => step(1)} className={btn}>›</button>
+        <TipButton type="button" aria-label="Next picture" tip="Next (Right arrow)" disabled={ids.length < 2} onClick={() => step(1)} className={btn}>›</TipButton>
         <span className="mx-1 h-6 w-px bg-line" aria-hidden="true" />
-        <button type="button" aria-label="Zoom out" title="Zoom out (-)" onClick={() => zoomBy(-1)} className={btn}>−</button>
-        <button type="button" aria-label="Actual size" title="Fit the screen (0)" onClick={reset} className="min-w-12 text-center tabular-nums">{Math.round(view.k * 100)}%</button>
-        <button type="button" aria-label="Zoom in" title="Zoom in (+)" onClick={() => zoomBy(1)} className={btn}>+</button>
+        <TipButton type="button" aria-label="Zoom out" tip="Zoom out (-)" onClick={() => zoomBy(-1)} className={btn}>−</TipButton>
+        <TipButton type="button" aria-label="Actual size" tip="Fit the screen (0)" onClick={reset} className="min-w-12 text-center tabular-nums">{Math.round(view.k * 100)}%</TipButton>
+        <TipButton type="button" aria-label="Zoom in" tip="Zoom in (+)" onClick={() => zoomBy(1)} className={btn}>+</TipButton>
       </div>
 
       {canEdit && topicId && (
@@ -299,15 +301,15 @@ export function PictureViewer({ imageId }: { imageId: string }) {
             Resize
           </button>
           <span className="mx-0.5 h-5 w-px bg-line" aria-hidden="true" />
-          <button type="button" aria-label="Rotate left" title="Rotate left" className={pill} onClick={() => rotatePicture(mapDoc, topicId, -90)}>
+          <TipButton type="button" aria-label="Rotate left" tip="Rotate left" className={pill} onClick={() => rotatePicture(mapDoc, topicId, -90)}>
             <Icon name="reset" size={16} />
-          </button>
-          <button type="button" aria-label="Rotate right" title="Rotate right" className={pill} onClick={() => rotatePicture(mapDoc, topicId, 90)}>
+          </TipButton>
+          <TipButton type="button" aria-label="Rotate right" tip="Rotate right" className={pill} onClick={() => rotatePicture(mapDoc, topicId, 90)}>
             <Icon name="rotateCw" size={16} />
-          </button>
-          <button type="button" aria-label="Flip left to right" title="Flip left to right" className={pill} onClick={() => flipPicture(mapDoc, topicId, 'x')}>
+          </TipButton>
+          <TipButton type="button" aria-label="Flip left to right" tip="Flip left to right" className={pill} onClick={() => flipPicture(mapDoc, topicId, 'x')}>
             <Icon name="flipH" size={16} />
-          </button>
+          </TipButton>
           {(image?.rotation || image?.flipX || image?.flipY || marks.length > 0) && (
             <button type="button" className={pill} aria-haspopup="dialog" onClick={() => setPermanent(true)}>
               Make permanent…
@@ -324,10 +326,10 @@ export function PictureViewer({ imageId }: { imageId: string }) {
               </button>
             </>
           )}
-          <label className="flex items-center gap-1 px-2" title="Fingers pan and zoom; turn this on to draw with a finger when there is no stylus">
+          <Tooltip label="Fingers pan and zoom; turn this on to draw with a finger when there is no stylus"><label className="flex items-center gap-1 px-2">
             <input type="checkbox" checked={touchDraws} onChange={(e) => setTouchDraws(e.target.checked)} />
             Finger draws
-          </label>
+          </label></Tooltip>
           <button type="button" className={`${pill} text-bad`} onClick={() => { showPreview(null); removeImage(topicId) }}>
             Delete picture
           </button>

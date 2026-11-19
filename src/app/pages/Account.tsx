@@ -11,6 +11,7 @@ import { buttonDanger, buttonPrimary, buttonSecondary } from '../Modal'
 import { ReferralPanel } from '../referral/ReferFriend'
 import { WORDING } from '../referral/wording'
 import { Page, PageHeader } from '../ui'
+import { TipButton } from '@/ui/IconButton'
 
 function Section({ title, children, id }: { title: string; children: ReactNode; id?: string }) {
   return (
@@ -99,7 +100,7 @@ function MethodsSection() {
           </div>
           <div className="flex gap-2">
             <button type="button" className={buttonSecondary} onClick={() => setChanging(true)}>{has('email') ? 'Set or change password' : 'Add email and password'}</button>
-            {has('email') && <button type="button" className={buttonSecondary} disabled={onlyOne} title={onlyOne ? 'This is your only way to sign in' : undefined} onClick={() => void remove('email')}>Remove</button>}
+            {has('email') && <TipButton type="button" className={buttonSecondary} disabled={onlyOne} tip={onlyOne ? 'This is your only way to sign in' : undefined} onClick={() => void remove('email')}>Remove</TipButton>}
           </div>
         </div>
         {changing && <PasswordForm onDone={() => setChanging(false)} />}
@@ -112,7 +113,7 @@ function MethodsSection() {
             </div>
           </div>
           {has('google') ? (
-            <button type="button" className={buttonSecondary} disabled={onlyOne} title={onlyOne ? 'This is your only way to sign in' : undefined} onClick={() => void remove('google')}>Remove</button>
+            <TipButton type="button" className={buttonSecondary} disabled={onlyOne} tip={onlyOne ? 'This is your only way to sign in' : undefined} onClick={() => void remove('google')}>Remove</TipButton>
           ) : (
             <button type="button" className={buttonSecondary} disabled={step.busy} onClick={() => void step.run(() => auth.linkGoogle())}>Link Google</button>
           )}

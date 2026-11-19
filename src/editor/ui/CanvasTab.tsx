@@ -8,6 +8,7 @@ import { Check, Row, Section, field } from './panelKit'
 import { BranchDirectionRow, usesBothSides } from './BranchDirection'
 import { PicturesSection } from './PicturesSection'
 import { ThemeTab } from './ThemePanel'
+import { Tooltip } from '@/ui/Tooltip'
 
 /** Every layout the engine has, grouped under headings (a group with nothing in it is simply not listed). */
 export const layoutGroups = (size = 36): ChoiceGroup[] =>
@@ -55,18 +56,17 @@ export function CanvasTab() {
           />
         </Row>
         <Row label="Line style">
-          <select
+          <Tooltip label={def.usesConnectors ? undefined : 'This layout draws its own lines'}><select
             value={s.connector}
             disabled={!def.usesConnectors}
             onChange={(e) => A.changeSetting('connector', e.target.value as typeof s.connector)}
-            className={field}
-            title={def.usesConnectors ? undefined : 'This layout draws its own lines'}
+            className={field} aria-label={def.usesConnectors ? undefined : 'This layout draws its own lines'}
           >
             <option value="auto">Automatic</option>
             <option value="curve">Curved</option>
             <option value="elbow">Elbow</option>
             <option value="straight">Straight</option>
-          </select>
+          </select></Tooltip>
         </Row>
         <Check label="Branch free positioning (drag a branch to leave it where you drop it)" checked={s.freePositioning} onChange={(v) => A.changeSetting('freePositioning', v)} />
         {s.freePositioning && moved && (

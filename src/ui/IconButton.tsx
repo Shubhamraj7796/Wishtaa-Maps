@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes } from 'react'
+import { forwardRef, isValidElement, type ButtonHTMLAttributes, type ReactNode } from 'react'
 import { ICON_BOX, ICON_PX, SELECTED, UNSELECTED } from './iconSize'
 import { Icon, type IconName } from './icons'
 import { useTooltip } from './Tooltip'
@@ -120,15 +120,33 @@ export function Swatch({ label, color, selected, onClick, role = 'radio', filter
   )
 }
 
+/** True when a React child tree holds readable text (so the button already has a name), false for icons only. */
+function hasWords(node: ReactNode): boolean {
+  if (typeof node === 'string') return node.trim().length > 0
+  if (typeof node === 'number') return true
+  if (Array.isArray(node)) return node.some(hasWords)
+  if (isValidElement(node)) {
+    const p = node.props as { children?: ReactNode; 'aria-label'?: string; 'aria-hidden'?: boolean | 'true' | 'false' }
+    if (p['aria-label']) return true
+    if (p['aria-hidden'] === true || p['aria-hidden'] === 'true') return false
+    return hasWords(p.children)
+  }
+  return false
+}
+
 /**
  * A button of any look that shows its name through the shared tooltip (rule 8) instead of the browser's `title`: for the places that keep
  * their own styling (the floating pen bar, flyouts). It has no icon logic of its own; give it an `aria-label` or visible text.
  */
-export function TipButton({ tip, keys, children, ...rest }: Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'title'> & { tip: string; keys?: string }) {
+export const TipButton = forwardRef<HTMLButtonElement, Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'title'> & { tip: string | undefined | null; keys?: string }>(function TipButton({ tip, keys, children, ...rest }, ref) {
   const t = useTooltip(tip, keys)
+  // A button with no words on it takes its name from the tooltip text (what the native title used to provide).
+  const named = rest['aria-label'] === undefined && rest['aria-labelledby'] === undefined && tip && !hasWords(children) ? { 'aria-label': tip } : {}
   return (
     <button
+      ref={ref}
       type="button"
+      {...named}
       {...t}
       {...rest}
       onPointerEnter={(e) => (t.onPointerEnter(e), rest.onPointerEnter?.(e))}
@@ -141,4 +159,4 @@ export function TipButton({ tip, keys, children, ...rest }: Omit<ButtonHTMLAttri
       {children}
     </button>
   )
-}
+})

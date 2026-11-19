@@ -9,6 +9,7 @@ import { DriveAllowDialog, DriveChooseDialog, DriveProblemDialog, PickerProblemD
 import { Alert } from './parts'
 import { ReferFriendDialog } from '../referral/ReferFriend'
 import { SignInDialog } from './SignInDialog'
+import { TipButton } from '@/ui/IconButton'
 
 /** "Your sign-in expired" bar. Nothing is lost: files and unsent changes stay in this browser. */
 export function ExpiredBar() {
@@ -22,9 +23,9 @@ export function ExpiredBar() {
       <button type="button" onClick={() => open({ kind: 'signin', reason: 'Sign in again with the same method as before. Your files on this device are untouched.' })} className="shrink-0 rounded-ui bg-brand px-3 py-1 text-xs font-semibold text-brand-ink hover:opacity-90">
         Sign in again
       </button>
-      <button type="button" onClick={() => auth.dismissExpired()} aria-label="Continue without signing in" title="Continue without signing in" className="grid h-7 w-7 shrink-0 place-items-center rounded-ui hover:bg-bg">
+      <TipButton type="button" onClick={() => auth.dismissExpired()} aria-label="Continue without signing in" tip="Continue without signing in" className="grid h-7 w-7 shrink-0 place-items-center rounded-ui hover:bg-bg">
         <X size={16} aria-hidden="true" />
-      </button>
+      </TipButton>
     </div>
   )
 }

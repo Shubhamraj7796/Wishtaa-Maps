@@ -3,6 +3,7 @@ import { Icon } from '@/ui/icons'
 import { clearMarksSelected, toggleMarkSelected } from '../content'
 import { useEditor } from '../store'
 import { MarkBadge } from './MarkBadge'
+import { TipButton } from '@/ui/IconButton'
 
 function Group({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -15,16 +16,16 @@ function Group({ title, children }: { title: string; children: React.ReactNode }
 
 function Pick({ mark, label, on }: { mark: string; label: string; on: boolean }) {
   return (
-    <button
+    <TipButton
       type="button"
       aria-label={label}
       aria-pressed={on}
-      title={label}
+      tip={label}
       onClick={() => toggleMarkSelected(mark)}
       className={`grid h-8 w-8 place-items-center rounded-ui border transition-transform hover:scale-110 ${on ? 'border-brand bg-brand/15' : 'border-transparent hover:bg-bg'}`}
     >
       <MarkBadge mark={mark} size={22} />
-    </button>
+    </TipButton>
   )
 }
 
@@ -44,9 +45,9 @@ export function MarkPanel() {
           <Icon name="mark" size={16} />
           {none ? 'Select a topic, then click a mark' : `${selected.length} topic${selected.length > 1 ? 's' : ''} selected`}
         </span>
-        <button type="button" onClick={clearMarksSelected} disabled={none} aria-label="Remove all marks" title="Remove all marks" className="grid h-8 w-8 place-items-center rounded-ui border border-line hover:bg-bg disabled:opacity-40">
+        <TipButton type="button" onClick={clearMarksSelected} disabled={none} aria-label="Remove all marks" tip="Remove all marks" className="grid h-8 w-8 place-items-center rounded-ui border border-line hover:bg-bg disabled:opacity-40">
           <Icon name="eraser" size={16} />
-        </button>
+        </TipButton>
       </div>
       <Group title="Priority">
         {Array.from({ length: PRIORITY_COUNT }, (_, i) => i + 1).map((n) => (

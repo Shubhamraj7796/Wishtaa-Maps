@@ -3,6 +3,7 @@ import { useEditor } from '../store'
 import { readSelection, type PdfSelection } from './selection'
 import { markText } from './markup'
 import { addPdfTopics } from './topics'
+import { Tooltip } from '@/ui/Tooltip'
 
 export const SOURCE_DRAG = 'application/x-wishtaa-source'
 
@@ -72,13 +73,12 @@ export function SelectionBar({ sourceId, root }: { sourceId: string; root: React
       </button>
       <button type="button" className={act} onClick={() => mark('underline')}>Underline</button>
       <button type="button" className={act} onClick={() => mark('strike')}>Strike</button>
-      <label className="flex items-center gap-1 px-1 text-xs text-muted" title="Make a topic from each line of the selection">
+      <Tooltip label="Make a topic from each line of the selection"><label className="flex items-center gap-1 px-1 text-xs text-muted">
         <input type="checkbox" checked={perLine} onChange={(e) => setPerLine(e.target.checked)} />
         One per line
-      </label>
-      <span
+      </label></Tooltip>
+      <Tooltip label="Drag onto a row of the Outline"><span
         draggable
-        title="Drag onto a row of the Outline"
         className="ml-auto cursor-grab select-none rounded-ui border border-dashed border-line px-2 py-1 text-xs text-muted"
         onDragStart={(e) => {
           e.dataTransfer.setData(SOURCE_DRAG, JSON.stringify({ ...sel, perLine }))
@@ -87,7 +87,7 @@ export function SelectionBar({ sourceId, root }: { sourceId: string; root: React
         }}
       >
         ⠿ Drag to Outline
-      </span>
+      </span></Tooltip>
     </div>
   )
 }

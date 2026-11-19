@@ -9,6 +9,7 @@ import { routeForFile } from '../../app/navigation'
 import { Icon } from '@/ui/icons'
 import { setTopicLink } from '../content'
 import { useEditor } from '../store'
+import { TipButton } from '@/ui/IconButton'
 
 /** Choose another map or knowledge base to link a topic to. */
 export function FileLinkPicker({ topicId, onClose }: { topicId: string; onClose: () => void }) {
@@ -95,18 +96,18 @@ export function Backlinks({ topicId }: { topicId: string }) {
             if (!file) return null
             return (
               <li key={`${l.fileId}:${l.topicId}:${i}`}>
-                <button
+                <TipButton
                   type="button"
                   onClick={() => open(file, l.topicId)}
                   className="flex w-full items-center gap-2 rounded-ui px-2 py-1.5 text-left text-sm hover:bg-brand/15"
-                  title={routeForFile(file, l.topicId)}
+                  tip={routeForFile(file, l.topicId)}
                 >
                   <FileKindIcon type={file.type} size={15} className="shrink-0 text-muted" />
                   <span className="min-w-0">
                     <span className="block truncate">{l.topicText || '(untitled topic)'}</span>
                     <span className="block truncate text-xs text-muted">{file.name}</span>
                   </span>
-                </button>
+                </TipButton>
               </li>
             )
           })}

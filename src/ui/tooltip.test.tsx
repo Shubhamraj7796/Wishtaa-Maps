@@ -2,7 +2,7 @@
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { useState } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { IconButton, IconTile, IconToggleGroup, Swatch } from './IconButton'
+import { IconButton, IconTile, IconToggleGroup, Swatch, TipButton } from './IconButton'
 import { HOVER_MS, LONG_PRESS_MS, QUICK_MS, resetTips, Tooltip, TooltipLayer, TOUCH_HIDE_MS, placeTip } from './Tooltip'
 
 beforeEach(() => {
@@ -358,5 +358,45 @@ describe('shared components: names, states and roles', () => {
     act(() => screen.getByText('go').focus())
     expect(onFocus).toHaveBeenCalled()
     expect(tip()?.textContent).toContain('Open the thing')
+  })
+})
+
+describe('tooltip: a control inside a wrapper that has its own tooltip', () => {
+  it('shows the inner control\'s name, not the wrapper\'s (focus and long press bubble)', () => {
+    focusVisible(true)
+    render(
+      <>
+        <Tooltip label="Saved at 11:21">
+          <div data-testid="wrapper">
+            <TipButton tip="Resume the picture uploads">Resume</TipButton>
+          </div>
+        </Tooltip>
+        <TooltipLayer />
+      </>
+    )
+    act(() => screen.getByRole('button', { name: 'Resume' }).focus())
+    expect(tip()?.textContent).toContain('Resume the picture uploads')
+    expect(tip()?.textContent).not.toContain('Saved at')
+    act(() => screen.getByRole('button', { name: 'Resume' }).blur())
+    // the wrapper itself (not the inner button) still shows its own text when it is the one that has the focus
+    const wrapper = screen.getByTestId('wrapper')
+    wrapper.setAttribute('tabindex', '0')
+    act(() => wrapper.focus())
+    expect(tip()?.textContent).toContain('Saved at 11:21')
+  })
+
+  it('a button with only icons takes its name from the tip; a missing tip shows nothing and adds no name', () => {
+    render(
+      <>
+        <TipButton tip="Close the panel"><svg aria-hidden="true" /></TipButton>
+        <TipButton tip={undefined}>Words</TipButton>
+        <TooltipLayer />
+      </>
+    )
+    expect(screen.getByRole('button', { name: 'Close the panel' }).getAttribute('title')).toBeNull()
+    expect(screen.getByRole('button', { name: 'Words' }).getAttribute('aria-label')).toBeNull()
+    fireEvent.pointerEnter(screen.getByRole('button', { name: 'Words' }), mouse)
+    act(() => void vi.advanceTimersByTime(HOVER_MS + 10))
+    expect(tip()).toBeNull()
   })
 })

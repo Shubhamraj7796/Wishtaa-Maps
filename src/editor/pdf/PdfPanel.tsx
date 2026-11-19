@@ -18,6 +18,7 @@ import { clampSide, loadSheetHeight, loadSideWidth, saveSheetHeight, saveSideWid
 import { useTouchFriendly } from '../pictures/touch'
 import { OutlineView } from '../ui/OutlineView'
 import { BRAND_FAB } from '@/ui/iconSize'
+import { TipButton } from '@/ui/IconButton'
 
 
 const typing = (t: EventTarget | null) => !!(t as HTMLElement | null)?.closest?.('input,textarea,select,[contenteditable="true"]')
@@ -205,10 +206,10 @@ function OutlineDrawer() {
   return (
     <>
       {!open && (
-        <button type="button" data-outline-drawer-button className={`absolute bottom-16 z-40 flex h-11 items-center gap-1.5 ${toolSide === 'left' ? 'right-3' : 'left-3'} rounded-full border px-3 text-sm font-medium ${BRAND_FAB}`} aria-label="Show the Outline over the PDF" title="Show the Outline" onClick={() => setPdfDrawer(true)}>
+        <TipButton type="button" data-outline-drawer-button className={`absolute bottom-16 z-40 flex h-11 items-center gap-1.5 ${toolSide === 'left' ? 'right-3' : 'left-3'} rounded-full border px-3 text-sm font-medium ${BRAND_FAB}`} aria-label="Show the Outline over the PDF" tip="Show the Outline" onClick={() => setPdfDrawer(true)}>
           <Icon name="outline" size={16} />
           Outline
-        </button>
+        </TipButton>
       )}
       {open && (
         <>

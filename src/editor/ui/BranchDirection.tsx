@@ -2,6 +2,7 @@ import { usesBothSides } from '@/core/layout/catalog'
 import type { BranchDirection } from '@/core/settings'
 import * as A from '../actions'
 import { useEditor } from '../store'
+import { TipButton } from '@/ui/IconButton'
 
 export const DIRECTION_LABEL: Record<BranchDirection, string> = { balanced: 'Balanced', clockwise: 'Clockwise', reverse: 'Reverse' }
 
@@ -54,19 +55,19 @@ export function BranchDirectionRow() {
         {ORDER.map((id) => {
           const on = current === id
           return (
-            <button
+            <TipButton
               key={id}
               type="button"
               role="radio"
               aria-checked={on}
               aria-label={DIRECTION_LABEL[id]}
-              title={DIRECTION_HINT[id]}
+              tip={DIRECTION_HINT[id]}
               onClick={() => !on && A.setBranchDirection(id)}
               className={`flex flex-1 flex-col items-center gap-0.5 rounded-ui border px-1 py-1.5 text-[11px] transition-colors ${on ? 'border-brand bg-brand/15 text-ink' : 'border-line text-muted hover:bg-bg hover:text-ink'}`}
             >
               <DirectionThumb id={id} size={44} />
               {DIRECTION_LABEL[id]}
-            </button>
+            </TipButton>
           )
         })}
       </div>

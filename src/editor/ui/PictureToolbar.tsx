@@ -6,6 +6,7 @@ import { copyImage, downloadImage, removeImage, replaceImage, resetImageSize } f
 import { selectionKind } from '../panel/behaviour'
 import { placeToolbar } from '../quickToolbarPlace'
 import { useEditor } from '../store'
+import { TipButton } from '@/ui/IconButton'
 
 const btn = 'grid h-9 min-w-9 shrink-0 place-items-center rounded-ui border border-transparent px-1.5 text-sm hover:bg-bg [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:min-w-11'
 
@@ -62,25 +63,25 @@ export function PictureToolbar() {
         items[(i + (e.key === 'ArrowRight' ? 1 : -1) + items.length) % items.length]?.focus()
       }}
     >
-      <button type="button" aria-label="Preview" title="Preview full screen" onClick={() => showPreview(image.imageId)} className={btn}>
+      <TipButton type="button" aria-label="Preview" tip="Preview full screen" onClick={() => showPreview(image.imageId)} className={btn}>
         <Icon name="preview" size={17} />
-      </button>
-      <button type="button" aria-label="Download original" title="Download the original" onClick={() => void downloadImage(image.imageId, topic?.text ?? '')} className={btn}>
+      </TipButton>
+      <TipButton type="button" aria-label="Download original" tip="Download the original" onClick={() => void downloadImage(image.imageId, topic?.text ?? '')} className={btn}>
         <Icon name="download" size={17} />
-      </button>
-      <button type="button" aria-label="Replace" title="Replace the picture" onClick={() => void replaceImage(id)} className={btn}>
+      </TipButton>
+      <TipButton type="button" aria-label="Replace" tip="Replace the picture" onClick={() => void replaceImage(id)} className={btn}>
         <Icon name="replace" size={17} />
-      </button>
-      <button type="button" aria-label="Copy" title="Copy the picture" onClick={() => void copyImage(image.imageId)} className={btn}>
+      </TipButton>
+      <TipButton type="button" aria-label="Copy" tip="Copy the picture" onClick={() => void copyImage(image.imageId)} className={btn}>
         <Icon name="copy" size={17} />
-      </button>
-      <button type="button" aria-label="Delete picture" title="Delete the picture" onClick={() => removeImage(id)} className={`${btn} text-bad`}>
+      </TipButton>
+      <TipButton type="button" aria-label="Delete picture" tip="Delete the picture" onClick={() => removeImage(id)} className={`${btn} text-bad`}>
         <Icon name="trash" size={17} />
-      </button>
+      </TipButton>
       <div className="relative">
-        <button type="button" aria-label="More" aria-haspopup="menu" aria-expanded={more} title="More" onClick={() => setMore(!more)} className={btn}>
+        <TipButton type="button" aria-label="More" aria-haspopup="menu" aria-expanded={more} tip="More" onClick={() => setMore(!more)} className={btn}>
           ⋯
-        </button>
+        </TipButton>
         {more && (
           <>
             <div className="fixed inset-0 z-30" onPointerDown={() => setMore(false)} />

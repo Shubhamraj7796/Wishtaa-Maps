@@ -6,6 +6,8 @@ import { useScene, useTheme } from '../scene'
 import { useEditor } from '../store'
 import { Color, Row, field } from './panelKit'
 import { Slider } from './Slider'
+import { TipButton } from '@/ui/IconButton'
+import { Tooltip } from '@/ui/Tooltip'
 
 /** The choices for how a branch is drawn. "Tapered" is a curved branch that thins toward the topic. */
 export const CURVE_CHOICES: { id: BranchCurve | 'tapered'; label: string }[] = [
@@ -77,7 +79,7 @@ export function BranchControls() {
       <div className="space-y-1">
         <Slider label="Thickness" value={Math.min(MAX_BRANCH_SLIDER, Math.round(line.width * 2) / 2)} min={1} max={MAX_BRANCH_SLIDER} step={0.5} format={(v) => `${v} px`} onPreview={(v) => A.previewStyle({ lineWidth: v }, mode)} onCommit={(v) => set({ lineWidth: v })} />
         <div className="flex items-center justify-between gap-2 text-xs">
-          <label className="flex items-center gap-1.5" title={mapManual ? 'The whole map has a manual thickness. Use "Reset all branches to automatic" in the Theme tab first.' : 'Automatic: as bold as the topic is big, thinner each level down'}>
+          <Tooltip label={mapManual ? 'The whole map has a manual thickness. Use "Reset all branches to automatic" in the Theme tab first.' : 'Automatic: as bold as the topic is big, thinner each level down'}><label className="flex items-center gap-1.5">
             <input
               type="checkbox"
               aria-label="Automatic thickness"
@@ -87,7 +89,7 @@ export function BranchControls() {
               className="h-4 w-4 accent-[rgb(var(--c-brand))]"
             />
             Auto
-          </label>
+          </label></Tooltip>
           <button type="button" onClick={() => A.resetBranchesToAuto('selection')} className="text-muted hover:text-ink">
             Reset to automatic
           </button>
@@ -108,9 +110,9 @@ export function BranchControls() {
         <span>Dash</span>
         <div className="flex gap-1.5" role="group" aria-label="Branch dash style">
           {(['solid', 'dashed', 'dotted'] as LineStyle[]).map((ls) => (
-            <button key={ls} type="button" aria-pressed={line.style === ls} aria-label={`Branch: ${ls}`} title={ls} onClick={() => set({ lineStyle: ls === 'solid' ? undefined : ls })} className={`grid h-9 w-12 place-items-center rounded-ui border ${line.style === ls ? 'border-brand bg-brand/15' : 'border-line hover:bg-bg'}`}>
+            <TipButton key={ls} type="button" aria-pressed={line.style === ls} aria-label={`Branch: ${ls}`} tip={ls} onClick={() => set({ lineStyle: ls === 'solid' ? undefined : ls })} className={`grid h-9 w-12 place-items-center rounded-ui border ${line.style === ls ? 'border-brand bg-brand/15' : 'border-line hover:bg-bg'}`}>
               <LineIcon style={ls} />
-            </button>
+            </TipButton>
           ))}
         </div>
       </div>

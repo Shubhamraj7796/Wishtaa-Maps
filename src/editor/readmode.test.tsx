@@ -20,6 +20,7 @@ import { ReadModeSwitch } from './ui/ReadModeSwitch'
 import { ReadPanel } from './ui/ReadPanel'
 import { OutlineView } from './ui/OutlineView'
 import { ContextMenu, CommandPalette } from './ui/Overlays'
+import { tipOf } from '../test/tipText'
 
 const WRITES = ['saveContent', 'update', 'create', 'remove', 'move', 'trash', 'restore', 'emptyTrash', 'duplicate'] as const
 
@@ -392,7 +393,7 @@ describe('a file that can only be read', () => {
     expect(useEditor.getState().notice?.text).toMatch(/permission/)
     render(<ReadModeSwitch />)
     expect(screen.queryByRole('button', { name: 'Edit' })).toBeNull()
-    expect(screen.getByTestId('read-badge').title).toMatch(/permission to edit it in Google Drive/)
+    expect(tipOf(screen.getByTestId('read-badge'))).toMatch(/permission to edit it in Google Drive/)
   })
 
   it('a file set to open in Read mode needs one click to edit, and says what happened', async () => {

@@ -13,6 +13,7 @@ import { registerAccountNotice, useAuth } from './account'
 import { AccountMenu } from './auth/AccountMenu'
 import { AuthHost, ExpiredBar } from './auth/AuthHost'
 import { Cloud, HardDrive, Home, Info, Library, Menu, Moon, Plus, Search, Sparkles, Sun, Trash2, X, FileText } from './icons'
+import { TipButton } from '@/ui/IconButton'
 
 export function Wordmark({ compact }: { compact?: boolean }) {
   return (
@@ -139,9 +140,9 @@ function TopBar() {
   }
   return (
     <header className="flex h-14 shrink-0 items-center gap-2 border-b border-line bg-surface px-3">
-      <button type="button" onClick={openMenu} aria-label="Open menu" title="Menu" className="grid h-9 w-9 place-items-center rounded-ui hover:bg-bg md:hidden">
+      <TipButton type="button" onClick={openMenu} aria-label="Open menu" tip="Menu" className="grid h-9 w-9 place-items-center rounded-ui hover:bg-bg md:hidden">
         <Menu size={20} aria-hidden="true" />
-      </button>
+      </TipButton>
       <form role="search" onSubmit={submit} className="relative min-w-0 max-w-xl flex-1">
         <Search size={16} aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
         <input
@@ -154,9 +155,9 @@ function TopBar() {
         />
       </form>
       <div className="ml-auto flex items-center gap-1">
-        <button type="button" onClick={toggleTheme} aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`} title="Switch theme" className="grid h-9 w-9 place-items-center rounded-ui hover:bg-bg">
+        <TipButton type="button" onClick={toggleTheme} aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`} tip="Switch theme" className="grid h-9 w-9 place-items-center rounded-ui hover:bg-bg">
           {theme === 'light' ? <Moon size={18} aria-hidden="true" /> : <Sun size={18} aria-hidden="true" />}
-        </button>
+        </TipButton>
         <AccountMenu />
       </div>
     </header>
@@ -170,7 +171,7 @@ function LocalBanner() {
     <div role="note" className="flex items-center gap-3 border-b border-line bg-warn/10 px-4 py-2 text-sm">
       <Info size={16} aria-hidden="true" className="shrink-0 text-warn" />
       <p className="min-w-0 flex-1">Files are saved in this browser only.</p>
-      <button
+      <TipButton
         type="button"
         onClick={() => {
           setGone(true)
@@ -181,11 +182,11 @@ function LocalBanner() {
           }
         }}
         aria-label="Dismiss"
-        title="Dismiss"
+        tip="Dismiss"
         className="grid h-7 w-7 shrink-0 place-items-center rounded-ui hover:bg-bg"
       >
         <X size={16} aria-hidden="true" />
-      </button>
+      </TipButton>
     </div>
   )
 }
@@ -263,8 +264,8 @@ export function Shell(): ReactNode {
 export function EditorMenuButton() {
   const { openMenu } = useShell()
   return (
-    <button type="button" onClick={openMenu} aria-label="Open menu" title="Menu" className="grid h-9 w-9 shrink-0 place-items-center rounded-ui hover:bg-bg">
+    <TipButton type="button" onClick={openMenu} aria-label="Open menu" tip="Menu" className="grid h-9 w-9 shrink-0 place-items-center rounded-ui hover:bg-bg">
       <Menu size={20} aria-hidden="true" />
-    </button>
+    </TipButton>
   )
 }

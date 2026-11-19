@@ -15,6 +15,8 @@ import { useEditor, type DetailsSection } from '../store'
 import { Formula } from './Formula'
 import { Backlinks, FileLinkPicker, useLinkedFile } from './FileLinks'
 import { useFiles } from '../../app/FilesContext'
+import { TipButton } from '@/ui/IconButton'
+import { Tooltip } from '@/ui/Tooltip'
 
 const field = 'rounded-ui border border-line bg-surface px-2 py-1 text-sm'
 const iconBtn = 'grid h-8 w-8 shrink-0 place-items-center rounded-ui border border-line hover:bg-bg disabled:opacity-40'
@@ -67,9 +69,9 @@ function PictureSection({ id }: { id: string }) {
     <Sec id="picture" title="Picture" icon="image">
       <div className="flex flex-wrap gap-1.5" role="group" aria-label="Picture position">
         {IMAGE_POSITIONS.map((p) => (
-          <button key={p} type="button" aria-label={POSITION_LABEL[p]} title={POSITION_LABEL[p]} aria-pressed={pos === p} onClick={() => setPicturePosition(id, p)} className={`${iconBtn} ${pos === p ? 'border-brand bg-brand/15' : ''}`}>
+          <TipButton key={p} type="button" aria-label={POSITION_LABEL[p]} tip={POSITION_LABEL[p]} aria-pressed={pos === p} onClick={() => setPicturePosition(id, p)} className={`${iconBtn} ${pos === p ? 'border-brand bg-brand/15' : ''}`}>
             <PositionIcon position={p} />
-          </button>
+          </TipButton>
         ))}
       </div>
       <div className="flex items-center gap-2 text-sm">
@@ -77,22 +79,22 @@ function PictureSection({ id }: { id: string }) {
           <span className="text-muted">W</span>
           <input type="number" min={40} max={1200} aria-label="Picture width" value={w} onChange={(e) => setW(e.target.value)} onBlur={() => apply(Number(w), keep ? Number(w) * ratio : Number(h))} onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()} className={`${field} w-20`} />
         </label>
-        <button type="button" aria-label="Keep the picture's proportions" aria-pressed={keep} title="Keep proportions" onClick={() => setKeep(!keep)} className={`${iconBtn} ${keep ? 'border-brand bg-brand/15' : ''}`}>
+        <TipButton type="button" aria-label="Keep the picture's proportions" aria-pressed={keep} tip="Keep proportions" onClick={() => setKeep(!keep)} className={`${iconBtn} ${keep ? 'border-brand bg-brand/15' : ''}`}>
           <Icon name={keep ? 'link' : 'unlink'} size={15} />
-        </button>
+        </TipButton>
         <label className="flex items-center gap-1">
           <span className="text-muted">H</span>
           <input type="number" min={40} max={2400} aria-label="Picture height" value={h} onChange={(e) => setH(e.target.value)} onBlur={() => apply(keep ? Number(h) / ratio : Number(w), Number(h))} onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()} className={`${field} w-20`} />
         </label>
       </div>
       <div className="flex flex-wrap gap-1.5">
-        <button type="button" aria-label="Give every picture this width" title="Apply this width to all pictures" onClick={() => applyPictureSizeToAll(id)} className={iconBtn}><Icon name="details" size={16} /></button>
-        <button type="button" aria-label="Back to original size" title="Back to original size" onClick={() => void resetImageSize(id)} className={iconBtn}><Icon name="reset" size={16} /></button>
-        <button type="button" aria-label="Replace the picture" title="Replace the picture" onClick={() => void replaceImage(id)} className={iconBtn}><Icon name="replace" size={16} /></button>
-        <button type="button" aria-label="Preview the picture" title="Preview" onClick={() => showPreview(image.imageId)} className={iconBtn}><Icon name="preview" size={16} /></button>
-        <button type="button" aria-label="Download the picture" title="Download" onClick={() => void downloadImage(image.imageId, text)} className={iconBtn}><Icon name="download" size={16} /></button>
-        <button type="button" aria-label="Read text from the picture (OCR)" title="Read text from the picture (OCR)" onClick={() => startOcr(id)} className={iconBtn}><Icon name="ocr" size={16} /></button>
-        <button type="button" aria-label="Remove the picture" title="Remove the picture" onClick={() => removeImage(id)} className={`${iconBtn} text-bad`}><Icon name="trash" size={16} /></button>
+        <TipButton type="button" aria-label="Give every picture this width" tip="Apply this width to all pictures" onClick={() => applyPictureSizeToAll(id)} className={iconBtn}><Icon name="details" size={16} /></TipButton>
+        <TipButton type="button" aria-label="Back to original size" tip="Back to original size" onClick={() => void resetImageSize(id)} className={iconBtn}><Icon name="reset" size={16} /></TipButton>
+        <TipButton type="button" aria-label="Replace the picture" tip="Replace the picture" onClick={() => void replaceImage(id)} className={iconBtn}><Icon name="replace" size={16} /></TipButton>
+        <TipButton type="button" aria-label="Preview the picture" tip="Preview" onClick={() => showPreview(image.imageId)} className={iconBtn}><Icon name="preview" size={16} /></TipButton>
+        <TipButton type="button" aria-label="Download the picture" tip="Download" onClick={() => void downloadImage(image.imageId, text)} className={iconBtn}><Icon name="download" size={16} /></TipButton>
+        <TipButton type="button" aria-label="Read text from the picture (OCR)" tip="Read text from the picture (OCR)" onClick={() => startOcr(id)} className={iconBtn}><Icon name="ocr" size={16} /></TipButton>
+        <TipButton type="button" aria-label="Remove the picture" tip="Remove the picture" onClick={() => removeImage(id)} className={`${iconBtn} text-bad`}><Icon name="trash" size={16} /></TipButton>
       </div>
     </Sec>
   )
@@ -117,7 +119,7 @@ function TagsSection({ id }: { id: string }) {
     <Sec id="tags" title="Tags" icon="tag">
       <div className="flex gap-1.5">
         <input value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && add()} placeholder="Add a tag…" aria-label="New tag" maxLength={30} className={`${field} min-w-0 flex-1`} />
-        <button type="button" onClick={add} aria-label="Add tag" title="Add tag" className={iconBtn}><Icon name="plus" size={16} /></button>
+        <TipButton type="button" onClick={add} aria-label="Add tag" tip="Add tag" className={iconBtn}><Icon name="plus" size={16} /></TipButton>
       </div>
       {mine.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
@@ -181,7 +183,7 @@ function TaskSection({ id }: { id: string }) {
               ))}
             </select>
           </div>
-          <button type="button" onClick={() => setTask(mapDoc, id, null)} aria-label="Remove task" title="Remove task" className={`${iconBtn} text-bad`}><Icon name="trash" size={16} /></button>
+          <TipButton type="button" onClick={() => setTask(mapDoc, id, null)} aria-label="Remove task" tip="Remove task" className={`${iconBtn} text-bad`}><Icon name="trash" size={16} /></TipButton>
         </>
       )}
       <div className="border-t border-line pt-2">
@@ -207,9 +209,9 @@ function LinkSection({ id }: { id: string }) {
     <Sec id="link" title="Hyperlink" icon="link">
       <div className="flex gap-1.5">
         <input value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && setTopicLink(id, text)} placeholder="https://…" aria-label="Web address" className={`${field} min-w-0 flex-1`} />
-        <button type="button" onClick={() => setTopicLink(id, text)} aria-label="Save link" title="Save link" className={iconBtn}><Icon name="check" size={16} /></button>
+        <TipButton type="button" onClick={() => setTopicLink(id, text)} aria-label="Save link" tip="Save link" className={iconBtn}><Icon name="check" size={16} /></TipButton>
         {link && (
-          <button type="button" onClick={() => setTopicLink(id, '')} aria-label="Remove link" title="Remove link" className={iconBtn}><Icon name="unlink" size={16} /></button>
+          <TipButton type="button" onClick={() => setTopicLink(id, '')} aria-label="Remove link" tip="Remove link" className={iconBtn}><Icon name="unlink" size={16} /></TipButton>
         )}
       </div>
       <button type="button" onClick={() => (linkFrom ? cancelLinkPick() : startLinkPick(id))} aria-pressed={!!linkFrom} className={`${field} flex w-full items-center gap-2 hover:bg-bg ${linkFrom ? 'border-brand bg-brand/15' : ''}`}>
@@ -242,10 +244,10 @@ function AttachmentsSection({ id }: { id: string }) {
       {files.map((f) => (
         <div key={f.id} className="flex items-center gap-2 text-sm">
           <Icon name="notebook" size={15} />
-          <span className="min-w-0 flex-1 truncate" title={f.name}>{f.name}</span>
+          <Tooltip label={f.name}><span className="min-w-0 flex-1 truncate">{f.name}</span></Tooltip>
           <span className="text-xs text-muted">{formatBytes(f.size)}</span>
-          <button type="button" aria-label={`Download ${f.name}`} title="Download" onClick={() => void downloadAttachment(f)} className={iconBtn}><Icon name="download" size={15} /></button>
-          <button type="button" aria-label={`Remove ${f.name}`} title="Remove" onClick={() => detachFile(id, f.id)} className={`${iconBtn} text-bad`}><Icon name="trash" size={15} /></button>
+          <TipButton type="button" aria-label={`Download ${f.name}`} tip="Download" onClick={() => void downloadAttachment(f)} className={iconBtn}><Icon name="download" size={15} /></TipButton>
+          <TipButton type="button" aria-label={`Remove ${f.name}`} tip="Remove" onClick={() => detachFile(id, f.id)} className={`${iconBtn} text-bad`}><Icon name="trash" size={15} /></TipButton>
         </div>
       ))}
       <p className="text-xs text-muted">Up to {MAX_ATTACHMENTS} files of 10 MB each, kept in this browser.</p>
@@ -318,7 +320,7 @@ function TableSection({ id }: { id: string }) {
             <button type="button" disabled={cols >= MAX_TABLE_COLS} onClick={() => commit(rows.map((r) => [...r, '']))} className={`${field} hover:bg-bg disabled:opacity-40`}>+ Column</button>
             <button type="button" disabled={rows.length <= 1} onClick={() => commit(rows.slice(0, -1))} className={`${field} hover:bg-bg disabled:opacity-40`}>− Row</button>
             <button type="button" disabled={cols <= 1} onClick={() => commit(rows.map((r) => r.slice(0, -1)))} className={`${field} hover:bg-bg disabled:opacity-40`}>− Column</button>
-            <button type="button" onClick={() => commit([])} aria-label="Remove the table" title="Remove the table" className={`${iconBtn} text-bad`}><Icon name="trash" size={16} /></button>
+            <TipButton type="button" onClick={() => commit([])} aria-label="Remove the table" tip="Remove the table" className={`${iconBtn} text-bad`}><Icon name="trash" size={16} /></TipButton>
           </div>
         </>
       )}

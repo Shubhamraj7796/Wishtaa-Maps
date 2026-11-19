@@ -6,6 +6,7 @@ import { ShapeIcon } from '@/ui/icons'
 import * as A from '../actions'
 import { useEditor } from '../store'
 import { Check, Color, Row, Section, field } from './panelKit'
+import { TipButton } from '@/ui/IconButton'
 
 const COLUMNS = 6
 
@@ -71,13 +72,13 @@ export function ShapePicker({ value, onPick }: { value: Shape | undefined; onPic
           <div ref={grid} role="menu" aria-label="Shapes" onKeyDown={onKey} className="fixed z-40 w-[19.5rem] max-w-[calc(100vw-1rem)] rounded-ui border border-line bg-surface p-2 shadow-xl" style={pos ?? undefined}>
             <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${COLUMNS}, minmax(0, 1fr))` }}>
               {options.map((sh, i) => (
-                <button
+                <TipButton
                   key={sh ?? 'theme'}
                   type="button"
                   role="menuitemradio"
                   aria-checked={value === sh}
                   aria-label={sh ? SHAPE_NAME(sh) : 'Shape from the theme'}
-                  title={sh ? SHAPE_NAME(sh) : 'Follow the theme'}
+                  tip={sh ? SHAPE_NAME(sh) : 'Follow the theme'}
                   tabIndex={i === focus ? 0 : -1}
                   onClick={() => {
                     onPick(sh)
@@ -86,7 +87,7 @@ export function ShapePicker({ value, onPick }: { value: Shape | undefined; onPic
                   className={`grid h-11 place-items-center rounded-ui border ${value === sh ? 'border-brand bg-brand/15' : 'border-transparent hover:bg-bg'}`}
                 >
                   {sh ? <ShapeIcon shape={sh} size={34} /> : <span className="text-[10px] leading-tight">Theme</span>}
-                </button>
+                </TipButton>
               ))}
             </div>
             <p className="px-1 pt-2 text-[11px] text-muted">{SHAPE_DEFS.length} shapes. Arrow keys to move, Enter to choose.</p>
@@ -131,13 +132,13 @@ export function TopicSection({ style: st, look, count }: { style: TopicStyle; lo
         <span>Corner</span>
         <div role="radiogroup" aria-label="Corner" className="flex gap-1">
           {CORNERS.map((c) => (
-            <button
+            <TipButton
               key={c.id}
               type="button"
               role="radio"
               aria-checked={st.corner === c.id}
               aria-label={c.label}
-              title={rect ? c.label : 'Corners apply to box shapes'}
+              tip={rect ? c.label : 'Corners apply to box shapes'}
               disabled={!rect}
               onClick={() => set({ corner: st.corner === c.id ? undefined : c.id })}
               className={`grid h-8 w-9 place-items-center rounded-ui border disabled:opacity-40 ${st.corner === c.id ? 'border-brand bg-brand/15' : 'border-line hover:bg-bg'}`}
@@ -145,7 +146,7 @@ export function TopicSection({ style: st, look, count }: { style: TopicStyle; lo
               <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
                 <path d={c.d} />
               </svg>
-            </button>
+            </TipButton>
           ))}
         </div>
       </div>

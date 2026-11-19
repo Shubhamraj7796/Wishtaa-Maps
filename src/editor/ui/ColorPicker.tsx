@@ -5,6 +5,7 @@ import { recentColours, rememberColour } from '@/core/theme/recent'
 import { useBusyWhile } from '../panel/busy'
 import { useTheme } from '../scene'
 import { Slider } from './Slider'
+import { TipButton } from '@/ui/IconButton'
 
 /** A small, familiar set to pick from besides the map's own colour scheme. */
 export const STANDARD_COLORS = [
@@ -50,13 +51,13 @@ export function ColorPicker(p: ColorPickerProps) {
   const none = p.value === 'transparent'
 
   const swatch = (
-    <button
+    <TipButton
       ref={trigger}
       type="button"
       aria-haspopup="dialog"
       aria-expanded={open}
       aria-label={`${p.label}: ${none ? 'none' : p.value}. Change`}
-      title={p.label}
+      tip={p.label}
       onClick={() => setOpen((o) => !o)}
       className={p.variant === 'swatch' ? 'grid h-9 w-9 shrink-0 place-items-center rounded-ui border border-transparent hover:bg-bg' : 'flex h-7 w-9 items-center justify-center rounded border border-line p-0.5'}
     >
@@ -66,7 +67,7 @@ export function ColorPicker(p: ColorPickerProps) {
       >
         {p.glyph}
       </span>
-    </button>
+    </TipButton>
   )
 
   return (
@@ -79,9 +80,9 @@ export function ColorPicker(p: ColorPickerProps) {
           <span className="flex items-center gap-1.5">
             {swatch}
             {p.onClear && (
-              <button type="button" onClick={p.onClear} className="rounded px-1.5 text-xs text-muted hover:text-ink" title="Back to the theme's colour">
+              <TipButton type="button" onClick={p.onClear} className="rounded px-1.5 text-xs text-muted hover:text-ink" tip="Back to the theme's colour">
                 Auto
-              </button>
+              </TipButton>
             )}
           </span>
         </div>
@@ -133,11 +134,11 @@ function Popover(p: ColorPickerProps & { anchor: React.RefObject<HTMLElement>; o
   const grid = (name: string, colors: string[]) => (
     <div role="group" aria-label={name} className="grid grid-cols-6 gap-1">
       {colors.map((c) => (
-        <button
+        <TipButton
           key={c}
           type="button"
           aria-label={c}
-          title={c}
+          tip={c}
           aria-pressed={p.value.toLowerCase() === c}
           onClick={() => pick(c)}
           className={`h-8 rounded border ${p.value.toLowerCase() === c ? 'border-brand ring-2 ring-brand' : 'border-black/20'}`}
@@ -240,17 +241,17 @@ function Popover(p: ColorPickerProps & { anchor: React.RefObject<HTMLElement>; o
             className="min-w-0 flex-1 rounded-ui border border-line bg-surface px-2 py-1 font-mono text-sm"
           />
           {Dropper && (
-            <button
+            <TipButton
               type="button"
               aria-label="Pick a colour from the screen"
-              title="Pick a colour from the screen"
+              tip="Pick a colour from the screen"
               onClick={() => void new Dropper().open().then((r) => pick(r.sRGBHex)).catch(() => undefined)}
               className="grid h-8 w-8 place-items-center rounded-ui border border-line hover:bg-bg"
             >
               <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden="true">
                 <path d="M12 4l4 4M3 17l1-4 8-8 3 3-8 8-4 1z" />
               </svg>
-            </button>
+            </TipButton>
           )}
         </div>
         {p.opacity !== undefined && p.onOpacityCommit && (

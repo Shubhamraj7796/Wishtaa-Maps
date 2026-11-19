@@ -6,6 +6,8 @@ import { deleteSelectedObject, editObject, patchObject, selectObject } from '../
 import { useEditor } from '../store'
 import { ColorPicker } from './ColorPicker'
 import { Slider } from './Slider'
+import { TipButton } from '@/ui/IconButton'
+import { Tooltip } from '@/ui/Tooltip'
 
 const btn = 'grid h-9 min-w-9 place-items-center rounded-ui border px-1.5 transition-colors'
 const on = 'border-brand bg-brand/15'
@@ -23,15 +25,15 @@ export function ObjectBar() {
 
   const common = (
     <>
-      <button type="button" aria-label="Edit the text" title="Edit the text" onClick={() => editObject(ref)} className={`${btn} ${off}`}>
+      <TipButton type="button" aria-label="Edit the text" tip="Edit the text" onClick={() => editObject(ref)} className={`${btn} ${off}`}>
         <Icon name="edit" size={17} />
-      </button>
-      <button type="button" aria-label="Delete" title="Delete (Delete key)" onClick={() => deleteSelectedObject()} className={`${btn} ${off} text-bad`}>
+      </TipButton>
+      <TipButton type="button" aria-label="Delete" tip="Delete (Delete key)" onClick={() => deleteSelectedObject()} className={`${btn} ${off} text-bad`}>
         <Icon name="trash" size={17} />
-      </button>
-      <button type="button" aria-label="Done" title="Done (Esc)" onClick={() => selectObject(null)} className={`${btn} ${off}`}>
+      </TipButton>
+      <TipButton type="button" aria-label="Done" tip="Done (Esc)" onClick={() => selectObject(null)} className={`${btn} ${off}`}>
         <Icon name="close" size={17} />
-      </button>
+      </TipButton>
     </>
   )
 
@@ -43,17 +45,17 @@ export function ObjectBar() {
       <>
         <div className="flex gap-0.5" role="group" aria-label="Arrow heads">
           {(['end', 'both', 'start', 'none'] as ArrowEnds[]).map((a) => (
-            <button key={a} type="button" aria-pressed={r.arrows === a} aria-label={`Arrows: ${a === 'end' ? 'at the end' : a === 'start' ? 'at the start' : a}`} title={`Arrows: ${a}`} onClick={() => patchObject('relationship', r.id, { arrows: a })} className={`${btn} ${r.arrows === a ? on : off}`}>
+            <TipButton key={a} type="button" aria-pressed={r.arrows === a} aria-label={`Arrows: ${a === 'end' ? 'at the end' : a === 'start' ? 'at the start' : a}`} tip={`Arrows: ${a}`} onClick={() => patchObject('relationship', r.id, { arrows: a })} className={`${btn} ${r.arrows === a ? on : off}`}>
               <ArrowEndsIcon ends={a} />
-            </button>
+            </TipButton>
           ))}
         </div>
         <Sep />
         <div className="flex gap-0.5" role="group" aria-label="Line style">
           {(['solid', 'dashed', 'dotted'] as LineStyle[]).map((l) => (
-            <button key={l} type="button" aria-pressed={(r.lineStyle ?? 'solid') === l} aria-label={`Line: ${l}`} title={l} onClick={() => patchObject('relationship', r.id, { lineStyle: l })} className={`${btn} ${(r.lineStyle ?? 'solid') === l ? on : off}`}>
+            <TipButton key={l} type="button" aria-pressed={(r.lineStyle ?? 'solid') === l} aria-label={`Line: ${l}`} tip={l} onClick={() => patchObject('relationship', r.id, { lineStyle: l })} className={`${btn} ${(r.lineStyle ?? 'solid') === l ? on : off}`}>
               <LineIcon style={l} />
-            </button>
+            </TipButton>
           ))}
         </div>
         <Sep />
@@ -73,21 +75,21 @@ export function ObjectBar() {
       <>
         <div className="flex gap-0.5" role="group" aria-label="Boundary shape">
           {(['rounded', 'rect', 'ellipse'] as BoundaryShape[]).map((s) => (
-            <button key={s} type="button" aria-pressed={b.shape === s} aria-label={`Shape: ${s}`} title={s} onClick={() => patchObject('boundary', b.id, { shape: s })} className={`${btn} ${b.shape === s ? on : off}`}>
+            <TipButton key={s} type="button" aria-pressed={b.shape === s} aria-label={`Shape: ${s}`} tip={s} onClick={() => patchObject('boundary', b.id, { shape: s })} className={`${btn} ${b.shape === s ? on : off}`}>
               <ShapeIcon shape={s} size={26} />
-            </button>
+            </TipButton>
           ))}
         </div>
         <Sep />
         <div className="flex gap-0.5" role="group" aria-label="Line style">
           {(['solid', 'dashed', 'dotted'] as LineStyle[]).map((l) => (
-            <button key={l} type="button" aria-pressed={b.lineStyle === l} aria-label={`Line: ${l}`} title={l} onClick={() => patchObject('boundary', b.id, { lineStyle: l })} className={`${btn} ${b.lineStyle === l ? on : off}`}>
+            <TipButton key={l} type="button" aria-pressed={b.lineStyle === l} aria-label={`Line: ${l}`} tip={l} onClick={() => patchObject('boundary', b.id, { lineStyle: l })} className={`${btn} ${b.lineStyle === l ? on : off}`}>
               <LineIcon style={l} />
-            </button>
+            </TipButton>
           ))}
         </div>
         <Sep />
-        <input type="color" aria-label="Boundary colour" title="Boundary colour" value={isHex(b.color) ? b.color : '#0f766e'} onChange={(e) => patchObject('boundary', b.id, { color: e.target.value })} className="h-8 w-9 cursor-pointer rounded border border-line bg-transparent p-0.5" />
+        <Tooltip label="Boundary colour"><input type="color" aria-label="Boundary colour" value={isHex(b.color) ? b.color : '#0f766e'} onChange={(e) => patchObject('boundary', b.id, { color: e.target.value })} className="h-8 w-9 cursor-pointer rounded border border-line bg-transparent p-0.5" /></Tooltip>
         <Sep />
       </>
     )

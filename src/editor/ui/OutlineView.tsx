@@ -22,6 +22,8 @@ import { openAddPicture } from '../pictures/flow'
 import { viewTopics } from '../scene'
 import { useEditor } from '../store'
 import { MarkBadge } from './MarkBadge'
+import { TipButton } from '@/ui/IconButton'
+import { Tooltip } from '@/ui/Tooltip'
 
 interface Row {
   id: string
@@ -83,10 +85,10 @@ function OutlinePicture({ topicId, image, box, label, selected, readOnly, zoom }
   const shown = url ?? (last.current?.id === image.imageId ? last.current.url : null)
   return (
     <div className="relative" style={{ width: box.w, height: box.h }} data-outline-picture={topicId}>
-      <button
+      <TipButton
         type="button"
         aria-label={`Open picture: ${label}`}
-        title="Click to select the topic; double-click to select the picture"
+        tip="Click to select the topic; double-click to select the picture"
         onClick={() => {
           const now = performance.now()
           const double = lastTap.id === topicId && now - lastTap.t < 350
@@ -105,18 +107,18 @@ function OutlinePicture({ topicId, image, box, label, selected, readOnly, zoom }
         ) : (
           <span className="grid h-full w-full place-items-center px-2 text-center text-xs text-muted">{missing ? 'Picture missing' : pending ? 'Picture is still uploading' : ''}</span>
         )}
-      </button>
+      </TipButton>
       {selected && !readOnly && (
         <div className="absolute right-1 top-1 flex gap-1">
-          <button type="button" aria-label="View the picture larger" title="View the picture larger (rotate, mark up)" onClick={() => showPreview(image.imageId)} className="grid h-7 w-7 place-items-center rounded-full bg-surface text-ink shadow">
+          <TipButton type="button" aria-label="View the picture larger" tip="View the picture larger (rotate, mark up)" onClick={() => showPreview(image.imageId)} className="grid h-7 w-7 place-items-center rounded-full bg-surface text-ink shadow">
             <Icon name="fullscreen" size={14} />
-          </button>
-          <button type="button" aria-label="Replace the picture" title="Replace the picture" onClick={() => void replaceImage(topicId)} className="grid h-7 w-7 place-items-center rounded-full bg-surface text-ink shadow">
+          </TipButton>
+          <TipButton type="button" aria-label="Replace the picture" tip="Replace the picture" onClick={() => void replaceImage(topicId)} className="grid h-7 w-7 place-items-center rounded-full bg-surface text-ink shadow">
             <Icon name="replace" size={14} />
-          </button>
-          <button type="button" aria-label="Delete the picture" title="Delete the picture" onClick={() => removeImage(topicId)} className="grid h-7 w-7 place-items-center rounded-full bg-surface text-bad shadow">
+          </TipButton>
+          <TipButton type="button" aria-label="Delete the picture" tip="Delete the picture" onClick={() => removeImage(topicId)} className="grid h-7 w-7 place-items-center rounded-full bg-surface text-bad shadow">
             <Icon name="trash" size={14} />
-          </button>
+          </TipButton>
         </div>
       )}
     </div>
@@ -142,17 +144,16 @@ const OutlineRow = memo(function OutlineRow({ row, top, height, text, image, box
       <div style={{ width: `${100 / zoom}%`, transform: zoom === 1 ? undefined : `scale(${zoom})`, transformOrigin: '0 0', paddingLeft: row.depth * 22 + 4, paddingRight: 8 }}>
       <div className="flex items-center gap-1" style={{ height: ROW_H }}>
         {!readOnly && (
-          <span
+          <Tooltip label="Drag to reorder (or Alt+Up and Alt+Down)"><span
             role="button"
             tabIndex={-1}
             aria-label="Drag to reorder"
-            title="Drag to reorder (or Alt+Up and Alt+Down)"
             data-drag-handle={row.id}
             onPointerDown={(e) => onDragStart(e, row.id)}
             className={`grid h-7 w-6 shrink-0 cursor-grab touch-none select-none place-items-center rounded text-muted hover:bg-bg [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-9 ${selected ? '' : 'opacity-40'}`}
           >
             ⠿
-          </span>
+          </span></Tooltip>
         )}
         <button
           type="button"
@@ -188,15 +189,15 @@ const OutlineRow = memo(function OutlineRow({ row, top, height, text, image, box
         <TasksChip id={row.id} size={16} className="h-7 min-w-7 justify-center text-xs text-muted hover:text-ink" />
         <NotesChip id={row.id} size={16} className="h-7 min-w-7 justify-center text-xs text-muted hover:text-ink [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:min-w-11" />
         {selected && !readOnly && (
-          <button
+          <TipButton
             type="button"
             aria-label={image ? 'Replace picture' : 'Add picture'}
-            title={image ? 'Replace the picture' : 'Add a picture'}
+            tip={image ? 'Replace the picture' : 'Add a picture'}
             onClick={() => openAddPicture(image ? { kind: 'replace', id: row.id } : { kind: 'topic', id: row.id })}
             className="grid h-7 w-7 shrink-0 place-items-center rounded text-muted hover:bg-bg hover:text-ink"
           >
             <Icon name="image" size={15} />
-          </button>
+          </TipButton>
         )}
       </div>
       {image && box && (

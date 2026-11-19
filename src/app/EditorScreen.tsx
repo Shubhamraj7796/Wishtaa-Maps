@@ -28,7 +28,7 @@ import { SaveStatus } from '@/editor/ui/SaveStatus'
 import { closeFile, openFile, renameOpenFile } from '@/editor/session'
 import type { FileRecord } from '@/core/files/types'
 import { Icon } from '@/ui/icons'
-import { IconButton } from '@/ui/IconButton'
+import { IconButton, TipButton } from '@/ui/IconButton'
 import { takePendingShare } from '@/pwa/share'
 import { recordRecentFile } from './account'
 import { pickPdfFromDevice, restoreCollapsedPanel, togglePdfPanel } from '@/editor/pdf/actions'
@@ -288,38 +288,38 @@ function Editor({ file }: { file: FileRecord }) {
         <div className="flex items-center gap-1" role="group" aria-label="Show levels">
           <Icon name="details" size={14} />
           {([1, 2, 3, null] as const).map((n) => (
-            <button
+            <TipButton
               key={String(n)}
               type="button"
               aria-pressed={levels === n}
-              title={n === null ? 'Show all levels' : `Show ${n} level${n > 1 ? 's' : ''}`}
+              tip={n === null ? 'Show all levels' : `Show ${n} level${n > 1 ? 's' : ''}`}
               onClick={() => A.setLevels(n)}
               className={`rounded px-1.5 py-0.5 ${levels === n ? 'bg-brand/20 text-ink' : 'hover:bg-bg'}`}
             >
               {n ?? 'All'}
-            </button>
+            </TipButton>
           ))}
         </div>
         <div className="flex items-center gap-1">
-          <button type="button" onClick={A.openSearch} aria-label="Search topics" title="Search topics (Ctrl+F)" className="grid h-7 w-7 place-items-center rounded hover:bg-bg hover:text-ink">
+          <TipButton type="button" onClick={A.openSearch} aria-label="Search topics" tip="Search topics (Ctrl+F)" className="grid h-7 w-7 place-items-center rounded hover:bg-bg hover:text-ink">
             <SearchIcon size={15} aria-hidden="true" />
-          </button>
-          <button type="button" onClick={A.toggleMinimap} aria-pressed={minimap} aria-label="Minimap" title="Show or hide the minimap" className={`grid h-7 w-7 place-items-center rounded hover:bg-bg hover:text-ink ${minimap ? 'bg-brand/15 text-ink' : ''}`}>
+          </TipButton>
+          <TipButton type="button" onClick={A.toggleMinimap} aria-pressed={minimap} aria-label="Minimap" tip="Show or hide the minimap" className={`grid h-7 w-7 place-items-center rounded hover:bg-bg hover:text-ink ${minimap ? 'bg-brand/15 text-ink' : ''}`}>
             <Icon name="map" size={15} />
-          </button>
-          <button type="button" onClick={() => A.zoomBy(0.8)} aria-label="Zoom out" title="Zoom out" className="grid h-7 w-7 place-items-center rounded hover:bg-bg hover:text-ink">
+          </TipButton>
+          <TipButton type="button" onClick={() => A.zoomBy(0.8)} aria-label="Zoom out" tip="Zoom out" className="grid h-7 w-7 place-items-center rounded hover:bg-bg hover:text-ink">
             <Icon name="zoomOut" size={16} />
-          </button>
+          </TipButton>
           <ZoomBox />
-          <button type="button" onClick={() => A.zoomBy(1.25)} aria-label="Zoom in" title="Zoom in" className="grid h-7 w-7 place-items-center rounded hover:bg-bg hover:text-ink">
+          <TipButton type="button" onClick={() => A.zoomBy(1.25)} aria-label="Zoom in" tip="Zoom in" className="grid h-7 w-7 place-items-center rounded hover:bg-bg hover:text-ink">
             <Icon name="zoomIn" size={16} />
-          </button>
-          <button type="button" onClick={A.fitToScreen} aria-label="Fit to screen" title="Fit to screen (Ctrl+0)" className="grid h-7 w-7 place-items-center rounded hover:bg-bg hover:text-ink">
+          </TipButton>
+          <TipButton type="button" onClick={A.fitToScreen} aria-label="Fit to screen" tip="Fit to screen (Ctrl+0)" className="grid h-7 w-7 place-items-center rounded hover:bg-bg hover:text-ink">
             <Icon name="fit" size={16} />
-          </button>
-          <button type="button" onClick={A.toggleFullscreen} aria-label="Fullscreen" title="Fullscreen" className="grid h-7 w-7 place-items-center rounded hover:bg-bg hover:text-ink">
+          </TipButton>
+          <TipButton type="button" onClick={A.toggleFullscreen} aria-label="Fullscreen" tip="Fullscreen" className="grid h-7 w-7 place-items-center rounded hover:bg-bg hover:text-ink">
             <Icon name="fullscreen" size={16} />
-          </button>
+          </TipButton>
         </div>
       </footer>
     </div>

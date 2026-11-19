@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { PopoverRow } from './PopoverRow'
+import { TipButton } from '@/ui/IconButton'
 
 export interface Choice {
   id: string
@@ -73,13 +74,13 @@ function List({ groups, value, columns, onPick, label }: { groups: ChoiceGroup[]
             {g.items.map((c) => {
               const on = c.id === value
               return (
-                <button
+                <TipButton
                   key={c.id}
                   type="button"
                   role="option"
                   aria-selected={on}
                   aria-label={g.heading ? `${g.heading}: ${c.label}` : c.label}
-                  title={c.label}
+                  tip={c.label}
                   onClick={() => onPick(c.id)}
                   onFocus={() => setHint(c.label)}
                   onMouseEnter={() => setHint(c.label)}
@@ -87,7 +88,7 @@ function List({ groups, value, columns, onPick, label }: { groups: ChoiceGroup[]
                 >
                   {c.thumb}
                   <span className="line-clamp-2 text-center">{c.label}</span>
-                </button>
+                </TipButton>
               )
             })}
           </div>

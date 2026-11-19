@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useTouchFriendly } from '../pictures/touch'
 import { useEditor } from '../store'
+import { TipButton } from '@/ui/IconButton'
 
 export const formatBytes = (n: number) => (n >= 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`)
 
@@ -31,9 +32,9 @@ export function ChoiceControl({
       <button type="button" role="radio" aria-checked={value === 'compressed'} onClick={() => onChange('compressed')} className={seg(value === 'compressed')}>
         Compressed (readable) - {formatBytes(compressed)}
       </button>
-      <button type="button" role="radio" aria-checked={value === 'original'} disabled={!!originalDisabled} title={originalDisabled ?? undefined} onClick={() => onChange('original')} className={seg(value === 'original')}>
+      <TipButton type="button" role="radio" aria-checked={value === 'original'} disabled={!!originalDisabled} tip={originalDisabled ?? undefined} onClick={() => onChange('original')} className={seg(value === 'original')}>
         Original - {original === null ? 'too large' : formatBytes(original)}
-      </button>
+      </TipButton>
     </div>
   )
 }

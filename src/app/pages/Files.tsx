@@ -12,6 +12,7 @@ import { Cloud, FilePlus2, FolderInput, FolderPlus, ImageIcon, Network, Papercli
 import { ActionCard, Breadcrumbs, Chips, EmptyState, Page, PageHeader, SortControl, Tabs, ViewToggle, usePref } from '../ui'
 import { useDriveActions } from '../useDrive'
 import { useIndexes } from '../useIndexes'
+import { TipButton } from '@/ui/IconButton'
 
 type Tab = 'files' | 'notes' | 'resources' | 'bin'
 type Chip = 'all' | 'mine' | 'shared' | 'myshares'
@@ -72,7 +73,7 @@ function BulkBar({ ids, inBin, onDone }: { ids: string[]; inBin: boolean; onDone
           <button type="button" className={`${btn} text-bad`} onClick={run(() => f.trash(ids))}><Trash2 size={15} aria-hidden="true" /> Move to bin</button>
         </>
       )}
-      <button type="button" className="grid h-8 w-8 place-items-center rounded-ui hover:bg-bg" onClick={onDone} aria-label="Clear selection" title="Clear selection"><X size={16} aria-hidden="true" /></button>
+      <TipButton type="button" className="grid h-8 w-8 place-items-center rounded-ui hover:bg-bg" onClick={onDone} aria-label="Clear selection" tip="Clear selection"><X size={16} aria-hidden="true" /></TipButton>
     </div>
   )
 }

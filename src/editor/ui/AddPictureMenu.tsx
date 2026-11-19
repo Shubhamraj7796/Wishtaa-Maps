@@ -6,6 +6,7 @@ import { closeAddPicture, pictureIdsInMap, recentPictures, reusePicture, startSo
 import { canCaptureScreen, canReadClipboardImage, canTakePhoto, CAPTURE_UNSUPPORTED } from '../pictures/sources'
 import { useTouchFriendly } from '../pictures/touch'
 import { useEditor, type PictureSource } from '../store'
+import { TipButton } from '@/ui/IconButton'
 
 interface Item {
   icon: IconName
@@ -22,9 +23,9 @@ const PREF_LABEL: Record<PicturesPref, string> = { ask: 'Ask each time', compres
 function Thumb({ id, onPick }: { id: string; onPick: () => void }) {
   const { url } = useImageUrl(id)
   return (
-    <button type="button" onClick={onPick} aria-label="Use this picture again" title="Use this picture again" className="grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-ui border border-line bg-bg hover:border-brand">
+    <TipButton type="button" onClick={onPick} aria-label="Use this picture again" tip="Use this picture again" className="grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-ui border border-line bg-bg hover:border-brand">
       {url ? <img src={url} alt="" className="h-full w-full object-cover" draggable={false} /> : null}
-    </button>
+    </TipButton>
   )
 }
 
@@ -75,12 +76,12 @@ export function AddPictureMenu() {
         <h2 className="px-1 pb-2 text-sm font-semibold">{replace ? 'Replace picture' : 'Add picture'}</h2>
         <div role="menu" className="space-y-0.5">
           {items.map((it) => (
-            <button
+            <TipButton
               key={it.label}
               type="button"
               role="menuitem"
               disabled={!!it.disabledNote}
-              title={it.hint}
+              tip={it.hint}
               onClick={() => it.source && void startSource(it.source, target, { crop: it.crop })}
               className={`flex w-full items-center gap-3 rounded-ui px-3 text-left hover:bg-brand/15 disabled:opacity-50 ${touch ? 'min-h-11 py-2' : 'py-1.5'}`}
             >
@@ -90,7 +91,7 @@ export function AddPictureMenu() {
                 <span className="block truncate text-xs text-muted">{it.hint}</span>
               </span>
               {it.keys && <span className="text-xs text-muted">{it.keys}</span>}
-            </button>
+            </TipButton>
           ))}
         </div>
         {mine.length > 0 && (

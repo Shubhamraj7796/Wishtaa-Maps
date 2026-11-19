@@ -8,6 +8,7 @@ import { useEditor } from '../store'
 import { ColorPicker } from './ColorPicker'
 import { Section, field } from './panelKit'
 import { Slider } from './Slider'
+import { TipButton } from '@/ui/IconButton'
 
 const pick = (on: boolean) => `grid h-9 min-w-10 place-items-center rounded-ui border px-1 ${on ? 'border-brand bg-brand/15' : 'border-line hover:bg-bg'}`
 
@@ -37,9 +38,9 @@ function Dashes({ value, onPick }: { value: LineStyle; onPick: (l: LineStyle) =>
       <span>Dash</span>
       <div className="flex gap-1.5" role="group" aria-label="Line style">
         {(['solid', 'dashed', 'dotted'] as LineStyle[]).map((l) => (
-          <button key={l} type="button" aria-pressed={value === l} aria-label={`Line: ${l}`} title={l} onClick={() => onPick(l)} className={pick(value === l)}>
+          <TipButton key={l} type="button" aria-pressed={value === l} aria-label={`Line: ${l}`} tip={l} onClick={() => onPick(l)} className={pick(value === l)}>
             <LineIcon style={l} />
-          </button>
+          </TipButton>
         ))}
       </div>
     </div>
@@ -76,9 +77,9 @@ export function ObjectStyle() {
           <span>Arrows</span>
           <div className="flex gap-1.5" role="group" aria-label="Arrow heads">
             {(['end', 'both', 'start', 'none'] as ArrowEnds[]).map((a) => (
-              <button key={a} type="button" aria-pressed={r.arrows === a} aria-label={`Arrows: ${a === 'end' ? 'at the end' : a === 'start' ? 'at the start' : a}`} title={`Arrows: ${a}`} onClick={() => set({ arrows: a })} className={pick(r.arrows === a)}>
+              <TipButton key={a} type="button" aria-pressed={r.arrows === a} aria-label={`Arrows: ${a === 'end' ? 'at the end' : a === 'start' ? 'at the start' : a}`} tip={`Arrows: ${a}`} onClick={() => set({ arrows: a })} className={pick(r.arrows === a)}>
                 <ArrowEndsIcon ends={a} />
-              </button>
+              </TipButton>
             ))}
           </div>
         </div>
@@ -102,9 +103,9 @@ export function ObjectStyle() {
           <span>Shape</span>
           <div className="flex gap-1.5" role="group" aria-label="Boundary shape">
             {(['rounded', 'rect', 'ellipse'] as BoundaryShape[]).map((sh) => (
-              <button key={sh} type="button" aria-pressed={b.shape === sh} aria-label={`Shape: ${sh}`} title={sh} onClick={() => set({ shape: sh })} className={pick(b.shape === sh)}>
+              <TipButton key={sh} type="button" aria-pressed={b.shape === sh} aria-label={`Shape: ${sh}`} tip={sh} onClick={() => set({ shape: sh })} className={pick(b.shape === sh)}>
                 <ShapeIcon shape={sh} size={26} />
-              </button>
+              </TipButton>
             ))}
           </div>
         </div>

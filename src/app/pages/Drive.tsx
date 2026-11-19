@@ -13,6 +13,7 @@ import { buttonPrimary, buttonSecondary } from '../Modal'
 import { driveRepository } from '../repo'
 import { EmptyState, Page, PageHeader } from '../ui'
 import { useDriveActions, useDriveAuth } from '../useDrive'
+import { TipButton } from '@/ui/IconButton'
 
 interface Crumb {
   id: string | undefined
@@ -84,9 +85,9 @@ function DriveBrowser({ initialFolder }: { initialFolder: { id: string; name: st
             )}
           </span>
         ))}
-        <button type="button" onClick={() => void load()} aria-label="Refresh" title="Refresh" className="ml-auto grid h-8 w-8 place-items-center rounded-ui hover:bg-bg">
+        <TipButton type="button" onClick={() => void load()} aria-label="Refresh" tip="Refresh" className="ml-auto grid h-8 w-8 place-items-center rounded-ui hover:bg-bg">
           <RotateCcw size={16} aria-hidden="true" />
-        </button>
+        </TipButton>
       </nav>
 
       {error && (

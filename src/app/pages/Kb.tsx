@@ -7,6 +7,7 @@ import { useFiles } from '../FilesContext'
 import { BookOpen, LayoutTemplate, Library, Plus, Trash2, X } from '../icons'
 import { ActionCard, Chips, EmptyState, Page, PageHeader, SortControl, Tabs, ViewToggle, usePref } from '../ui'
 import { NotesList, useSelection, useSortPref } from './Files'
+import { TipButton } from '@/ui/IconButton'
 
 type Tab = 'kb' | 'notes' | 'trash'
 type Chip = 'all' | 'mine' | 'shared' | 'sharedby'
@@ -51,7 +52,7 @@ export default function Kb() {
           <Library size={18} aria-hidden="true" className="shrink-0 text-brand" />
           <p className="min-w-0 flex-1">A mind map is a knowledge base: use mind maps to manage interconnected notes.</p>
           <button type="button" onClick={() => void f.openSampleKb()} className="rounded-ui bg-brand px-3 py-1.5 text-xs font-semibold text-brand-ink hover:opacity-90">View example</button>
-          <button type="button" onClick={() => setBannerGone('1')} aria-label="Dismiss" title="Dismiss" className="grid h-7 w-7 place-items-center rounded-ui hover:bg-bg"><X size={16} aria-hidden="true" /></button>
+          <TipButton type="button" onClick={() => setBannerGone('1')} aria-label="Dismiss" tip="Dismiss" className="grid h-7 w-7 place-items-center rounded-ui hover:bg-bg"><X size={16} aria-hidden="true" /></TipButton>
         </div>
       )}
 

@@ -4,6 +4,7 @@ import { Icon } from '@/ui/icons'
 import { toggleMarkSelected } from '../content'
 import { useEditor } from '../store'
 import { CLIPART_CATEGORIES, CLIPART_COLORS, searchIconNames } from './clipartData'
+import { TipButton } from '@/ui/IconButton'
 
 /** Searchable clipart: every icon in the open-source Lucide set (about 2,000), plus curated categories. */
 export default function ClipartPanel() {
@@ -69,17 +70,17 @@ export default function ClipartPanel() {
       </div>
       <div className="mt-3 grid grid-cols-5 gap-1.5">
         {names.map((n) => (
-          <button
+          <TipButton
             key={n}
             type="button"
-            title={n.replace(/-/g, ' ')}
+            tip={n.replace(/-/g, ' ')}
             aria-label={`Add ${n.replace(/-/g, ' ')}`}
             aria-pressed={marks.has(markFor(n))}
             onClick={() => toggleMarkSelected(markFor(n))}
             className={`grid h-11 place-items-center rounded-ui border transition-transform hover:scale-105 ${marks.has(markFor(n)) ? 'border-brand bg-brand/15' : 'border-transparent hover:bg-bg'}`}
           >
             <DynamicIcon name={n as LucideName} size={24} color={color} strokeWidth={2} fallback={() => <span className="h-6 w-6" />} />
-          </button>
+          </TipButton>
         ))}
       </div>
       {names.length === 0 && <p className="mt-3 text-sm text-muted">No clipart matches “{query}”.</p>}

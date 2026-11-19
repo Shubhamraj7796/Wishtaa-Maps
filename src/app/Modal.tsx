@@ -1,5 +1,6 @@
 import { useEffect, useRef, type ReactNode } from 'react'
 import { X } from './icons'
+import { TipButton } from '@/ui/IconButton'
 
 /** A centered dialog: closes on Escape or a click outside, keeps focus inside, returns focus when closed. */
 export function Modal({ title, onClose, children, wide }: { title: string; onClose: () => void; children: ReactNode; wide?: boolean }) {
@@ -45,9 +46,9 @@ export function Modal({ title, onClose, children, wide }: { title: string; onClo
       >
         <div className="mb-3 flex items-center justify-between gap-3">
           <h2 className="text-base font-semibold">{title}</h2>
-          <button type="button" data-close onClick={onClose} aria-label="Close" title="Close" className="grid h-8 w-8 place-items-center rounded-ui hover:bg-bg">
+          <TipButton type="button" data-close onClick={onClose} aria-label="Close" tip="Close" className="grid h-8 w-8 place-items-center rounded-ui hover:bg-bg">
             <X size={18} aria-hidden="true" />
-          </button>
+          </TipButton>
         </div>
         {children}
       </div>

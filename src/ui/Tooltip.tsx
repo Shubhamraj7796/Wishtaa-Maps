@@ -24,6 +24,8 @@ export interface TipState {
 }
 
 let current: TipState | null = null
+/** What is showing now (for tests). */
+export const currentTip = (): TipState | null => current
 let lastShownAt = -Infinity
 const listeners = new Set<() => void>()
 const emit = () => listeners.forEach((l) => l())
@@ -33,7 +35,8 @@ const snapshot = () => current
 let hoverTimer = 0
 let touchTimer = 0
 
-function show(el: Element, text: string, keys: string | undefined) {
+function show(el: Element, text: string | undefined | null, keys: string | undefined) {
+  if (!text) return // nothing to say (for example a hint that only applies sometimes)
   window.clearTimeout(hoverTimer)
   current = { text, keys, anchor: el.getBoundingClientRect(), el, at: Date.now() }
   lastShownAt = Date.now()
@@ -142,8 +145,18 @@ type Handlers = {
   'data-tip-anchor': ''
 }
 
+/**
+ * True when the event belongs to THIS control, not to a control nested inside it that has a tooltip of its own (focus and press events
+ * bubble, so a wrapper with a tooltip would otherwise replace the inner control's name with its own).
+ */
+const isOwn = (e: { target: EventTarget; currentTarget: EventTarget }) => {
+  const t = e.target as Element | null
+  if (!t || t === e.currentTarget || typeof t.closest !== 'function') return true
+  return t.closest('[data-tip-anchor]') === e.currentTarget
+}
+
 /** The tooltip behaviour for one control: spread the result on the button (or use <Tooltip>). */
-export function useTooltip(text: string, keys?: string): Handlers {
+export function useTooltip(text: string | undefined | null, keys?: string): Handlers {
   // Whether the press that is going on turned into a long press (so the click that follows must not run the control).
   const longPressed = useRef(false)
   const touching = useRef(false)
@@ -164,7 +177,7 @@ export function useTooltip(text: string, keys?: string): Handlers {
     onPointerDown: (e) => {
       longPressed.current = false
       hideTip() // pressing a control runs it (or starts a long press): any tooltip showing has done its job
-      if (!prefersCoarse(e)) return
+      if (!prefersCoarse(e) || !isOwn(e)) return
       touching.current = true
       const el = e.currentTarget
       window.clearTimeout(touchTimer)
@@ -183,6 +196,7 @@ export function useTooltip(text: string, keys?: string): Handlers {
       touching.current = false
     },
     onFocus: (e) => {
+      if (!isOwn(e)) return
       let visible = true
       try {
         visible = e.currentTarget.matches(':focus-visible')
@@ -207,7 +221,7 @@ export function useTooltip(text: string, keys?: string): Handlers {
 }
 
 /** The same behaviour around any single element that can take the handlers (a button, a link, a swatch). */
-export function Tooltip({ label, keys, children }: { label: string; keys?: string; children: ReactElement<Record<string, unknown>> }) {
+export function Tooltip({ label, keys, children }: { label: string | undefined | null; keys?: string; children: ReactElement<Record<string, unknown>> }) {
   const handlers = useTooltip(label, keys)
   if (!isValidElement(children)) return children
   const own = children.props as Record<string, (e: never) => void>

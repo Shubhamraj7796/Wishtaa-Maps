@@ -33,6 +33,7 @@ import { AppRoutes } from './App'
 import { driveAuth, driveClient } from './drive'
 import { FilesProvider } from './FilesContext'
 import { driveRepository } from './repo'
+import { tipOf } from '../test/tipText'
 
 vi.mock('./EditorScreen', () => ({ default: ({ kind }: { kind: string }) => <div data-testid="editor">editor:{kind}</div> }))
 
@@ -136,7 +137,7 @@ describe('Drive in the file screens', () => {
     fireEvent.click(await screen.findByRole('menuitem', { name: 'Move to Google Drive' }))
     await waitFor(async () => expect((await driveRepository.list({ parentId: null }))[0]?.storage).toBe('drive'))
     const card = (await screen.findByRole('button', { name: 'Open Budget' })).closest('li') as HTMLElement
-    await waitFor(() => expect(within(card).getByTitle('Stored in Google Drive')).toBeTruthy())
+    await waitFor(() => expect(tipOf(within(card).getByText('Drive').closest('span.rounded-full') as HTMLElement)).toBe('Stored in Google Drive'))
     fireEvent.click(within(card).getByRole('button', { name: 'More actions for Budget' }))
     expect(await screen.findByRole('menuitem', { name: 'Move to this browser' })).toBeTruthy()
     expect(screen.getByRole('menuitem', { name: 'Stop syncing with Drive' })).toBeTruthy()
@@ -155,7 +156,7 @@ describe('Drive in the file screens', () => {
     await driveRepository.create({ type: 'map', name: 'Plain', content: buildStarterContent('blank') })
     mount('/files')
     await screen.findByRole('button', { name: 'Open Plain' })
-    expect(screen.queryByTitle('Stored in Google Drive')).toBeNull()
+    expect(screen.queryByText('Drive')).toBeNull()
   })
 })
 

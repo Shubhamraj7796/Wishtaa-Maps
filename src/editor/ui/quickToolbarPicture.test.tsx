@@ -10,6 +10,7 @@ import * as A from '../actions'
 import { closeFile, mapDoc, openFile } from '../session'
 import { useEditor } from '../store'
 import { QuickToolbar } from './QuickToolbar'
+import { tipOf } from '../../test/tipText'
 
 let t = 1_700_000_000_000
 let child = ''
@@ -42,7 +43,8 @@ describe('the camera button in the quick toolbar', () => {
     expect(names[bold + 2]).toBe('Italic')
     const button = within(bar()).getByRole('button', { name: 'Add picture' })
     expect(button.querySelector('svg')?.getAttribute('class')).toMatch(/lucide-camera/)
-    expect(button.getAttribute('title')).toMatch(/Add a picture to this topic/)
+    expect(button.getAttribute('title')).toBeNull()
+    expect(tipOf(button)).toMatch(/Add a picture to this topic/)
   })
 
   it('opens the usual Add picture menu for the selected topic (so the Compressed or Original choice applies)', () => {

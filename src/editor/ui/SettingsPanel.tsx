@@ -26,6 +26,7 @@ import { ObjectStyle } from "./ObjectStyle";
 import { PictureFormat } from "./PictureFormat";
 import { BRAND_FAB } from "@/ui/iconSize";
 import { Tooltip } from "@/ui/Tooltip";
+import { TipButton } from '@/ui/IconButton'
 
 const ICON: Record<PanelTab, IconName> = {
   canvas: "layout",
@@ -297,20 +298,20 @@ export function SettingsPanel() {
               style={{ width: HOT_ZONE_PX }}
             />
           )}
-          <button
+          <TipButton
             type="button"
             data-testid="panel-handle"
             aria-label="Open the settings panel"
             aria-expanded={false}
             aria-controls="settings-panel"
-            title="Settings (F4)"
+            tip="Settings (F4)"
             onPointerEnter={enter}
             onPointerLeave={leave}
             onClick={() => A.openPanel()}
             className="absolute right-0 top-1/2 z-20 grid h-20 w-5 -translate-y-1/2 place-items-center rounded-l-ui border border-r-0 border-line bg-surface text-muted shadow-md hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand max-md:bottom-16 max-md:top-auto max-md:h-12 max-md:w-8 max-md:translate-y-0"
           >
             <Icon name="chevronRight" size={16} className="rotate-180" />
-          </button>
+          </TipButton>
           {kind !== "none" && (
             <button
               type="button"
@@ -388,11 +389,11 @@ export function SettingsPanel() {
               ))}
             </div>
             <div className="flex shrink-0 flex-col items-center justify-center gap-0.5 border-l border-line px-1">
-              <button
+              <TipButton
                 type="button"
                 aria-pressed={pinned}
                 aria-label="Keep the settings panel open"
-                title={
+                tip={
                   pinned
                     ? "Pinned: stays open beside the map. Click to let it tuck away again."
                     : "Pin: keep the panel open beside the map"
@@ -401,16 +402,16 @@ export function SettingsPanel() {
                 className={`grid h-6 w-6 place-items-center rounded text-muted max-md:hidden ${pinned ? "bg-brand/15 text-ink" : "hover:bg-bg hover:text-ink"}`}
               >
                 <Icon name="pin" size={13} />
-              </button>
-              <button
+              </TipButton>
+              <TipButton
                 type="button"
                 aria-label="Close the settings panel"
-                title="Close (Esc)"
+                tip="Close (Esc)"
                 onClick={() => A.closePanel(true)}
                 className="grid h-6 w-6 place-items-center rounded text-muted hover:bg-bg hover:text-ink"
               >
                 <Icon name="close" size={13} />
-              </button>
+              </TipButton>
             </div>
           </div>
           <div

@@ -11,6 +11,7 @@ import { showNotice } from '../notice'
 import { useTouchFriendly } from '../pictures/touch'
 import { useEditor } from '../store'
 import { ChoiceControl, formatBytes } from './PictureChoiceDialog'
+import { TipButton } from '@/ui/IconButton'
 
 const FIT_PAD = 12
 
@@ -306,12 +307,12 @@ function Crop({ codec }: { codec: Codec }) {
             {chosen ? ` → ${chosen.width} × ${chosen.height} px, about ${formatBytes(chosen.blob.size)}` : busy ? ' …' : ''}
           </span>
           <span className="ml-auto flex flex-wrap gap-2">
-            <button type="button" aria-label="Rotate left" title="Rotate left" onClick={() => rotateBy('left')} className={btn}>
+            <TipButton type="button" aria-label="Rotate left" tip="Rotate left" onClick={() => rotateBy('left')} className={btn}>
               <Icon name="redo" size={16} className="-scale-x-100" />
-            </button>
-            <button type="button" aria-label="Rotate right" title="Rotate right" onClick={() => rotateBy('right')} className={btn}>
+            </TipButton>
+            <TipButton type="button" aria-label="Rotate right" tip="Rotate right" onClick={() => rotateBy('right')} className={btn}>
               <Icon name="redo" size={16} />
-            </button>
+            </TipButton>
             <button type="button" onClick={() => natural && setRect(fullRect(bounds ?? natural))} className={btn}>
               Full image
             </button>

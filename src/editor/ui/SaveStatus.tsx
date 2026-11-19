@@ -6,6 +6,8 @@ import { uploadingText } from '@/core/drive/progress'
 import { retrySave } from '../session'
 import { useEditor } from '../store'
 import { otherTabOpen, subscribeOtherTab } from '../tabwatch'
+import { TipButton } from '@/ui/IconButton'
+import { Tooltip } from '@/ui/Tooltip'
 
 function Spinner() {
   return (
@@ -74,15 +76,15 @@ export function SaveStatus() {
 
   if (readOnly) {
     return (
-      <div role="status" aria-live="polite" title="Read mode: nothing is saved or changed" className="flex shrink-0 items-center gap-1.5 px-1 text-xs text-ink">
+      <Tooltip label="Read mode: nothing is saved or changed"><div role="status" aria-live="polite" className="flex shrink-0 items-center gap-1.5 px-1 text-xs text-ink">
         <Icon name="lock" size={14} />
         <span>Read only</span>
-      </div>
+      </div></Tooltip>
     )
   }
 
   return (
-    <div role="status" aria-live="polite" title={tip} className="flex min-w-0 shrink-0 flex-col items-start text-xs text-ink">
+    <Tooltip label={tip}><div role="status" aria-live="polite" className="flex min-w-0 shrink-0 flex-col items-start text-xs text-ink">
       {status === 'error' ? (
         <button
           type="button"
@@ -104,20 +106,20 @@ export function SaveStatus() {
         </span>
       )}
       {up.pictures > 0 && up.pausedReason && (
-        <button
+        <TipButton
           type="button"
           data-testid="pictures-paused"
           onClick={() => void resumePictureUploads()}
-          title={`${up.pictures} picture${up.pictures === 1 ? '' : 's'} in all your maps ${up.pictures === 1 ? 'is' : 'are'} not going up to Google Drive: ${PAUSE_TEXT[up.pausedReason]}. The map itself is saved. Click to ${resumeLabel(up.pausedReason).toLowerCase()}.`}
+          tip={`${up.pictures} picture${up.pictures === 1 ? '' : 's'} in all your maps ${up.pictures === 1 ? 'is' : 'are'} not going up to Google Drive: ${PAUSE_TEXT[up.pausedReason]}. The map itself is saved. Click to ${resumeLabel(up.pausedReason).toLowerCase()}.`}
           className="mt-0.5 max-w-[16rem] truncate text-left text-[11px] text-warn underline decoration-dotted underline-offset-2"
         >
           {up.pictures} picture{up.pictures === 1 ? '' : 's'} paused: {PAUSE_TEXT[up.pausedReason]} · {resumeLabel(up.pausedReason)}
-        </button>
+        </TipButton>
       )}
       {up.pictures > 0 && !up.pausedReason && (
-        <span data-testid="pictures-uploading" title="The map itself is saved. Pictures (in all your maps) go up in the background and never hold up your editing." className="mt-0.5 hidden max-w-[16rem] truncate text-[11px] text-muted sm:block">
+        <Tooltip label="The map itself is saved. Pictures (in all your maps) go up in the background and never hold up your editing."><span data-testid="pictures-uploading" className="mt-0.5 hidden max-w-[16rem] truncate text-[11px] text-muted sm:block">
           {up.mode === 'manual' && up.active === 0 ? `${up.pictures} picture${up.pictures === 1 ? '' : 's'} waiting for Sync` : uploadingText(up)}
-        </span>
+        </span></Tooltip>
       )}
       {sync.state === 'checking' && (
         <span data-testid="sync-checking" className="mt-0.5 max-w-[16rem] truncate text-[11px] text-muted">
@@ -125,9 +127,9 @@ export function SaveStatus() {
         </span>
       )}
       {sync.state === 'offline' && (
-        <span data-testid="sync-offline" title="Google Drive could not be reached. This is the copy kept on this device; it is checked again when the connection returns." className="mt-0.5 max-w-[16rem] truncate text-[11px] text-warn">
+        <Tooltip label="Google Drive could not be reached. This is the copy kept on this device; it is checked again when the connection returns."><span data-testid="sync-offline" className="mt-0.5 max-w-[16rem] truncate text-[11px] text-warn">
           Offline: may be out of date
-        </span>
+        </span></Tooltip>
       )}
       {sync.state === 'latest' && sync.syncedAt !== null && (
         <span data-testid="sync-latest" className="mt-0.5 hidden max-w-[16rem] truncate text-[11px] text-muted sm:block">
@@ -139,6 +141,6 @@ export function SaveStatus() {
           This file is open in another tab
         </span>
       )}
-    </div>
+    </div></Tooltip>
   )
 }

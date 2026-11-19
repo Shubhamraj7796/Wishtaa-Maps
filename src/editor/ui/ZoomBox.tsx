@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import * as A from '../actions'
 import { MAX_ZOOM, MIN_ZOOM, OUTLINE_MAX_ZOOM, OUTLINE_MIN_ZOOM } from '../navigation'
 import { useEditor } from '../store'
+import { TipButton } from '@/ui/IconButton'
+import { Tooltip } from '@/ui/Tooltip'
 
 /** The zoom percentage in the footer. Click it to type a value (2 to 400); Enter applies, Esc cancels. */
 export function ZoomBox() {
@@ -25,7 +27,7 @@ export function ZoomBox() {
 
   if (editing) {
     return (
-      <input
+      <Tooltip label={`Type a zoom from ${Math.round(lo * 100)} to ${Math.round(hi * 100)}`}><input
         ref={input}
         aria-label="Zoom percentage"
         inputMode="numeric"
@@ -40,22 +42,21 @@ export function ZoomBox() {
           }
         }}
         className="w-14 rounded border border-brand bg-surface px-1 py-0.5 text-center text-xs text-ink"
-        title={`Type a zoom from ${Math.round(lo * 100)} to ${Math.round(hi * 100)}`}
-      />
+      /></Tooltip>
     )
   }
   return (
-    <button
+    <TipButton
       type="button"
       onClick={() => {
         setText(String(percent))
         setEditing(true)
       }}
-      title={`Click to type a zoom value. Alt+Z resets to 100%.${outline ? ' This is the zoom of the outline.' : ''}`}
+      tip={`Click to type a zoom value. Alt+Z resets to 100%.${outline ? ' This is the zoom of the outline.' : ''}`}
       aria-label={`${outline ? 'Outline zoom' : 'Zoom'} ${percent} percent. Click to type a value`}
       className="w-11 text-center hover:text-ink"
     >
       {percent}%
-    </button>
+    </TipButton>
   )
 }

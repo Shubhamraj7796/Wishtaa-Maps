@@ -3,6 +3,7 @@ import { Icon } from '@/ui/icons'
 import { useEditor } from '../store'
 import { closePdfTab, focusPdfPane, openPdfTab, reorderPdfTab, splitPdf, unsplitPdf } from './actions'
 import { OpenPdfButton } from './OpenPdf'
+import { TipButton } from '@/ui/IconButton'
 
 export const TAB_TYPE = 'application/x-wishtaa-pdf-tab'
 
@@ -53,12 +54,12 @@ export function Tabs() {
             onDrop={(e) => dropAt(e, i)}
             className={`group flex min-w-0 max-w-[12rem] shrink-0 items-center gap-1 rounded-t border border-b-0 px-2 py-1 text-xs ${isActive ? 'border-line bg-surface font-semibold' : showing ? 'border-line bg-surface/70' : 'border-transparent hover:bg-surface/60'} ${over === i ? 'outline outline-2 outline-brand' : ''}`}
           >
-            <button type="button" className="min-w-0 flex-1 truncate text-left [@media(pointer:coarse)]:min-h-9" onClick={() => (showing ? focusPdfPane(id) : openPdfTab(id))} title={s.name}>
+            <TipButton type="button" className="min-w-0 flex-1 truncate text-left [@media(pointer:coarse)]:min-h-9" onClick={() => (showing ? focusPdfPane(id) : openPdfTab(id))} tip={s.name}>
               {s.name}
-            </button>
-            <button type="button" aria-label={`Close ${s.name}`} title="Close this tab (the PDF stays in the map)" className="grid h-5 w-5 shrink-0 place-items-center rounded hover:bg-line [@media(pointer:coarse)]:h-8 [@media(pointer:coarse)]:w-8" onClick={() => closePdfTab(id)}>
+            </TipButton>
+            <TipButton type="button" aria-label={`Close ${s.name}`} tip="Close this tab (the PDF stays in the map)" className="grid h-5 w-5 shrink-0 place-items-center rounded hover:bg-line [@media(pointer:coarse)]:h-8 [@media(pointer:coarse)]:w-8" onClick={() => closePdfTab(id)}>
               <Icon name="close" size={12} />
-            </button>
+            </TipButton>
           </div>
         )
       })}

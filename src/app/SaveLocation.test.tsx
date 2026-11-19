@@ -9,6 +9,7 @@ let account: string | null = null
 vi.mock('./FilesContext', () => ({ useFiles: () => ({ files }) }))
 vi.mock('./useDrive', () => ({ useDriveAuth: () => ({ status: 'connected', account }) }))
 
+import { tipOf } from '../test/tipText'
 import { SaveLocation } from './SaveLocation'
 
 afterEach(() => {
@@ -29,7 +30,8 @@ describe('where the file saves (header chip)', () => {
     useEditor.setState({ fileId: 'a' })
     render(<SaveLocation />)
     expect(screen.getByTestId('save-location').textContent).toMatch(/This browser/)
-    expect(screen.getByTestId('save-location').title).toMatch(/Move to Google Drive/)
+    expect(screen.getByTestId('save-location').getAttribute('title')).toBeNull()
+    expect(tipOf(screen.getByTestId('save-location'))).toMatch(/Move to Google Drive/)
   })
 
   it('says "Google Drive · email" for a Drive file, and points at the file menu for moving it', () => {
@@ -39,7 +41,7 @@ describe('where the file saves (header chip)', () => {
     render(<SaveLocation />)
     const chip = screen.getByTestId('save-location')
     expect(chip.textContent).toMatch(/Google Drive · me@example\.com/)
-    expect(chip.title).toMatch(/Move to this browser/)
+    expect(tipOf(chip)).toMatch(/Move to this browser/)
   })
 
   it('still says Google Drive when the account name is not known yet', () => {
