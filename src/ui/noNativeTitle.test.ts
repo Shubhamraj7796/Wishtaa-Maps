@@ -17,7 +17,7 @@ function files(dir: string): string[] {
 }
 
 describe('no native title tooltips', () => {
-  it('no plain HTML element in src carries a title attribute (except iframe)', () => {
+  it('no plain HTML element or router link in src carries a title attribute (except iframe)', () => {
     const bad: string[] = []
     for (const file of files('src')) {
       const sf = ts.createSourceFile(file, readFileSync(file, 'utf8'), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)
@@ -25,7 +25,7 @@ describe('no native title tooltips', () => {
         if (ts.isJsxOpeningElement(n) || ts.isJsxSelfClosingElement(n)) {
           const tag = n.tagName.getText()
           const hasTitle = n.attributes.properties.some((a) => ts.isJsxAttribute(a) && a.name.getText() === 'title')
-          if (hasTitle && /^[a-z]/.test(tag) && tag !== 'iframe') bad.push(`${file.replace(/\\/g, '/')}:${sf.getLineAndCharacterOfPosition(n.getStart()).line + 1} <${tag} title>`)
+          if (hasTitle && (/^[a-z]/.test(tag) || tag === 'Link' || tag === 'NavLink') && tag !== 'iframe') bad.push(`${file.replace(/\\/g, '/')}:${sf.getLineAndCharacterOfPosition(n.getStart()).line + 1} <${tag} title>`)
         }
         ts.forEachChild(n, visit)
       }

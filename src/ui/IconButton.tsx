@@ -15,8 +15,6 @@ interface Props extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'title'> {
   /** The chosen option: shown by a highlighted background. (`active` is the older name for the same thing.) */
   selected?: boolean
   active?: boolean
-  /** Small caption under the icon on wide screens (older toolbars; icons-first screens do not use it). */
-  caption?: string
   size?: number
 }
 
@@ -25,7 +23,7 @@ interface Props extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'title'> {
  * `aria-label` for screen readers. For a radio or a checkbox in a menu pass `role` ("menuitemradio", "menuitemcheckbox", "radio",
  * "checkbox"): the chosen state then goes to `aria-checked` instead of `aria-pressed`.
  */
-export function IconButton({ icon, label, keys, selected, active, caption, size = ICON_PX, className = '', role, ...rest }: Props) {
+export function IconButton({ icon, label, keys, selected, active, size = ICON_PX, className = '', role, ...rest }: Props) {
   const tip = useTooltip(label, keys)
   const on = selected ?? active ?? false
   const state = isChecked(role) ? { 'aria-checked': on } : { 'aria-pressed': selected !== undefined || active !== undefined ? on : undefined }
@@ -45,10 +43,9 @@ export function IconButton({ icon, label, keys, selected, active, caption, size 
       onBlur={(e) => (tip.onBlur(e), rest.onBlur?.(e))}
       className={`group flex shrink-0 select-none flex-col items-center justify-center gap-0.5 rounded-ui border px-2 py-1 transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
         on ? 'border-brand bg-brand/15 text-ink' : 'border-transparent text-ink hover:bg-bg'
-      } ${caption ? 'min-w-11' : 'min-w-9'} ${className}`}
+      } min-w-9 ${className}`}
     >
       <Icon name={icon} size={size} />
-      {caption && <span className="hidden text-[10px] leading-none text-muted xl:block">{caption}</span>}
     </button>
   )
 }
@@ -64,7 +61,7 @@ interface TileProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'title
 
 /**
  * The one look for a control inside a menu or a bar: the icon alone in a square box (36 px, 44 px on touch), highlighted when chosen.
- * Same behaviour as IconButton (tooltip, aria-label, role for radios and checkboxes), but without the older caption layout.
+ * Same behaviour as IconButton (tooltip, aria-label, role for radios and checkboxes).
  */
 export function IconTile({ icon, label, keys, selected = false, size = ICON_PX, className = '', role, disabled, ...rest }: TileProps) {
   const tip = useTooltip(label, keys)

@@ -29,6 +29,7 @@ import { closeFile, openFile, renameOpenFile } from '@/editor/session'
 import type { FileRecord } from '@/core/files/types'
 import { Icon } from '@/ui/icons'
 import { IconButton, TipButton } from '@/ui/IconButton'
+import { Tooltip } from '@/ui/Tooltip'
 import { takePendingShare } from '@/pwa/share'
 import { recordRecentFile } from './account'
 import { pickPdfFromDevice, restoreCollapsedPanel, togglePdfPanel } from '@/editor/pdf/actions'
@@ -152,9 +153,11 @@ function Editor({ file }: { file: FileRecord }) {
     <div className="flex h-full flex-col" data-mode={readOnly ? 'read' : 'edit'}>
       <header style={away} className="flex h-12 shrink-0 items-center gap-2 overflow-x-auto whitespace-nowrap border-b border-line bg-surface px-3">
         <EditorMenuButton />
-        <Link to={backTo} aria-label="Back to files" title="Back to files" className="grid h-9 w-9 shrink-0 place-items-center rounded-ui hover:bg-bg">
-          <ArrowLeft size={18} aria-hidden="true" />
-        </Link>
+        <Tooltip label="Back to files">
+          <Link to={backTo} aria-label="Back to files" className="grid h-9 w-9 shrink-0 place-items-center rounded-ui hover:bg-bg">
+            <ArrowLeft size={18} aria-hidden="true" />
+          </Link>
+        </Tooltip>
         <Wordmark compact />
         <Divider />
         <input
@@ -179,13 +182,13 @@ function Editor({ file }: { file: FileRecord }) {
           <IconButton icon="pdf" label="PDF sources: read a PDF beside the map, take topics and pictures from it, mark it up" active={pdfOpen} onClick={togglePdfPanel} />
           <Divider />
           {readOnly ? (
-            <IconButton icon="notebook" label="Notes and tags of the selected topic (read only)" keys="F4" active={readPanelOpen} onClick={() => A.togglePanel()} caption="Details" />
+            <IconButton icon="notebook" label="Notes and tags of the selected topic (read only)" keys="F4" active={readPanelOpen} onClick={() => A.togglePanel()} />
           ) : (
             <>
               <IconButton icon="format" label="Layout, themes, marks and topic details" keys="F4" active={panelOpen} onClick={() => A.togglePanel()} />
               <IconButton icon="painter" label="Format painter: copy a topic's look, then click topics" active={!!painter} onClick={A.togglePainter} />
               <Divider />
-              {isKb && <IconButton icon="notebook" label="Notes panel for the selected topic" active={panelOpen && panelTab === 'notes'} onClick={() => A.togglePanel('notes')} caption="Notes" />}
+              {isKb && <IconButton icon="notebook" label="Notes panel for the selected topic" active={panelOpen && panelTab === 'notes'} onClick={() => A.togglePanel('notes')} />}
             </>
           )}
           <IconButton icon="command" label="Command palette" keys="Ctrl+K" onClick={() => A.setPalette(true)} />
@@ -199,16 +202,16 @@ function Editor({ file }: { file: FileRecord }) {
         <ReadToolbar file={file} />
       ) : (
       <div role="toolbar" aria-label="Editing tools" className="flex shrink-0 items-center gap-0.5 overflow-x-auto border-b border-line bg-surface px-3 py-1">
-        <IconButton icon="map" label="Map view" active={view === 'map'} onClick={() => C.setView('map')} caption="Map" />
-        <IconButton icon="outline" label="Outline view" keys={keysOf('viewOutline')} active={view === 'outline'} onClick={() => C.setView('outline')} caption="Outline" />
-        <IconButton icon="taskList" label="Task view" active={view === 'tasks'} onClick={() => C.setView('tasks')} caption="Tasks" />
+        <IconButton icon="map" label="Map view" active={view === 'map'} onClick={() => C.setView('map')} />
+        <IconButton icon="outline" label="Outline view" keys={keysOf('viewOutline')} active={view === 'outline'} onClick={() => C.setView('outline')} />
+        <IconButton icon="taskList" label="Task view" active={view === 'tasks'} onClick={() => C.setView('tasks')} />
         <Divider />
         <IconButton icon="undo" label="Undo" keys="Ctrl+Z" disabled={!canUndo} onClick={A.cmdUndo} />
         <IconButton icon="redo" label="Redo" keys="Ctrl+Y" disabled={!canRedo} onClick={A.cmdRedo} />
         <Divider />
-        <IconButton icon="topic" label="Add topic (next to the selected one)" keys="Enter" disabled={onlyRoot} onClick={A.cmdAddSibling} caption="Topic" />
-        <IconButton icon="subTopic" label="Add sub topic" keys="Tab" onClick={A.cmdAddChild} caption="Sub Topic" />
-        <IconButton icon="floating" label="Add a floating topic" onClick={() => A.cmdAddFloating()} caption="Floating" />
+        <IconButton icon="topic" label="Add topic (next to the selected one)" keys="Enter" disabled={onlyRoot} onClick={A.cmdAddSibling} />
+        <IconButton icon="subTopic" label="Add sub topic" keys="Tab" onClick={A.cmdAddChild} />
+        <IconButton icon="floating" label="Add a floating topic" onClick={() => A.cmdAddFloating()} />
         <IconButton
           icon="trash"
           label="Delete"
@@ -219,13 +222,13 @@ function Editor({ file }: { file: FileRecord }) {
           }}
         />
         <Divider />
-        <IconButton icon="relationship" label="Relationship line between two topics" keys={keysOf('relationship')} active={!!relationFrom} onClick={C.startRelationship} caption="Relationship" />
-        <IconButton icon="callout" label="Callout note on a topic" keys={keysOf('callout')} onClick={C.addCalloutToSelected} caption="Callout" />
-        <IconButton icon="boundary" label="Boundary around topics" keys={keysOf('boundary')} onClick={() => C.addBoundaryToSelected()} caption="Boundary" />
-        <IconButton icon="summary" label="Summary of sibling topics" keys={keysOf('summary')} onClick={C.addSummaryToSelected} caption="Summary" />
+        <IconButton icon="relationship" label="Relationship line between two topics" keys={keysOf('relationship')} active={!!relationFrom} onClick={C.startRelationship} />
+        <IconButton icon="callout" label="Callout note on a topic" keys={keysOf('callout')} onClick={C.addCalloutToSelected} />
+        <IconButton icon="boundary" label="Boundary around topics" keys={keysOf('boundary')} onClick={() => C.addBoundaryToSelected()} />
+        <IconButton icon="summary" label="Summary of sibling topics" keys={keysOf('summary')} onClick={C.addSummaryToSelected} />
         <Divider />
         <div className="relative">
-          <IconButton icon="insert" label="Insert: marks, clipart, picture, notes, tags, task, link, attachment, PDF, formula, table" active={insertOpen} onClick={() => C.toggleInsert()} caption="Insert" aria-haspopup="menu" aria-expanded={insertOpen} />
+          <IconButton icon="insert" label="Insert: marks, clipart, picture, notes, tags, task, link, attachment, PDF, formula, table" active={insertOpen} onClick={() => C.toggleInsert()} aria-haspopup="menu" aria-expanded={insertOpen} />
           <InsertMenu />
         </div>
       </div>

@@ -51,9 +51,9 @@ export function ReadToolbar({ file }: { file: FileRecord }) {
   const outline = commandById('viewOutline')
   return (
     <div role="toolbar" aria-label="Reading tools" className="flex shrink-0 items-center gap-0.5 overflow-x-auto border-b border-line bg-surface px-3 py-1">
-      <IconButton icon="map" label="Map view" active={view === 'map'} onClick={() => C.setView('map')} caption="Map" />
-      <IconButton icon="outline" label="Outline view" keys={outline ? displayKeys(outline) : undefined} active={view === 'outline'} onClick={() => C.setView('outline')} caption="Outline" />
-      <IconButton icon="taskList" label="Task view" active={view === 'tasks'} onClick={() => C.setView('tasks')} caption="Tasks" />
+      <IconButton icon="map" label="Map view" active={view === 'map'} onClick={() => C.setView('map')} />
+      <IconButton icon="outline" label="Outline view" keys={outline ? displayKeys(outline) : undefined} active={view === 'outline'} onClick={() => C.setView('outline')} />
+      <IconButton icon="taskList" label="Task view" active={view === 'tasks'} onClick={() => C.setView('tasks')} />
       {drive && (
         <>
           <Divider />

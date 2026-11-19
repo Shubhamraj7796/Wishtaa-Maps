@@ -273,9 +273,10 @@ describe('shared components: names, states and roles', () => {
     expect(b.getAttribute('aria-pressed')).toBe('true')
   })
 
-  it('IconButton keeps the older "active" name and a caption', () => {
-    render(<IconButton icon="undo" label="Undo" active caption="Undo" />)
+  it('IconButton keeps the older "active" name and has no words under the icon', () => {
+    render(<IconButton icon="undo" label="Undo" active />)
     expect(screen.getByRole('button', { name: 'Undo' }).getAttribute('aria-pressed')).toBe('true')
+    expect(screen.getByRole('button', { name: 'Undo' }).textContent).toBe('')
   })
 
   it('a radio or checkbox role puts the chosen state in aria-checked', () => {
