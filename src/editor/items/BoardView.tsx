@@ -4,7 +4,7 @@ import type { TopicMap } from '@/core/model/tree'
 import { formatDue, formatTime, isOverdue } from '@/core/tasks/agenda'
 import { boardColumns } from '@/core/tasks/board'
 import { IconButton } from '@/ui/IconButton'
-import { Icon } from '@/ui/icons'
+import { Icon, type IconName } from '@/ui/icons'
 import { mapDoc } from '../mapdoc'
 import { showNotice } from '../notice'
 import { addTaskAndOpen } from './TaskList'
@@ -15,6 +15,9 @@ interface Now {
   today: string
   time: string
 }
+
+/** The card's move icons: a play icon for Doing ("start it"), the done icon for Done, the empty box for To do (the clock stays the sign of Doing elsewhere). */
+const MOVE_ICON: Record<TaskStatus, IconName> = { todo: STATUS_ICON.todo, doing: 'start', done: STATUS_ICON.done }
 
 function move(entry: TaskEntry, status: TaskStatus, readOnly: boolean) {
   if (readOnly) return showNotice('Reading mode: switch to Edit to change a task.')
@@ -48,7 +51,7 @@ function Card({ e, now, topics, readOnly }: { e: TaskEntry; now: Now; topics: To
       </button>
       <div className="mt-1 flex items-center justify-end gap-0.5">
         {TASK_STATUSES.filter((s) => s !== e.status).map((s) => (
-          <IconButton key={s} icon={STATUS_ICON[s]} label={`Move to ${STATUS_LABEL[s]}`} disabled={false} data-move-to={s} onClick={() => move(e, s, readOnly)} className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11" />
+          <IconButton key={s} icon={MOVE_ICON[s]} label={`Move to ${STATUS_LABEL[s]}`} disabled={false} data-move-to={s} onClick={() => move(e, s, readOnly)} className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11" />
         ))}
       </div>
     </li>

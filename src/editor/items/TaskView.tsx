@@ -181,7 +181,7 @@ export function TaskView() {
         </div>
       )}
       {mode === 'agenda' && (
-        <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3">
+        <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-20 pt-3 md:pb-3">
           <div className="mx-auto max-w-3xl">
             {groups.map((g) => (
               <section key={g.id} data-agenda-group={g.id} aria-label={g.label} className="mb-4">

@@ -9,7 +9,7 @@ import { newPage } from './notesHelpers'
  * mouse and moves it with the card's icons; phone-size (touch) and dark mode. Pictures go to docs/screenshots/task-month-board.
  * NOT covered: a real phone or tablet, finger dragging (the card icons are the touch way), Safari, Firefox, a screen reader.
  */
-const SHOTS = join('docs', 'screenshots', 'task-month-board')
+const SHOTS = process.env.SHOTS_DIR ?? join('docs', 'screenshots', 'task-month-board')
 mkdirSync(SHOTS, { recursive: true })
 
 const ymdOf = (offset: number) => {

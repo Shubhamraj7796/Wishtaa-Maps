@@ -114,7 +114,9 @@ test('the Drive choice starts the existing Drive flow and the popover closes', a
   await openIcon(page).click()
   await popover(page).getByRole('menuitem', { name: 'From Google Drive' }).click()
   await expect(popover(page)).toHaveCount(0)
-  await page.waitForTimeout(2500)
+  // Google's sign-in script comes from the internet, so how long it takes depends on the network (about 3 s here at times): wait up to 15 s for
+  // either the sign-in window or the app's message instead of a fixed 2.5 s.
+  await expect.poll(async () => popups > 0 || /Google|Drive|sign-in/i.test(await outcome()), { timeout: 15_000 }).toBe(true)
   const viaPopover = { popups, text: await outcome() }
   console.log(`Drive choice from the popover: ${viaPopover.popups} window(s) opened, messages "${viaPopover.text.replace(/\s+/g, ' ').slice(0, 100)}"`)
   // The existing flow ran: either the Google sign-in window opened, or its message came (here: no Google client, or the window was closed).
